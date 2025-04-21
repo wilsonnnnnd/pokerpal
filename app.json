@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "pokerpal",
+    "slug": "pokerpal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/PokerPal.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/Loading_PokerPal.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/PokerPal.png",
+        "backgroundColor": "#ffffff"
+      },
+      "usesCleartextTraffic": true,
+      "package": "com.wilsonnnnd.pokerpal"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ee93057e-27d6-41c7-b9ae-d494fd7663c2"
+      }
+    }
+  }
+}
