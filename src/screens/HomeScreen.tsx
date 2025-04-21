@@ -23,6 +23,7 @@ import { GameSetupCard } from '@/components/GameSetupCard';
 import { usePopup } from '@/components/PopupProvider';
 import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
 import Toast from 'react-native-toast-message';
+import { usePlayerStore } from '@/stores/usePlayerStore';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -48,6 +49,15 @@ const HomeScreen = () => {
                     } else {
                         await deleteGameFromFirebase(gameId);
                         useGameStore.getState().resetGame(); 
+                        usePlayerStore.getState().resetPlayers();
+
+                        Toast.show({
+                            type: 'info',
+                            text1: '游戏已重置',
+                            text2: '您可以开始新的游戏。',
+                            position: 'bottom',
+                            visibilityTime: 2000,
+                        });
 
 
                     }

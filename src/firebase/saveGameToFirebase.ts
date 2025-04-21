@@ -82,12 +82,11 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         token: game.token,
     });
 
-    // 2️⃣ 遍历每位玩家，保存数据
     for (const player of players ?? []) {
         const playerRef = doc(db, gameDoc, gameId, playerDoc, player.id);
         const totalBuyInCash = player.totalBuyInChips * rate;
 
-        // 玩家在当前游戏中的记录
+        // ✅ 保存玩家在该游戏中的表现
         batch.set(playerRef, {
             playerId: player.id,
             nickname: player.nickname,
@@ -101,54 +100,66 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
             settleROI: player.settleROI ?? null,
         });
 
-        if (player.email) {
-            const userRef = doc(db, userDoc, player.id);
-            const emailRef = doc(db, 'users-by-email', player.email.toLowerCase());
+        // ✅ 检查 email 是否存在且合法（避免空值写入）
+        const hasValidEmail =
+            typeof player.email === 'string' && player.email.includes('@');
 
-            // ✅ 获取已有用户，避免重复写入 createdAt
-            const userSnap = await getDoc(userRef);
-            const userData: any = {
-                nickname: player.nickname,
-                email: player.email,
-                photoURL: player.photoURL,
-                isActive: true,
-            };
-            if (!userSnap.exists()) {
-                userData.createdAt = serverTimestamp(); // 新用户才加 createdAt
-            } else {
-                userData.updatedAt = serverTimestamp(); // 老用户更新时间
-            }
+        if (!hasValidEmail) {
+            console.warn(`⚠️ 跳过未绑定邮箱的玩家：${player.nickname}`);
+            continue;
+        }
 
-            // 3️⃣ 写入用户档案 & email 映射
-            batch.set(userRef, userData, { merge: true });
+        const userRef = doc(db, userDoc, player.id);
+        const emailRef = player.email
+            ? doc(db, 'users-by-email', player.email.toLowerCase())
+            : null;
+
+        // ✅ 获取已有用户（判断是否新用户）
+        const userSnap = await getDoc(userRef);
+        const userData: any = {
+            nickname: player.nickname,
+            email: player.email,
+            photoURL: player.photoURL || '',
+            isActive: true,
+        };
+
+        if (!userSnap.exists()) {
+            userData.createdAt = serverTimestamp();
+        } else {
+            userData.updatedAt = serverTimestamp();
+        }
+
+        // ✅ 写入档案 & email 映射
+        batch.set(userRef, userData, { merge: true });
+        if (emailRef) {
             batch.set(emailRef, {
                 uid: player.id,
                 registered: true,
             });
-
-            // 4️⃣ 玩家游戏历史记录
-            const gameHistoryRef = doc(db, userDoc, player.id, 'games', gameId);
-            batch.set(gameHistoryRef, {
-                gameId,
-                createdAt: serverTimestamp(),
-                totalBuyInChips: player.totalBuyInChips,
-                totalBuyInCash,
-                settleCashAmount: player.settleCashAmount ?? null,
-                settleCashDiff: player.settleCashDiff ?? null,
-                settleROI: player.settleROI ?? null,
-            });
-
-            // 5️⃣ 累加玩家全局统计字段
-            batch.update(userRef, {
-                totalBuyIn: increment(player.totalBuyInChips),
-                totalProfit: increment(player.settleCashDiff ?? 0),
-                roiSum: increment(player.settleROI ?? 0),
-                gamesPlayed: increment(1),
-            });
-
-            // 6️⃣ 图表数据放入 batch
-            await preparePlayerGraphBatch(player, gameId, batch);
         }
+
+        // ✅ 玩家游戏历史记录
+        const gameHistoryRef = doc(db, userDoc, player.id, 'games', gameId);
+        batch.set(gameHistoryRef, {
+            gameId,
+            createdAt: serverTimestamp(),
+            totalBuyInChips: player.totalBuyInChips,
+            totalBuyInCash,
+            settleCashAmount: player.settleCashAmount ?? null,
+            settleCashDiff: player.settleCashDiff ?? null,
+            settleROI: player.settleROI ?? null,
+        });
+
+        // ✅ 累加总统计字段（注意 null 安全）
+        batch.update(userRef, {
+            totalBuyIn: increment(player.totalBuyInChips),
+            totalProfit: increment(player.settleCashDiff ?? 0),
+            roiSum: increment(player.settleROI ?? 0),
+            gamesPlayed: increment(1),
+        });
+
+        // ✅ 图表折线图数据（summary/history）
+        await preparePlayerGraphBatch(player, gameId, batch);
     }
 
     // 7️⃣ 提交写入
