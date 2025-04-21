@@ -23,7 +23,6 @@ import { GameSetupCard } from '@/components/GameSetupCard';
 import { usePopup } from '@/components/PopupProvider';
 import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
 import Toast from 'react-native-toast-message';
-import { syncGameToUserProfiles } from '@/firebase/syncGameToUserProfiles';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -118,16 +117,6 @@ const HomeScreen = () => {
                                 style={styles.secondaryButton}
                                 iconColor="#3498db"
                             />
-
-{/*                             
-                            <PrimaryButton
-                                title="设置"
-                                icon="cog-outline"
-                                variant="outlined"
-                                onPress={() => syncGameToUserProfiles("game-1744537191905-C12981E6BD7D6E16")}
-                                style={styles.secondaryButton}
-                                iconColor="#3498db"
-                            /> */}
                         </View>
 
                     </View>

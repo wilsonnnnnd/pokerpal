@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { NavigationContainer, NavigationProp } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -10,16 +10,15 @@ import GameHistoryScreen from './src/screens/GameHistoryScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
 import GamePlayerRankScreen from './src/screens/PlayerRankingScreen';
 import { PopupProvider } from '@/components/PopupProvider';
-import { useAuthStore } from '@/stores/useAuthStore';
 
+import { useNavigationContainerRef } from '@react-navigation/native';
 import './src/firebase/config';
 import { Header } from '@/components/Header';
 import Toast from 'react-native-toast-message';
-import LoginScreen from '@/screens/LoginScreen';
 
 
 export type RootStackParamList = {
-  Login: undefined;
+  Login: undefined
   Home: undefined;
   GameSetup: undefined;
   AddPlayer: undefined;
@@ -29,62 +28,28 @@ export type RootStackParamList = {
   GamePlayerRank: undefined;
 };
 
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
-  interface AuthState {
-    user: AuthUser | null;
-    loading: boolean;
-    listenToAuth: () => void;
-  }
-
-  interface AuthUser {
-    id?: string;
-    name?: string;
-    email?: string;
-  }
-
-  const user: AuthUser | null = useAuthStore((state: AuthState) => state.user);
-  const loading: boolean = useAuthStore((state: { loading: boolean }) => state.loading)
-  const listenToAuth: () => void = useAuthStore((state: { listenToAuth: () => void }) => state.listenToAuth)
-
-  useEffect(() => {
-    listenToAuth()
-  }, [])
-
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#000" />
-      </View>
-    )
-  }
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
 
 
 
   return (
     <SafeAreaProvider>
       <PopupProvider>
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName="Home"
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator
             screenOptions={{
               header: () => <Header />,
             }}>
-            {user ? (
-              <>
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="GamePlay" component={GamePlayScreen} />
-                <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
-                <Stack.Screen name="GameDetail" component={GameDetailScreen} />
-                <Stack.Screen name="GamePlayerRank" component={GamePlayerRankScreen} />
-              </>
-            ) : (
-              <>
-                <Stack.Screen name="Login" component={LoginScreen} />
-              </>
-            )}
+
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="GamePlay" component={GamePlayScreen} />
+            <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
+            <Stack.Screen name="GameDetail" component={GameDetailScreen} />
+
           </Stack.Navigator>
         </NavigationContainer>
       </PopupProvider>

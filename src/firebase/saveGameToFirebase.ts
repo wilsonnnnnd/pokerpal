@@ -75,7 +75,7 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         baseCashAmount: game.baseCashAmount,
         baseChipAmount: game.baseChipAmount,
         playerCount: players?.length ?? 0,
-        createdBy: 'host@https://hdpoker.xyz',
+        createdBy: 'host@hdpoker.xyz',
         createdAt: serverTimestamp(),
         finalized: !isOngoing,
         status: isOngoing ? 'ongoing' : 'finished',

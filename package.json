@@ -9,12 +9,12 @@
     "web": "expo start --web"
   },
   "expo": {
-      "doctor": {
-        "reactNativeDirectoryCheck": {
-          "listUnknownPackages": false
-        }
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false
       }
-    },
+    }
+  },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
