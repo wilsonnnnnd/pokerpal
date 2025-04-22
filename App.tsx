@@ -49,6 +49,9 @@ export default function App() {
             <Stack.Screen name="GamePlay" component={GamePlayScreen} />
             <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
             <Stack.Screen name="GameDetail" component={GameDetailScreen} />
+            <Stack.Screen name="GamePlayerRank" component={GamePlayerRankScreen} />
+
+            {/* Add other screens here */}
 
           </Stack.Navigator>
         </NavigationContainer>

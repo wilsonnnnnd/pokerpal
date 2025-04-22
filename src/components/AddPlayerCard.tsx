@@ -10,11 +10,26 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { userByEmailDoc } from '@/constants/namingDb';
 
 interface AddPlayerCardProps {
     onConfirm: () => void;
     onCancel: () => void;
 }
+
+const fetchUsersByEmail = async () => {
+    const querySnapshot = await getDocs(collection(db, userByEmailDoc));
+    const users = querySnapshot.docs.map((doc) => ({
+        email: doc.id,
+        uid: doc.data().uid || '',
+        nickname: doc.data().nickname,
+        ...doc.data(),
+    }));
+    console.log('Fetched users:', users);
+    return users;
+};
 
 export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps) => {
     const [nickname, setNickname] = useState('');
@@ -25,6 +40,9 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const getGame = useGameStore((state) => state.getGame);
     const gameId = useGameStore((state) => state.gameId);
     const token = useGameStore((state) => state.token);
+    const [registeredUsers, setRegisteredUsers] = useState<{ email: string, uid: string, nickname: string }[]>([]);
+    const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+
 
     useEffect(() => {
         if (showQRCode && gameId) {
@@ -38,6 +56,20 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         };
     }, [showQRCode, gameId]);
 
+    useEffect(() => {
+        const loadUsers = async () => {
+            const users = await fetchUsersByEmail();
+            setRegisteredUsers(users);
+        };
+        loadUsers();
+    }, []);
+
+    const toggleSelect = (email: string) => {
+        setSelectedEmails((prev) =>
+            prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+        );
+    };
+
 
     const handleAdd = () => {
         if (!nickname.trim()) {
@@ -47,14 +79,20 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
         const newPlayer = {
             id: generateSecureId('player'),
+            playerId: generateSecureId('player'),
             nickname,
             email: email.trim().toLowerCase(),
             joinAt: new Date().toISOString(),
+            photoURL: undefined,
             buyInChipsList: [],
+            buyInCount: 1,
             totalBuyInChips: getGame().baseChipAmount,
+            totalBuyInCash: getGame().baseCashAmount,
+            finalized: false,
             isActive: true,
-            isSyncing: false, // Added the missing property
+            isSyncing: false,
         };
+
 
         logInfo('Player', `添加玩家: ${nickname}` + (email ? `(${email})` : '') + `, 加入时间: ${newPlayer.joinAt}`);
 
@@ -91,6 +129,46 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     };
 
 
+    const handleAddSelectedPlayers = () => {
+        const baseChipAmount = getGame().baseChipAmount;
+        selectedEmails.forEach(email => {
+            const user = registeredUsers.find(u => u.email === email);
+            if (!user) return;
+
+            const newPlayer = {
+                id: user.uid,
+                playerId: user.uid,
+                nickname: user.nickname,
+                email,
+                joinAt: new Date().toISOString(),
+                photoURL: undefined,
+                buyInChipsList: [],
+                buyInCount: 1,
+                totalBuyInChips: baseChipAmount,
+                totalBuyInCash: getGame().baseCashAmount,
+                finalized: false,
+                isActive: true,
+                isSyncing: false,
+            };
+
+
+            addPlayer(newPlayer);
+        });
+
+        Toast.show({
+            type: 'success',
+            text1: '已添加玩家',
+            text2: `${selectedEmails.length} 个用户已添加到游戏`,
+            position: 'bottom',
+        });
+
+        setSelectedEmails([]);
+        onAdd();
+    };
+
+
+
+
     return (
         <View style={styles.container}>
             <View style={styles.card}>
@@ -100,6 +178,27 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 <Text style={styles.title}>
                     {showQRCode ? '扫码加入游戏' : '添加玩家'}
                 </Text>
+                <PrimaryButton
+                    title="添加所选玩家"
+                    onPress={handleAddSelectedPlayers}
+                />
+
+
+                {registeredUsers.map((user) => (
+                    <TouchableOpacity
+                        key={user.email}
+                        onPress={() => toggleSelect(user.email)}
+                        style={{
+                            padding: 12,
+                            backgroundColor: selectedEmails.includes(user.email) ? '#e0f7fa' : '#fff',
+                            borderBottomWidth: 1,
+                            borderColor: '#eee',
+                        }}
+                    >
+                        <Text>{user.email}</Text>
+                        <Text style={{ fontSize: 12, color: '#666' }}>UID: {user.uid}</Text>
+                    </TouchableOpacity>
+                ))}
 
                 {showQRCode ? (
                     <>
@@ -132,7 +231,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                 onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
                                 onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
                             />
-                        </View>yy
+                        </View>
                         <View style={styles.inputContainer}>
                             <Text style={styles.label}>邮箱 <Text style={styles.optional}>(选填)</Text></Text>
                             <TextInput

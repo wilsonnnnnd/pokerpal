@@ -27,9 +27,6 @@ export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
             <View style={styles.header}>
                 <Text style={styles.title}>🪵 德州日志</Text>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity onPress={clearLogs}>
-                        <Text style={styles.clear}>🧹 清空</Text>
-                    </TouchableOpacity>
                     {isClosed && (
                         <TouchableOpacity onPress={isClosed}>
                             <MaterialCommunityIcons name="close" size={24} color="#F44336" />

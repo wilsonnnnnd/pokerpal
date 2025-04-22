@@ -16,10 +16,9 @@ type Props = {
 export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) => {
     const [amount, setAmount] = useState('');
     const [isFocused, setIsFocused] = useState(false);
-    const { log, clearLogs, logs, getLogsByTag, exportLogsAsText } = useLogStore();
     const presetValues = [
         { value: 1000, label: "+1K" },
-        { value: 3000, label: "+3K" },
+        { value: 2000, label: "+2K" },
         { value: 5000, label: "+5K" },
         { value: 10000, label: "+10K" }
     ];

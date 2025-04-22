@@ -21,6 +21,7 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
+import { serverTimestamp } from 'firebase/firestore';
 
 interface GameSetupCardProps {
     onConfirm: () => void;
@@ -172,7 +173,9 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 smallBlind: gameData.smallBlind ?? 0,
                 bigBlind: gameData.bigBlind?? 0,
                 baseChipAmount: gameData.baseChipAmount?? 0,
-                baseCashAmount: gameData.baseCashAmount?? 0
+                baseCashAmount: gameData.baseCashAmount?? 0,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
             });
 
             // 记录游戏设置
@@ -182,7 +185,9 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 smallBlind: gameData.smallBlind,
                 bigBlind: gameData.bigBlind,
                 baseChipAmount: gameData.baseChipAmount,
-                baseCashAmount: gameData.baseCashAmount
+                baseCashAmount: gameData.baseCashAmount,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
             })}`);
 
             // 同步到Firebase

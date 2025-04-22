@@ -16,47 +16,58 @@ export default function GameHistoryScreen() {
     const { history, setHistory, clearHistory } = useGameHistoryStore();
     const navigation = useNavigation<HomeScreenNav>();
     const [loading, setLoading] = useState(true);
-    
+
     useEffect(() => {
         const fetchGames = async () => {
             setLoading(true);
             try {
                 const snapshot = await getDocs(collection(db, 'games'));
                 const result: GameSnapshot[] = [];
-        
+
                 for (const docSnap of snapshot.docs) {
                     const data = docSnap.data();
                     const gameId = data.gameId;
-        
+
                     // 获取玩家子集合
                     const playersSnapshot = await getDocs(collection(db, 'games', gameId, 'players'));
-                    const players = playersSnapshot.docs.map((playerDoc) => ({
-                        id: playerDoc.id,
-                        nickname: playerDoc.data().nickname,
-                        chipDifference: playerDoc.data().chipDifference || 0,
-                        cashDifference: playerDoc.data().cashDifference || 0,
-                        roi: playerDoc.data().roi || 0,
-                        totalBuyInChips: playerDoc.data().totalBuyInChips || 0,
-                        buyInCount: playerDoc.data().buyInCount || 0,
-                        endingChipCount: playerDoc.data().endingChipCount || 0,
-                    }));
-        
+                    const players = playersSnapshot.docs.map((playerDoc) => {
+                        const data = playerDoc.data();
+                        const email = data.email || '';
+                        const nickname = data.nickname || email.split('@')[0] || '未知玩家';
+
+                        return {
+                            id: playerDoc.id,
+                            nickname,
+                            cashDifference: data.settleCashDiff ?? 0,
+                            roiSum: data.settleROI ?? 0,
+                            totalBuyInChips: data.totalBuyInChips ?? 0,
+                            buyInCount: data.buyInCount ?? 0,
+                            endingChipCount: data.endingChipCount ?? 0,
+                        };
+                    });
+
                     result.push({
                         id: gameId,
-                        createdAt: data.startTime,
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt,
                         smallBlind: data.smallBlind,
                         bigBlind: data.bigBlind,
                         baseCashAmount: data.baseCashAmount,
                         baseChipAmount: data.baseChipAmount,
                         totalBuyIn: players.reduce((sum, p) => sum + p.totalBuyInChips, 0),
-                        totalEnding: players.reduce((sum, p) => sum + p.totalBuyInChips + (p.chipDifference || 0), 0),
-                        totalDiff: players.reduce((sum, p) => sum + (p.chipDifference || 0), 0),
-                        players,
+                        totalEnding: players.reduce((sum, p) => sum + p.endingChipCount, 0),
+                        totalDiff: players.reduce((sum, p) => sum + p.endingChipCount, 0),
+                        players, // 直接使用，无需二次 map
                     });
+
                 }
-        
+
                 // 按时间排序，最新的游戏在前面
-                result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                result.sort((a, b) => {
+                    const dateA = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt.toDate();
+                    const dateB = typeof b.createdAt === 'string' ? new Date(b.createdAt) : b.createdAt.toDate();
+                    return dateB.getTime() - dateA.getTime();
+                });
                 setHistory(result);
             } catch (error) {
                 Toast.show({
@@ -91,22 +102,24 @@ export default function GameHistoryScreen() {
 
     const getWinnerAndLoser = (game: GameSnapshot) => {
         if (game.players.length === 0) return { winner: null, loser: null };
-        
-        const sortedPlayers = [...game.players].sort((a, b) => b.chipDifference - a.chipDifference);
+
+        const sortedPlayers = [...game.players].sort((a, b) => b.cashDifference - a.cashDifference);
         return {
             winner: sortedPlayers[0],
             loser: sortedPlayers[sortedPlayers.length - 1]
         };
     };
-    
+
     const renderGameCard = ({ item }: { item: GameSnapshot }) => {
         const { winner, loser } = getWinnerAndLoser(item);
-        const gameDate = new Date(item.createdAt);
+        const gameDate = typeof item.createdAt === 'string' 
+            ? new Date(item.createdAt) 
+            : item.createdAt.toDate();
         const day = gameDate.toLocaleDateString('zh-CN', { day: '2-digit' });
         const month = gameDate.toLocaleDateString('zh-CN', { month: '2-digit' });
         const time = gameDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         const year = gameDate.getFullYear();
-        
+
         return (
             <TouchableOpacity
                 style={styles.card}
@@ -121,19 +134,19 @@ export default function GameHistoryScreen() {
                     </View>
                     <Text style={styles.timeText}>{time}</Text>
                 </View>
-                
+
                 <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
                         <View style={styles.blindsContainer}>
                             <MaterialCommunityIcons name="poker-chip" size={20} color={color.iconHighlighter || "#d46613"} />
                             <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
                         </View>
-                        
+
                         <View style={styles.playerCountContainer}>
                             <Text style={styles.playerCountText}>{item.players.length}人参与</Text>
                         </View>
                     </View>
-                    
+
                     <View style={styles.statsContainer}>
                         <View style={styles.statItem}>
                             <MaterialCommunityIcons name="bank" size={18} color={color.iconHighlighter || "#d46613"} />
@@ -142,20 +155,31 @@ export default function GameHistoryScreen() {
                                 <Text style={styles.statLabel}>总买入</Text>
                             </View>
                         </View>
-                        
+
                         <View style={styles.statItem}>
                             <MaterialCommunityIcons name="calculator-variant" size={18} color={color.iconHighlighter || "#d46613"} />
                             <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{item.totalEnding}</Text>
+                                <Text style={styles.statValue}>
+                                    {(
+                                        item.players.reduce(
+                                            (sum, p) =>
+                                                sum +
+                                                (p.cashDifference / (item.baseCashAmount / item.baseChipAmount)) +
+                                                p.totalBuyInChips,
+                                            0
+                                        ).toFixed(0)
+                                    )}
+                                </Text>
+
                                 <Text style={styles.statLabel}>结算总额</Text>
                             </View>
                         </View>
-                        
+
                         <View style={styles.statItem}>
-                            <MaterialCommunityIcons 
+                            <MaterialCommunityIcons
                                 name={item.totalDiff >= 0 ? "alert-circle-check" : "alert-circle"}
-                                size={18} 
-                                color={item.totalDiff >= 0 ? "#4CAF50" : "#F44336"} 
+                                size={18}
+                                color={item.totalDiff >= 0 ? "#4CAF50" : "#F44336"}
                             />
                             <View style={styles.statTexts}>
                                 <Text style={[styles.statValue, {
@@ -167,7 +191,7 @@ export default function GameHistoryScreen() {
                             </View>
                         </View>
                     </View>
-                    
+
                     {winner && loser && (
                         <View style={styles.playersContainer}>
                             <View style={styles.playerRow}>
@@ -176,22 +200,22 @@ export default function GameHistoryScreen() {
                                     <Text style={styles.playerName}>{winner.nickname}</Text>
                                 </View>
                                 <Text style={[styles.playerProfit, { color: "#4CAF50" }]}>
-                                    +{winner.chipDifference}
+                                    +{winner.cashDifference}
                                 </Text>
                             </View>
-                            
+
                             <View style={styles.playerRow}>
                                 <View style={styles.playerInfo}>
                                     <MaterialCommunityIcons name="emoticon-sad" size={16} color="#9E9E9E" />
                                     <Text style={styles.playerName}>{loser.nickname}</Text>
                                 </View>
                                 <Text style={[styles.playerProfit, { color: "#F44336" }]}>
-                                    {loser.chipDifference}
+                                    {loser.cashDifference}
                                 </Text>
                             </View>
                         </View>
                     )}
-                    
+
                     <View style={styles.cardFooter}>
                         <MaterialCommunityIcons name="chevron-right" size={20} color="#9E9E9E" />
                     </View>
@@ -199,16 +223,16 @@ export default function GameHistoryScreen() {
             </TouchableOpacity>
         );
     };
-    
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={ "#d46613"} />
+                <ActivityIndicator size="large" color={"#d46613"} />
                 <Text style={styles.loadingText}>加载游戏历史...</Text>
             </View>
         );
     }
-    
+
     return (
         <View style={styles.container}>
             <FlatList
@@ -218,10 +242,10 @@ export default function GameHistoryScreen() {
                 renderItem={renderGameCard}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons 
-                            name="cards" 
-                            size={60} 
-                            color="#BDBDBD" 
+                        <MaterialCommunityIcons
+                            name="cards"
+                            size={60}
+                            color="#BDBDBD"
                         />
                         <Text style={styles.emptyText}>暂无游戏记录</Text>
                         <Text style={styles.emptySubText}>开始一局新游戏吧！</Text>

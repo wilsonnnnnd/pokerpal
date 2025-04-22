@@ -1,4 +1,4 @@
-import { Player } from '@/types';
+import { Player } from '@/types'
 
 /**
  * 合并本地和远程玩家数据，优先保留本地已有的有效信息
@@ -7,32 +7,32 @@ export function mergePlayerData(local: Player, remote: Player): Player {
     return {
         ...remote,
 
-        // ID & 基础信息保持远程为主
-        id: remote.id,
+        // ID & 基础信息（远程优先，但 fallback 到本地）
+        id: remote.id || local.id,
         nickname: remote.nickname || local.nickname,
         email: remote.email || local.email,
-        photoURL: remote.photoURL || local.photoURL,
+        photoURL: remote.photoURL ?? local.photoURL ?? undefined,
 
-        // 活跃状态优先取远程（防止误激活）
+        // 活跃状态优先远程，默认 true
         isActive: remote.isActive ?? local.isActive ?? true,
 
-        // 保留 buy-in 数据（如远程为空则保留本地）
+        // buy-in 数据
         buyInChipsList: remote.buyInChipsList?.length
             ? remote.buyInChipsList
             : local.buyInChipsList ?? [],
         totalBuyInChips: remote.totalBuyInChips ?? local.totalBuyInChips ?? 0,
 
-        // 结算信息优先保留本地
-        endingChipCount: remote.endingChipCount ?? local.endingChipCount,
-        chipDifference: remote.chipDifference ?? local.chipDifference,
-        cashDifference: remote.cashDifference ?? local.cashDifference,
-        roi: remote.roi ?? local.roi,
-        finalized: remote.finalized ?? local.finalized ?? false,
+        // 结算数据优先保留本地结果（避免线上被清空）
+        settleCashAmount: local.settleCashAmount ?? remote.settleCashAmount ?? undefined,
+        settleCashDiff: local.settleCashDiff ?? remote.settleCashDiff ?? undefined,
+        settleROI: local.settleROI ?? remote.settleROI ?? undefined,
+        settleChipDiff: local.settleChipDiff ?? remote.settleChipDiff ?? undefined,
+        finalized: local.finalized ?? remote.finalized ?? false,
 
-        // 保留本地 joinAt 时间（本地有更早数据）
+        // 时间戳类字段
         joinAt: local.joinAt || remote.joinAt || new Date().toISOString(),
 
-        // 保留本地同步状态
-        isSyncing: local.isSyncing,
-    };
+        // 本地状态控制
+        isSyncing: local.isSyncing ?? false,
+    }
 }

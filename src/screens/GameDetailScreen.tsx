@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, SafeAreaView, TouchableOpacity, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, SafeAreaView, TouchableOpacity, Share, Alert, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useGameHistoryStore } from '@/stores/useGameHistoryStore';
 import { InfoRow } from '@/components/InfoRow';
@@ -38,13 +38,15 @@ export default function GameDetailScreen() {
     }
 
     // 计算游戏结果数据
-    const winners = [...game.players].sort((a, b) => b.chipDifference - a.chipDifference);
+    const winners = [...game.players].sort((a, b) => b.cashDifference - a.cashDifference);
     const topWinner = winners[0];
-    const losers = [...game.players].sort((a, b) => a.chipDifference - b.chipDifference);
+    const losers = [...game.players].sort((a, b) => a.cashDifference - b.cashDifference);
     const topLoser = losers[0];
 
     // 日期格式化
-    const gameDate = new Date(game.createdAt);
+    const gameDate = new Date(
+        typeof game.createdAt === 'string' ? game.createdAt : game.createdAt.toDate()
+    );
     const dateString = gameDate.toLocaleDateString('en-AU', {
         year: 'numeric',
         month: '2-digit',
@@ -137,10 +139,8 @@ export default function GameDetailScreen() {
 
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topWinner.nickname}</Text>
-                                    <Text style={styles.highlightProfit}>+{topWinner.chipDifference} 筹码</Text>
-                                    <Text style={styles.highlightCash}>
-                                        (+${topWinner.cashDifference.toFixed(2)})
-                                    </Text>
+                                    <Text style={styles.highlightProfit}>(+${topWinner.cashDifference.toFixed(2)})</Text>
+
                                 </View>
                             </View>
                         </View>
@@ -159,9 +159,6 @@ export default function GameDetailScreen() {
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topLoser.nickname}</Text>
                                     <Text style={[styles.highlightProfit, { color: '#F44336' }]}>
-                                        {topLoser.chipDifference} 筹码
-                                    </Text>
-                                    <Text style={[styles.highlightCash, { color: '#F44336' }]}>
                                         (${topLoser.cashDifference.toFixed(2)})
                                     </Text>
                                 </View>
@@ -180,26 +177,27 @@ export default function GameDetailScreen() {
                         <View style={styles.playerCard} key={item.id}>
                             <View style={styles.playerCardHeader}>
                                 <View style={styles.playerIdentity}>
-                                    <View style={[
-                                        styles.avatar,
-                                        { backgroundColor: generateAvatarColor(item.nickname) }
-                                    ]}>
-                                        <Text style={styles.avatarText}>
-                                            {item.nickname.charAt(0).toUpperCase()}
-                                        </Text>
+                                    <View style={styles.avatar}>
+                                        {item.photoURL ? (
+                                            <Image source={{ uri: item.photoURL }} style={styles.avatarImage} />
+                                        ) : (
+                                            <View style={[StyleSheet.absoluteFill, styles.avatarFallback, { backgroundColor: generateAvatarColor(item.nickname) }]}>
+                                                <Text style={styles.avatarText}>{item.nickname.charAt(0).toUpperCase()}</Text>
+                                            </View>
+                                        )}
                                     </View>
                                     <Text style={styles.playerName}>{item.nickname}</Text>
                                 </View>
 
                                 <View style={[
                                     styles.profitBadge,
-                                    { backgroundColor: item.chipDifference >= 0 ? '#E8F5E9' : '#FFEBEE' }
+                                    { backgroundColor: item.cashDifference >= 0 ? '#E8F5E9' : '#FFEBEE' }
                                 ]}>
                                     <Text style={[
                                         styles.profitText,
-                                        { color: item.chipDifference >= 0 ? '#4CAF50' : '#F44336' }
+                                        { color: item.cashDifference >= 0 ? '#4CAF50' : '#F44336' }
                                     ]}>
-                                        {item.chipDifference >= 0 ? '+' : ''}{item.chipDifference}
+                                        {item.cashDifference >= 0 ? '+' : ''}{item.cashDifference.toFixed(2)}
                                     </Text>
                                 </View>
                             </View>
@@ -216,10 +214,16 @@ export default function GameDetailScreen() {
                                 <View style={styles.playerStatItem}>
                                     <MaterialCommunityIcons name="poker-chip" size={16} color={color.iconHighlighter} />
                                     <View style={styles.playerStatTexts}>
-                                        <Text style={styles.playerStatValue}>{item.endingChipCount}</Text>
+                                        <Text style={styles.playerStatValue}>
+                                            {(
+                                                item.totalBuyInChips +
+                                                (item.cashDifference / (game.baseCashAmount / game.baseChipAmount))
+                                            ).toFixed(0)}
+                                        </Text>
                                         <Text style={styles.playerStatLabel}>结算筹码</Text>
                                     </View>
                                 </View>
+
 
                                 <View style={styles.playerStatItem}>
                                     <MaterialCommunityIcons name="repeat" size={16} color={color.iconHighlighter} />
@@ -234,9 +238,9 @@ export default function GameDetailScreen() {
                                     <View style={styles.playerStatTexts}>
                                         <Text style={[
                                             styles.playerStatValue,
-                                            { color: item.roi >= 0 ? '#4CAF50' : '#F44336' }
+                                            { color: item.roiSum >= 0 ? '#4CAF50' : '#F44336' }
                                         ]}>
-                                            {(item.roi * 100).toFixed(2)}%
+                                            {(item.roiSum * 100).toFixed(2)}%
                                         </Text>
                                         <Text style={styles.playerStatLabel}>ROI</Text>
                                     </View>
@@ -272,7 +276,7 @@ export default function GameDetailScreen() {
                     <PrimaryButton
                         title="发送邮件"
                         icon="email"
-                        onPress={() => handleSendEmail(setEmailing,showPopup)}
+                        onPress={() => handleSendEmail(setEmailing, showPopup)}
                         style={[styles.emailButton, emailing && styles.buttonDisabled]}
                         textStyle={styles.actionButtonText}
                         disabled={emailing}
@@ -628,6 +632,16 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#FFFFFF',
         marginLeft: 6,
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 20
+    },
+    avatarFallback: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20
     },
     modalOverlay: {
         flex: 1,
