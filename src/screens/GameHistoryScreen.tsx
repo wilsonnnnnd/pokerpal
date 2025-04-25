@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { GameSnapshot } from '@/types';
 import Toast from 'react-native-toast-message';
+import {GameHistorystyles as styles} from '@/assets/styles';
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function GameHistoryScreen() {
@@ -138,7 +139,7 @@ export default function GameHistoryScreen() {
                 <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
                         <View style={styles.blindsContainer}>
-                            <MaterialCommunityIcons name="poker-chip" size={20} color={color.iconHighlighter || "#d46613"} />
+                            <MaterialCommunityIcons name="poker-chip" size={20} color={color.highLighter || "#d46613"} />
                             <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
                         </View>
 
@@ -149,26 +150,28 @@ export default function GameHistoryScreen() {
 
                     <View style={styles.statsContainer}>
                         <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="bank" size={18} color={color.iconHighlighter || "#d46613"} />
+                            <MaterialCommunityIcons name="bank" size={18} color={color.highLighter || "#d46613"} />
                             <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{item.totalBuyIn}</Text>
+                                <Text style={styles.statValue}>{item.totalBuyIn/1000 + "K"}</Text>
                                 <Text style={styles.statLabel}>总买入</Text>
                             </View>
                         </View>
 
                         <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="calculator-variant" size={18} color={color.iconHighlighter || "#d46613"} />
+                            <MaterialCommunityIcons name="calculator-variant" size={18} color={color.highLighter || "#d46613"} />
                             <View style={styles.statTexts}>
                                 <Text style={styles.statValue}>
                                     {(
-                                        item.players.reduce(
-                                            (sum, p) =>
-                                                sum +
-                                                (p.cashDifference / (item.baseCashAmount / item.baseChipAmount)) +
-                                                p.totalBuyInChips,
-                                            0
-                                        ).toFixed(0)
-                                    )}
+                                        Number(
+                                            item.players.reduce(
+                                                (sum, p) =>
+                                                    sum +
+                                                    (Number(p.cashDifference) / (Number(item.baseCashAmount) / Number(item.baseChipAmount))) +
+                                                    Number(p.totalBuyInChips),
+                                                0
+                                            ).toFixed(0)
+                                        ) / 1000
+                                    ) + "K"}
                                 </Text>
 
                                 <Text style={styles.statLabel}>结算总额</Text>
@@ -256,173 +259,3 @@ export default function GameHistoryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f6fa',
-    },
-    list: {
-        padding: 16,
-        paddingBottom: 24,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f6fa',
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: '#757575',
-    },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        marginBottom: 16,
-        overflow: 'hidden',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        flexDirection: 'row',
-    },
-    dateContainer: {
-        width: 70,
-        backgroundColor: '#f8f9fa',
-        padding: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRightWidth: 1,
-        borderRightColor: '#eeeeee',
-    },
-    dateBox: {
-        alignItems: 'center',
-    },
-    dateText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-    },
-    monthText: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-    },
-    yearText: {
-        fontSize: 12,
-        color: '#7f8c8d',
-        marginTop: 2,
-    },
-    timeText: {
-        fontSize: 12,
-        color: '#7f8c8d',
-        marginTop: 8,
-    },
-    cardContent: {
-        flex: 1,
-        padding: 12,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    blindsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    blindsText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2c3e50',
-        marginLeft: 4,
-    },
-    playerCountContainer: {
-        backgroundColor: '#f1f8e9',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    playerCountText: {
-        fontSize: 13,
-        color: '#558b2f',
-        fontWeight: '500',
-    },
-    statsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        backgroundColor: '#f8f9fa',
-        borderRadius: 12,
-        padding: 10,
-        marginBottom: 12,
-    },
-    statItem: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 4,
-    },
-    statTexts: {
-        marginLeft: 6,
-    },
-    statValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    statLabel: {
-        fontSize: 11,
-        color: '#7f8c8d',
-    },
-    playersContainer: {
-        backgroundColor: '#fafafa',
-        borderRadius: 12,
-        padding: 10,
-        marginBottom: 8,
-    },
-    playerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 6,
-    },
-    playerInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    playerName: {
-        fontSize: 13,
-        color: '#2c3e50',
-        marginLeft: 6,
-    },
-    playerProfit: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    cardFooter: {
-        alignItems: 'flex-end',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 40,
-    },
-    emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#757575',
-        marginTop: 16,
-    },
-    emptySubText: {
-        fontSize: 14,
-        color: '#9E9E9E',
-        marginTop: 8,
-    },
-});

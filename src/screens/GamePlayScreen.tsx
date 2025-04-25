@@ -34,6 +34,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { EditBuyInPopupCard } from '@/components/EditBuyInPopupCard';
 import { PlayerCard } from '@/components/PlayerCard';
 import { useGameStats } from '@/hooks/useGameStats';
+import {GamePlaystyles as styles} from '@/assets/styles';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -105,14 +106,14 @@ export default function GamePlayScreen() {
                 <TouchableOpacity onPress={() => setModalState({ type: 'add-player' })}
                     style={styles.headerButton}
                 >
-                    <MaterialCommunityIcons name="plus-circle" size={28} color={color.iconHighlighter} />
+                    <MaterialCommunityIcons name="plus-circle" size={28} color={color.highLighter} />
                 </TouchableOpacity>
             );
             setHeaderLeft(
                 <TouchableOpacity onPress={() => setModalState({ type: 'log-viewer' })}
                     style={styles.headerButton}
                 >
-                    <MaterialCommunityIcons name="history" size={28} color={color.iconHighlighter} />
+                    <MaterialCommunityIcons name="history" size={28} color={color.highLighter} />
                 </TouchableOpacity>
             );
             return () => clearHeader();
@@ -195,7 +196,7 @@ export default function GamePlayScreen() {
                                         <MaterialCommunityIcons
                                             name="chart-box"
                                             size={28}
-                                            color={color.iconHighlighter}
+                                            color={color.highLighter}
                                         />
                                         <Text style={styles.analysisTitle}>游戏分析</Text>
                                     </LinearGradient>
@@ -205,50 +206,50 @@ export default function GamePlayScreen() {
                                             icon="alert-decagram"
                                             text={`${stats.totalDiff}`}
                                             label="差额"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                             textColor={stats.totalDiff >= 0 ? color.success : color.error}
                                         />
                                         <InfoRow
                                             icon="bank"
                                             text={`${stats.totalBuyIn}`}
                                             label="总买入"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="calculator-variant"
                                             text={`${stats.totalEnding}`}
                                             label="结算总筹码"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="trophy-variant"
                                             text={`${stats.winner.nickname} (${((stats.winner.settleChipCount || 0) - stats.winner.totalBuyInChips)})`}
                                             label="赢家"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="emoticon-cry-outline"
                                             text={`${stats.loser.nickname} (${((stats.loser.settleChipCount || 0) - stats.loser.totalBuyInChips)})`}
                                             label="输家"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="arrow-up-bold-box"
                                             text={`${stats.mostBuyIn.nickname} (${stats.mostBuyIn.totalBuyInChips})`}
                                             label="最多买入"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="arrow-down-bold-box"
                                             text={`${stats.leastBuyIn.nickname} (${stats.leastBuyIn.totalBuyInChips})`}
                                             label="最少买入"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                         <InfoRow
                                             icon="counter"
                                             text={`${stats.mostBuyInTimes.nickname} (${stats.mostBuyInTimes.buyInChipsList.length}次)`}
                                             label="最多买入次数"
-                                            iconColor={color.iconHighlighter}
+                                            iconColor={color.highLighter}
                                         />
                                     </View>
                                 </View>
@@ -345,68 +346,3 @@ export default function GamePlayScreen() {
         </>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-        backgroundColor: '#f5f6fa',
-    },
-    list: {
-        gap: 16,
-        paddingBottom: 24,
-    },
-    overlay: {
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        padding: 20,
-    },
-    analysisCard: {
-        borderRadius: 16,
-        backgroundColor: '#fff',
-        marginTop: 24,
-        marginBottom: 16,
-        overflow: 'hidden',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    analysisHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eaeaea',
-    },
-    analysisTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 8,
-        color: '#2c3e50',
-    },
-    analysisCardContainer: {
-        padding: 16,
-    },
-    endGameButton: {
-        backgroundColor: '#FF9800',
-        borderRadius: 12,
-        marginBottom: 24,
-        height: 50,
-        shadowColor: '#FF9800',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 3,
-    },
-    endGameButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
-    headerButton: {
-        padding: 4,
-    }
-});

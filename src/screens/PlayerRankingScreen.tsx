@@ -17,6 +17,7 @@ import { Palette as color } from '@/constants';
 import { userDoc } from '@/constants/namingDb';
 import { AggregatedPlayer, SortType, FirebasePlayer } from '@/types';
 import Toast from 'react-native-toast-message';
+import {GamePlayerRankstyles as styles} from '@/assets/styles';
 
 // 提取出常量
 const SORT_TYPES = {
@@ -97,7 +98,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
 
             <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                    <MaterialCommunityIcons name="calendar-check" size={16} color={color.iconHighlighter} />
+                    <MaterialCommunityIcons name="calendar-check" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
                         <Text style={styles.statValue}>{item.gamesPlayed}</Text>
                         <Text style={styles.statLabel}>场次</Text>
@@ -105,7 +106,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 </View>
 
                 <View style={styles.statItem}>
-                    <MaterialCommunityIcons name="cash-multiple" size={16} color={color.iconHighlighter} />
+                    <MaterialCommunityIcons name="cash-multiple" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
                         <Text style={[
                             styles.statValue,
@@ -121,7 +122,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                     <MaterialCommunityIcons
                         name="chart-line"
                         size={16}
-                        color={color.iconHighlighter}
+                        color={color.highLighter}
                     />
                     <View style={styles.statTexts}>
                         <Text style={[
@@ -279,7 +280,6 @@ export default function PlayerRankingScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>玩家排行榜</Text>
                 <View style={styles.searchContainer}>
                     <MaterialCommunityIcons name="magnify" size={20} color="#7f8c8d" />
                     <TextInput
@@ -298,7 +298,6 @@ export default function PlayerRankingScreen() {
             </View>
 
             <View style={styles.sortContainer}>
-                <Text style={styles.sortLabel}>排序方式:</Text>
                 <View style={styles.sortButtonsContainer}>
                     <TouchableOpacity
                         style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
@@ -362,220 +361,3 @@ export default function PlayerRankingScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f6fa',
-    },
-    header: {
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        marginBottom: 12,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f6fa',
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 14,
-        marginLeft: 8,
-        color: '#34495e',
-    },
-    sortContainer: {
-        backgroundColor: '#FFFFFF',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    sortLabel: {
-        fontSize: 14,
-        color: '#7f8c8d',
-        marginBottom: 8,
-    },
-    sortButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    sortButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        flex: 1,
-        marginHorizontal: 4,
-        justifyContent: 'center',
-    },
-    sortButtonActive: {
-        backgroundColor: "#d46613",
-    },
-    sortButtonText: {
-        fontSize: 12,
-        color: '#666666',
-        marginLeft: 4,
-    },
-    sortButtonTextActive: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
-    list: {
-        padding: 12,
-        paddingBottom: 24,
-    },
-    playerCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        marginBottom: 12,
-        overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    topPlayerCard: {
-        borderLeftWidth: 3,
-        borderLeftColor: '#FFD700',
-    },
-    playerHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    rankBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 8,
-    },
-    rankBadgeText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
-    avatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 10,
-        overflow: 'hidden',
-    },
-    avatarImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 18,
-    },
-    avatarFallback: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 18,
-    },
-    avatarText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    nameContainer: {
-        flex: 1,
-    },
-    playerName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    gamesContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 2,
-    },
-    gamesText: {
-        fontSize: 12,
-        color: '#7f8c8d',
-        marginLeft: 4,
-    },
-    profitBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    profitText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    statsContainer: {
-        flexDirection: 'row',
-        padding: 12,
-        backgroundColor: '#f8f9fa',
-    },
-    statItem: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 4,
-    },
-    statTexts: {
-        marginLeft: 6,
-    },
-    statValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    statLabel: {
-        fontSize: 11,
-        color: '#7f8c8d',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 14,
-        color: '#7f8c8d',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-        marginTop: 40,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#7f8c8d',
-        marginTop: 16,
-    },
-    emptyText: {
-        fontSize: 14,
-        color: '#95a5a6',
-        marginTop: 8,
-        textAlign: 'center',
-    },
-});

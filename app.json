@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Loading_PokerPal.png",
+      "image": "./src/assets/Loading_PokerPal.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/PokerPal.png",
+        "foregroundImage": "./src/assets/PokerPal.png",
         "backgroundColor": "#ffffff"
       },
       "usesCleartextTraffic": true,

@@ -95,7 +95,7 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                                 <MaterialCommunityIcons
                                     name="poker-chip"
                                     size={20}
-                                    color={color.iconHighlighter || "#d46613"}
+                                    color={color.highLighter || "#d46613"}
                                 />
                             </View>
                             <TextInput

@@ -5,9 +5,10 @@ import { useGameHistoryStore } from '@/stores/useGameHistoryStore';
 import { InfoRow } from '@/components/InfoRow';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Palette as color } from '@/constants';
+import { Palette as color, Palette } from '@/constants';
 import { handleCopyToClipboard, handleSendEmail } from '@/utils/exportHandlers';
 import { usePopup } from '@/components/PopupProvider';
+import { GameDetailstyles as styles } from '@/assets/styles';
 
 export default function GameDetailScreen() {
     const route = useRoute<any>();
@@ -85,7 +86,7 @@ export default function GameDetailScreen() {
 
                 <View style={styles.summaryContainer}>
                     <View style={styles.summaryHeader}>
-                        <MaterialCommunityIcons name="chart-box" size={20} color={color.iconHighlighter} />
+                        <MaterialCommunityIcons name="chart-box" size={20} color={color.highLighter} />
                         <Text style={styles.summaryTitle}>游戏总览</Text>
                     </View>
 
@@ -158,7 +159,7 @@ export default function GameDetailScreen() {
 
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topLoser.nickname}</Text>
-                                    <Text style={[styles.highlightProfit, { color: '#F44336' }]}>
+                                    <Text style={[styles.highlightProfit, { color: Palette.error }]}>
                                         (${topLoser.cashDifference.toFixed(2)})
                                     </Text>
                                 </View>
@@ -168,7 +169,7 @@ export default function GameDetailScreen() {
                 )}
 
                 <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="account-group" size={20} color={color.iconHighlighter} />
+                    <MaterialCommunityIcons name="account-group" size={20} color={color.highLighter} />
                     <Text style={styles.sectionTitle}>玩家列表</Text>
                 </View>
 
@@ -195,7 +196,7 @@ export default function GameDetailScreen() {
                                 ]}>
                                     <Text style={[
                                         styles.profitText,
-                                        { color: item.cashDifference >= 0 ? '#4CAF50' : '#F44336' }
+                                        { color: item.cashDifference >= 0 ? Palette.success : Palette.error }
                                     ]}>
                                         {item.cashDifference >= 0 ? '+' : ''}{item.cashDifference.toFixed(2)}
                                     </Text>
@@ -204,7 +205,7 @@ export default function GameDetailScreen() {
 
                             <View style={styles.playerStats}>
                                 <View style={styles.playerStatItem}>
-                                    <MaterialCommunityIcons name="bank" size={16} color={color.iconHighlighter} />
+                                    <MaterialCommunityIcons name="bank" size={16} color={color.highLighter} />
                                     <View style={styles.playerStatTexts}>
                                         <Text style={styles.playerStatValue}>{item.totalBuyInChips}</Text>
                                         <Text style={styles.playerStatLabel}>总买入</Text>
@@ -212,7 +213,7 @@ export default function GameDetailScreen() {
                                 </View>
 
                                 <View style={styles.playerStatItem}>
-                                    <MaterialCommunityIcons name="poker-chip" size={16} color={color.iconHighlighter} />
+                                    <MaterialCommunityIcons name="poker-chip" size={16} color={color.highLighter} />
                                     <View style={styles.playerStatTexts}>
                                         <Text style={styles.playerStatValue}>
                                             {(
@@ -226,7 +227,7 @@ export default function GameDetailScreen() {
 
 
                                 <View style={styles.playerStatItem}>
-                                    <MaterialCommunityIcons name="repeat" size={16} color={color.iconHighlighter} />
+                                    <MaterialCommunityIcons name="repeat" size={16} color={color.highLighter} />
                                     <View style={styles.playerStatTexts}>
                                         <Text style={styles.playerStatValue}>{item.buyInCount}次</Text>
                                         <Text style={styles.playerStatLabel}>买入次数</Text>
@@ -234,11 +235,11 @@ export default function GameDetailScreen() {
                                 </View>
 
                                 <View style={styles.playerStatItem}>
-                                    <MaterialCommunityIcons name="chart-line" size={16} color={color.iconHighlighter} />
+                                    <MaterialCommunityIcons name="chart-line" size={16} color={color.highLighter} />
                                     <View style={styles.playerStatTexts}>
                                         <Text style={[
                                             styles.playerStatValue,
-                                            { color: item.roiSum >= 0 ? '#4CAF50' : '#F44336' }
+                                            { color: item.roiSum >= 0 ? Palette.success : Palette.error }
                                         ]}>
                                             {(item.roiSum * 100).toFixed(2)}%
                                         </Text>
@@ -251,11 +252,11 @@ export default function GameDetailScreen() {
                                 <MaterialCommunityIcons
                                     name={item.cashDifference >= 0 ? "cash-plus" : "cash-minus"}
                                     size={18}
-                                    color={item.cashDifference >= 0 ? "#4CAF50" : "#F44336"}
+                                    color={item.cashDifference >= 0 ? Palette.success : Palette.error}
                                 />
                                 <Text style={[
                                     styles.playerCashText,
-                                    { color: item.cashDifference >= 0 ? "#4CAF50" : "#F44336" }
+                                    { color: item.cashDifference >= 0 ? Palette.success : Palette.error }
                                 ]}>
                                     {item.cashDifference >= 0 ? "+" : ""}${Math.abs(item.cashDifference).toFixed(2)}
                                 </Text>
@@ -288,365 +289,3 @@ export default function GameDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f6fa',
-    },
-    scrollContent: {
-        padding: 0,
-        paddingBottom: 24,
-    },
-    notFoundContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#f5f6fa',
-    },
-    notFound: {
-        fontSize: 18,
-        color: '#7f8c8d',
-        textAlign: 'center',
-        marginTop: 12,
-        marginBottom: 24,
-    },
-    backButton: {
-        backgroundColor: '#ecf0f1',
-        paddingHorizontal: 24,
-    },
-    backButtonText: {
-        color: '#34495e',
-    },
-    header: {
-        backgroundColor: '#d46613',
-        padding: 16,
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-    },
-    gameInfoHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    dateTimeContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    dateText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
-    timeText: {
-        fontSize: 12,
-        color: '#FFFFFF',
-        opacity: 0.9,
-    },
-    blindContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    blindText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-        marginLeft: 6,
-    },
-    gameIdText: {
-        fontSize: 12,
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginTop: 8,
-    },
-    summaryContainer: {
-        margin: 16,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    summaryHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    summaryTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        marginLeft: 6,
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    statBox: {
-        width: '48%',
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-        alignItems: 'center',
-    },
-    statValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-    },
-    statLabel: {
-        fontSize: 12,
-        color: '#7f8c8d',
-        marginTop: 4,
-    },
-    exchangeRate: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ecf0f1',
-        padding: 8,
-        borderRadius: 6,
-        marginTop: 4,
-    },
-    exchangeText: {
-        fontSize: 12,
-        color: '#34495e',
-        marginLeft: 6,
-    },
-    highlightsContainer: {
-        marginHorizontal: 16,
-        marginBottom: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    highlightCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 12,
-        width: '48%',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    highlightHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    highlightTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2c3e50',
-        marginLeft: 4,
-    },
-    highlightContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    avatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    highlightInfo: {
-        marginLeft: 8,
-        flex: 1,
-    },
-    highlightName: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    highlightProfit: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-    },
-    highlightCash: {
-        fontSize: 12,
-        color: '#4CAF50',
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginBottom: 8,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        marginLeft: 6,
-    },
-    playerListContainer: {
-        paddingHorizontal: 16,
-    },
-    playerCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 10,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    playerCardHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    playerIdentity: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    playerName: {
-        marginLeft: 8,
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    profitBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    profitText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    playerStats: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 8,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    playerStatItem: {
-        width: '45%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 4,
-        backgroundColor: '#ecf0f1',
-        paddingHorizontal: 8,
-        gap: 6,
-        borderRadius: 6,
-        marginBottom: 8,
-        marginRight: 8,
-
-    },
-    playerStatTexts: {
-        marginLeft: 6,
-
-    },
-    playerStatValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2c3e50',
-    },
-    playerStatLabel: {
-        fontSize: 11,
-        color: '#7f8c8d',
-    },
-    playerCashResult: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        backgroundColor: '#f8f9fa',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-        alignSelf: 'flex-end',
-    },
-    playerCashText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginLeft: 6,
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginHorizontal: 16,
-        marginTop: 16,
-    },
-    copyButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#3498db',
-        borderRadius: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        flex: 1,
-        marginRight: 8,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.5,
-    },
-    emailButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#2ecc71',
-        borderRadius: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        flex: 1,
-        marginLeft: 8,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.5,
-    },
-    buttonDisabled: {
-        backgroundColor: '#95a5a6',
-        elevation: 0,
-        shadowOpacity: 0,
-    },
-    actionButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#FFFFFF',
-        marginLeft: 6,
-    },
-    avatarImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 20
-    },
-    avatarFallback: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 20
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        justifyContent: 'center',
-        padding: 20
-    },
-});

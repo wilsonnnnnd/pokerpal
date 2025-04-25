@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    TextInput,
+    StyleSheet,
+    Alert,
+    TouchableOpacity,
+    ScrollView,
+    Image,
+    ActivityIndicator
+} from 'react-native';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
@@ -13,11 +23,18 @@ import Toast from 'react-native-toast-message';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { userByEmailDoc } from '@/constants/namingDb';
+import { Ionicons } from '@expo/vector-icons';
 
 interface AddPlayerCardProps {
     onConfirm: () => void;
     onCancel: () => void;
 }
+
+const Tab = {
+    SCAN: 'scan',
+    SELECT: 'select',
+    MANUAL: 'manual'
+};
 
 const fetchUsersByEmail = async () => {
     const querySnapshot = await getDocs(collection(db, userByEmailDoc));
@@ -25,27 +42,30 @@ const fetchUsersByEmail = async () => {
         email: doc.id,
         uid: doc.data().uid || '',
         nickname: doc.data().nickname,
+        photoURL: doc.data().photoURL,
         ...doc.data(),
     }));
-    console.log('Fetched users:', users);
     return users;
 };
 
 export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps) => {
+    const [activeTab, setActiveTab] = useState(Tab.MANUAL);
     const [nickname, setNickname] = useState('');
     const [email, setEmail] = useState('');
     const [isFocused, setIsFocused] = useState({ nickname: false, email: false });
-    const [showQRCode, setShowQRCode] = useState(false);
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
     const addPlayer = usePlayerStore((state) => state.addPlayer);
     const getGame = useGameStore((state) => state.getGame);
     const gameId = useGameStore((state) => state.gameId);
     const token = useGameStore((state) => state.token);
-    const [registeredUsers, setRegisteredUsers] = useState<{ email: string, uid: string, nickname: string }[]>([]);
-    const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
 
+    const [registeredUsers, setRegisteredUsers] = useState<{ email: string, uid: string, nickname: string, photoURL?: string }[]>([]);
+    const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (showQRCode && gameId) {
+        if (activeTab === Tab.SCAN && gameId) {
             // 开始监听
             startPlayerSyncListener(gameId, getGame().baseChipAmount, true, logInfo);
         }
@@ -54,15 +74,27 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         return () => {
             stopPlayerSyncListener(logInfo);
         };
-    }, [showQRCode, gameId]);
+    }, [activeTab, gameId]);
 
     useEffect(() => {
         const loadUsers = async () => {
-            const users = await fetchUsersByEmail();
-            setRegisteredUsers(users);
+            setIsLoadingUsers(true);
+            try {
+                const users = await fetchUsersByEmail();
+                setRegisteredUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+            } finally {
+                setIsLoadingUsers(false);
+            }
         };
         loadUsers();
     }, []);
+
+    const filteredUsers = registeredUsers.filter(user =>
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const toggleSelect = (email: string) => {
         setSelectedEmails((prev) =>
@@ -70,8 +102,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         );
     };
 
-
-    const handleAdd = () => {
+    const handleManualAdd = () => {
         if (!nickname.trim()) {
             Alert.alert('提示', '请输入玩家昵称');
             return;
@@ -93,32 +124,28 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             isSyncing: false,
         };
 
-
         logInfo('Player', `添加玩家: ${nickname}` + (email ? `(${email})` : '') + `, 加入时间: ${newPlayer.joinAt}`);
-
         addPlayer(newPlayer);
         setNickname('');
         setEmail('');
         stopPlayerSyncListener(logInfo);
         onAdd();
-
     };
-
 
     const handleCancel = () => {
         stopPlayerSyncListener(logInfo);
         onCancel();
     };
 
-    const handleQRCode = () => {
+    const getQRCodeLink = () => {
         if (!gameId || !token) return '';
         return `https://hdpoker.xyz/join/${gameId}?token=${token}`;
     };
 
     const handleCopyLink = () => {
-        const link = handleQRCode();
+        const link = getQRCodeLink();
         if (link) {
-            Clipboard.setStringAsync(link); // expo 版本
+            Clipboard.setStringAsync(link);
             Toast.show({
                 type: 'success',
                 text1: '已复制',
@@ -128,8 +155,12 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         }
     };
 
-
     const handleAddSelectedPlayers = () => {
+        if (selectedEmails.length === 0) {
+            Alert.alert('提示', '请选择至少一名玩家');
+            return;
+        }
+
         const baseChipAmount = getGame().baseChipAmount;
         selectedEmails.forEach(email => {
             const user = registeredUsers.find(u => u.email === email);
@@ -141,7 +172,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 nickname: user.nickname,
                 email,
                 joinAt: new Date().toISOString(),
-                photoURL: undefined,
+                photoURL: user.photoURL,
                 buyInChipsList: [],
                 buyInCount: 1,
                 totalBuyInChips: baseChipAmount,
@@ -150,7 +181,6 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 isActive: true,
                 isSyncing: false,
             };
-
 
             addPlayer(newPlayer);
         });
@@ -166,106 +196,220 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         onAdd();
     };
 
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case Tab.SCAN:
+                return (
+                    <View style={styles.tabContent}>
+                        <View style={styles.qrContainer}>
+                            <Text style={styles.qrTitle}>扫描二维码加入游戏</Text>
+                            <View style={styles.qrWrapper}>
+                                <QRCode
+                                    value={getQRCodeLink()}
+                                    size={200}
+                                    backgroundColor="#fff"
+                                />
+                            </View>
+                            <TouchableOpacity
+                                onPress={handleCopyLink}
+                                style={styles.copyLinkButton}
+                            >
+                                <Ionicons name="copy-outline" size={20} color="#fff" />
+                                <Text style={styles.copyLinkText}>复制邀请链接</Text>
+                            </TouchableOpacity>
 
+                            <Text style={styles.qrHelper}>
+                                玩家扫描二维码后可直接加入游戏
+                            </Text>
+                        </View>
+                    </View>
+                );
 
+            case Tab.SELECT:
+                return (
+                    <View style={styles.tabContent}>
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="搜索玩家（昵称或邮箱）"
+                                value={searchTerm}
+                                onChangeText={setSearchTerm}
+                            />
+                            {searchTerm ? (
+                                <TouchableOpacity onPress={() => setSearchTerm('')} style={styles.clearSearch}>
+                                    <Ionicons name="close-circle" size={18} color="#999" />
+                                </TouchableOpacity>
+                            ) : null}
+                        </View>
+
+                        {isLoadingUsers ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={color.info} />
+                                <Text style={styles.loadingText}>正在加载玩家列表...</Text>
+                            </View>
+                        ) : filteredUsers.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="people" size={50} color="#ccc" />
+                                <Text style={styles.emptyText}>
+                                    {searchTerm ? '没有找到匹配的玩家' : '暂无已注册玩家'}
+                                </Text>
+                            </View>
+                        ) : (
+                            <ScrollView style={styles.userList}>
+                                {filteredUsers.map((user) => (
+                                    <TouchableOpacity
+                                        key={user.email}
+                                        onPress={() => toggleSelect(user.email)}
+                                        style={[
+                                            styles.userItem,
+                                            selectedEmails.includes(user.email) && styles.selectedUserItem
+                                        ]}
+                                    >
+                                        <View style={styles.userItemContent}>
+                                            <View style={styles.userAvatar}>
+                                                {user.photoURL ? (
+                                                    <Image
+                                                        source={{ uri: user.photoURL }}
+                                                        style={styles.avatarImage}
+                                                    />
+                                                ) : (
+                                                    <Text style={styles.avatarText}>
+                                                        {user.nickname?.charAt(0)?.toUpperCase() || 'U'}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            <View style={styles.userInfo}>
+                                                <Text style={styles.userNickname}>{user.nickname}</Text>
+                                                <Text style={styles.userEmail}>{user.email}</Text>
+                                            </View>
+                                            {selectedEmails.includes(user.email) && (
+                                                <View style={styles.checkmark}>
+                                                    <Ionicons name="checkmark-circle" size={24} color={color.info} />
+                                                </View>
+                                            )}
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+
+                        <PrimaryButton
+                            title={`添加选中的玩家 (${selectedEmails.length})`}
+                            onPress={handleAddSelectedPlayers}
+                            style={[
+                                styles.addSelectedButton,
+                                selectedEmails.length === 0 && styles.disabledButton
+                            ]}
+                            textStyle={styles.addSelectedButtonText}
+                            disabled={selectedEmails.length === 0}
+                        />
+                    </View>
+                );
+
+            case Tab.MANUAL:
+                return (
+                    <View style={styles.tabContent}>
+                        <View style={styles.manualAddContainer}>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>玩家昵称</Text>
+                                <TextInput
+                                    style={[styles.input, isFocused.nickname && styles.inputFocused]}
+                                    placeholder="输入玩家昵称"
+                                    placeholderTextColor="#A0A0A0"
+                                    value={nickname}
+                                    onChangeText={setNickname}
+                                    onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
+                                    onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
+                                />
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>邮箱 <Text style={styles.optional}>(选填)</Text></Text>
+                                <TextInput
+                                    style={[styles.input, isFocused.email && styles.inputFocused]}
+                                    placeholder="输入玩家邮箱"
+                                    placeholderTextColor="#A0A0A0"
+                                    value={email}
+                                    keyboardType="email-address"
+                                    onChangeText={setEmail}
+                                    onFocus={() => setIsFocused(prev => ({ ...prev, email: true }))}
+                                    onBlur={() => setIsFocused(prev => ({ ...prev, email: false }))}
+                                    autoCapitalize="none"
+                                />
+                            </View>
+
+                            <PrimaryButton
+                                title="添加玩家"
+                                onPress={handleManualAdd}
+                                style={styles.addButton}
+                                textStyle={styles.addButtonText}
+                            />
+                        </View>
+                    </View>
+                );
+
+            default:
+                return null;
+        }
+    };
 
     return (
         <View style={styles.container}>
             <View style={styles.card}>
                 <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-                    <Text style={styles.closeButtonText}>×</Text>
+                    <Ionicons name="close" size={24} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.title}>
-                    {showQRCode ? '扫码加入游戏' : '添加玩家'}
-                </Text>
-                <PrimaryButton
-                    title="添加所选玩家"
-                    onPress={handleAddSelectedPlayers}
-                />
 
+                <Text style={styles.title}>添加玩家</Text>
 
-                {registeredUsers.map((user) => (
+                {/* 选项卡导航 */}
+                <View style={styles.tabBar}>
                     <TouchableOpacity
-                        key={user.email}
-                        onPress={() => toggleSelect(user.email)}
-                        style={{
-                            padding: 12,
-                            backgroundColor: selectedEmails.includes(user.email) ? '#e0f7fa' : '#fff',
-                            borderBottomWidth: 1,
-                            borderColor: '#eee',
-                        }}
+                        style={[styles.tabButton, activeTab === Tab.MANUAL && styles.activeTabButton]}
+                        onPress={() => setActiveTab(Tab.MANUAL)}
                     >
-                        <Text>{user.email}</Text>
-                        <Text style={{ fontSize: 12, color: '#666' }}>UID: {user.uid}</Text>
-                    </TouchableOpacity>
-                ))}
-
-                {showQRCode ? (
-                    <>
-                        {/* 替换为你生成二维码的组件 */}
-                        <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                            <Text style={{ fontSize: 16, color: '#555' }}>扫描下方二维码加入游戏：</Text>
-                            <View style={{ marginTop: 16 }}>
-                                <QRCode
-                                    value={handleQRCode()}
-                                    size={200}
-                                />
-                                <TouchableOpacity onPress={handleCopyLink}>
-                                    <Text style={styles.copyableLink}>
-                                        加入链接: {handleQRCode()}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </>
-                ) : (
-                    <>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>昵称</Text>
-                            <TextInput
-                                style={[styles.input, isFocused.nickname && styles.inputFocused]}
-                                placeholder="输入玩家昵称"
-                                placeholderTextColor={"#A0A0A0"}
-                                value={nickname}
-                                onChangeText={setNickname}
-                                onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
-                                onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
-                            />
-                        </View>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>邮箱 <Text style={styles.optional}>(选填)</Text></Text>
-                            <TextInput
-                                style={[styles.input, isFocused.email && styles.inputFocused]}
-                                placeholder="输入玩家邮箱"
-                                placeholderTextColor={"#A0A0A0"}
-                                value={email}
-                                keyboardType="email-address"
-                                onChangeText={setEmail}
-                                onFocus={() => setIsFocused(prev => ({ ...prev, email: true }))}
-                                onBlur={() => setIsFocused(prev => ({ ...prev, email: false }))}
-                            />
-                        </View>
-                    </>
-                )}
-
-                <View style={styles.buttonGroup}>
-                    <PrimaryButton
-                        title={showQRCode ? '返回添加' : '扫码加入'}
-                        onPress={() => setShowQRCode(prev => !prev)}
-                        style={styles.cancelButton}
-                        textStyle={styles.cancelButtonText}
-                    />
-                    {!showQRCode && (
-                        <PrimaryButton
-                            title="添加"
-                            onPress={handleAdd}
-                            style={styles.addButton}
-                            textStyle={styles.addButtonText}
+                        <Ionicons
+                            name="create-outline"
+                            size={22}
+                            color={activeTab === Tab.MANUAL ? color.info : '#666'}
                         />
-                    )}
-                </View>
-            </View>
+                        <Text style={[styles.tabText, activeTab === Tab.MANUAL && styles.activeTabText]}>
+                            手动添加
+                        </Text>
+                    </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={[styles.tabButton, activeTab === Tab.SELECT && styles.activeTabButton]}
+                        onPress={() => setActiveTab(Tab.SELECT)}
+                    >
+                        <Ionicons
+                            name="people"
+                            size={22}
+                            color={activeTab === Tab.SELECT ? color.info : '#666'}
+                        />
+                        <Text style={[styles.tabText, activeTab === Tab.SELECT && styles.activeTabText]}>
+                            选择玩家
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.tabButton, activeTab === Tab.SCAN && styles.activeTabButton]}
+                        onPress={() => setActiveTab(Tab.SCAN)}
+                    >
+                        <Ionicons
+                            name="qr-code"
+                            size={22}
+                            color={activeTab === Tab.SCAN ? color.info : '#666'}
+                        />
+                        <Text style={[styles.tabText, activeTab === Tab.SCAN && styles.activeTabText]}>
+                            扫码加入
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {renderTabContent()}
+            </View>
         </View>
     );
 };
@@ -277,19 +421,69 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: '#FFFFFF',
         borderRadius: 20,
-        padding: 24,
+        padding: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 5,
+        maxHeight: 600, // 限制最大高度，避免在小屏幕上显示不全
     },
     title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#333333',
-        marginBottom: 24,
+        marginBottom: 20,
         textAlign: 'center',
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 10,
+        padding: 4,
+    },
+
+    // 选项卡相关样式
+    tabBar: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        borderRadius: 12,
+        backgroundColor: '#F5F5F5',
+        padding: 4,
+    },
+    tabButton: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 8,
+        borderRadius: 10,
+    },
+    activeTabButton: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    tabText: {
+        fontSize: 8,
+        fontWeight: '500',
+        color: '#666666',
+        marginLeft: 6,
+    },
+    activeTabText: {
+        color: color.info || '#007AFF',
+    },
+    tabContent: {
+        minHeight: 300,
+    },
+
+    // 手动添加相关样式
+    manualAddContainer: {
+        marginTop: 10,
     },
     inputContainer: {
         marginBottom: 20,
@@ -322,60 +516,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
-    copyableLink: {
-        fontSize: 14,
-        color: '#3498db', // 类似链接蓝色
-        marginTop: 10,
-        textDecorationLine: 'underline',
-    },
-    buttonGroup: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 32,
-    },
-    cancelButton: {
-        flex: 1,
-        marginRight: 10,
-        backgroundColor: '#F5F5F5',
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-        zIndex: 10,
-        backgroundColor: '#eee',
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 2,
-        elevation: 3,
-    },
-    closeButtonText: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-
-    cancelButtonText: {
-        color: '#666666',
-        fontWeight: '600',
-    },
     addButton: {
-        flex: 1,
-        marginLeft: 10,
-        backgroundColor: color.confirm || '#007AFF',
+        marginTop: 10,
+        backgroundColor: color.confirm || color.info,
         borderRadius: 12,
-        shadowColor: color.confirm || '#007AFF',
+        shadowColor: color.confirm || color.info,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -383,5 +528,157 @@ const styles = StyleSheet.create({
     addButtonText: {
         color: '#FFFFFF',
         fontWeight: '600',
+    },
+
+    // 选择玩家相关样式
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        marginBottom: 16,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 15,
+        paddingVertical: 12,
+    },
+    clearSearch: {
+        padding: 4,
+    },
+    userList: {
+        maxHeight: 300,
+    },
+    userItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderColor: '#F0F0F0',
+    },
+    selectedUserItem: {
+        backgroundColor: '#E6F7FF',
+    },
+    userItemContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E0E0E0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    avatarImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#666',
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userNickname: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 4,
+    },
+    userEmail: {
+        fontSize: 14,
+        color: '#666',
+    },
+    checkmark: {
+        marginLeft: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        marginTop: 12,
+        color: '#666',
+        fontSize: 14,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        marginTop: 12,
+        color: '#666',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    addSelectedButton: {
+        marginTop: 20,
+        backgroundColor: color.confirm || color.info,
+        borderRadius: 12,
+    },
+    addSelectedButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+    },
+    disabledButton: {
+        backgroundColor: '#CCCCCC',
+        opacity: 0.7,
+    },
+
+    // 扫码加入相关样式
+    qrContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20,
+    },
+    qrTitle: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '500',
+        marginBottom: 20,
+    },
+    qrWrapper: {
+        padding: 15,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+        marginBottom: 20,
+    },
+    copyLinkButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: color.info || '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        marginTop: 10,
+    },
+    copyLinkText: {
+        color: '#FFFFFF',
+        fontWeight: '500',
+        marginLeft: 6,
+    },
+    qrHelper: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 20,
+        lineHeight: 20,
     },
 });

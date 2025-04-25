@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f9f9f9',
     },
     inputFocused: {
-        borderColor: color.iconHighlighter,
+        borderColor: color.highLighter,
         backgroundColor: '#fff',
     },
     button: {

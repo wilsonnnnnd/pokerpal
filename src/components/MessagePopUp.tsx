@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MsgPopUpProps } from '@/types';
+import { Palette } from '@/constants';
 
 const MsgPopUp: React.FC<MsgPopUpProps> = ({
     title,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     },
     noteLabel: {
         fontWeight: 'bold',
-        color: '#e74c3c',
+        color: Palette.error,
     },
     buttonContainer: {
         flexDirection: 'row',
@@ -223,10 +224,10 @@ const styles = StyleSheet.create({
     confirmButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#007BFF',
+        color: Palette.confirm,
     },
     warningButtonText: {
-        color: '#e74c3c', // 修复警告按钮文本颜色
+        color: Palette.cancel, // 修复警告按钮文本颜色
     },
 });
 

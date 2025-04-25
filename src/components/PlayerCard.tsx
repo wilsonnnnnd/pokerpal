@@ -74,7 +74,7 @@ export function PlayerCard({
                     {/* 买入信息 */}
                     <View style={styles.detailsRow}>
                         <View style={styles.detailItem}>
-                            <MaterialCommunityIcons name="cash" size={20} color={color.iconHighlighter} />
+                            <MaterialCommunityIcons name="cash" size={20} color={color.highLighter} />
                             <View style={styles.detailTexts}>
                                 <Text style={styles.detailValue}>{player.totalBuyInChips}</Text>
                                 <Text style={styles.detailLabel}>总买入</Text>
@@ -82,7 +82,7 @@ export function PlayerCard({
                         </View>
                         
                         <View style={styles.detailItem}>
-                            <MaterialCommunityIcons name="format-list-numbered" size={20} color={color.iconHighlighter} />
+                            <MaterialCommunityIcons name="format-list-numbered" size={20} color={color.highLighter} />
                             <View style={styles.detailTexts}>
                                 <Text style={styles.detailValue}>{player.buyInChipsList.length}</Text>
                                 <Text style={styles.detailLabel}>买入次数</Text>
@@ -97,7 +97,7 @@ export function PlayerCard({
                                 <MaterialCommunityIcons 
                                     name="calculator-variant" 
                                     size={20} 
-                                    color={color.iconHighlighter} 
+                                    color={color.highLighter} 
                                 />
                                 <View style={styles.detailTexts}>
                                     <Text style={styles.detailValue}>
@@ -171,8 +171,8 @@ const generatePlayerAvatar = (name: string) => {
 
 const styles = StyleSheet.create({
     touchableWrapper: {
-        marginHorizontal: 2,
-        marginVertical: 1,
+        marginHorizontal: 4,
+        marginVertical: 4,
     },
     cardWrapperPressed: {
         opacity: 0.97,

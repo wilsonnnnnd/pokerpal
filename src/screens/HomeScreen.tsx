@@ -24,6 +24,10 @@ import { usePopup } from '@/components/PopupProvider';
 import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/firebase/config';
+import { useAuthStore } from '@/stores/useAuthStore';
+import {HomePagestyles as styles} from '@/assets/styles';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -32,8 +36,11 @@ const HomeScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const { status, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
-    const { confirmPopup  } = usePopup();
-
+    const { confirmPopup } = usePopup();
+    const logout = async () => {
+        await signOut(auth)
+        useAuthStore.getState().logout()
+    }
     useEffect(() => {
         if (status === 'ongoing') {
             const confirmation = async () => {
@@ -42,13 +49,13 @@ const HomeScreen = () => {
                         title: '继续上次游戏？',
                         message: '检测到您有未完成的游戏，是否继续？',
                     });
-    
+
                     if (result) {
                         navigation.navigate('GamePlay', { gameId });
 
                     } else {
                         await deleteGameFromFirebase(gameId);
-                        useGameStore.getState().resetGame(); 
+                        useGameStore.getState().resetGame();
                         usePlayerStore.getState().resetPlayers();
 
                         Toast.show({
@@ -69,11 +76,11 @@ const HomeScreen = () => {
                     });
                 }
             };
-    
+
             confirmation();
         }
     }, []);
-    
+
     if (!isReady) {
         return (
             <View style={styles.loadingContainer}>
@@ -91,7 +98,7 @@ const HomeScreen = () => {
                         <MaterialCommunityIcons
                             name="cards-playing-outline"
                             size={64}
-                            color={color.iconHighlighter}
+                            color={color.highLighter}
                             style={styles.icon}
                         />
                         <Text style={styles.title}>德州扑克筹码记录器</Text>
@@ -128,6 +135,17 @@ const HomeScreen = () => {
                                 iconColor="#3498db"
                             />
                         </View>
+                        <View style={[styles.buttonRow, { justifyContent: 'center', }]}>
+                            <PrimaryButton
+                                title="登出"
+                                icon="logout"
+                                variant="outlined"
+                                onPress={() => logout()}
+                                style={styles.secondaryButton}
+                                iconColor="#3498db"
+                            />
+
+                        </View>
 
                     </View>
                     {/* 新游戏设置弹窗 */}
@@ -157,88 +175,6 @@ const HomeScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-    },
-    contentContainer: {
-        flex: 1,
-        padding: 24,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#ffffff',
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: '#7f8c8d',
-    },
-    headerSection: {
-        width: '100%',
-        alignItems: 'center',
-        marginTop: 40,
-        marginBottom: 40,
-    },
-    buttonsSection: {
-        width: '100%',
-        alignItems: 'center',
-        marginBottom: 40,
-    },
-    footerSection: {
-        width: '100%',
-        alignItems: 'center',
-        marginTop: 20,
-        bottom: 20,
-        position: 'absolute',
-    },
-    icon: {
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#2c3e50',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#7f8c8d',
-        marginBottom: 32,
-        textAlign: 'center',
-    },
-    startGameButton: {
-        marginBottom: 24,
-        backgroundColor: '#27ae60',
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        width: '100%',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-    },
-    secondaryButton: {
-        width: '48%',
-        borderColor: '#3498db',
-    },
 
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        padding: 20,
-    },
-    footerText: {
-        fontSize: 12,
-        color: '#95a5a6',
-        textAlign: 'center',
-    },
-});
 
 export default HomeScreen;
