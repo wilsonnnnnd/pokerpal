@@ -1,29 +1,45 @@
-import { useGameStore } from '@/stores/useGameStore';
-import { usePlayerStore } from '@/stores/usePlayerStore';
-import { useGameHistoryStore } from '@/stores/useGameHistoryStore';
+import { useGameStore } from '@/stores/useGameStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useGameHistoryStore } from '@/stores/useGameHistoryStore'
 
 export const saveGameToHistory = () => {
-    const game = useGameStore.getState();
-    const players = usePlayerStore.getState().players;
-    const addGameSnapshot = useGameHistoryStore.getState().addGameSnapshot;
+    const game = useGameStore.getState()
+    const players = usePlayerStore.getState().players
+    const addGameSnapshot = useGameHistoryStore.getState().addGameSnapshot
 
-    const playerSnapshots = players.map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        totalBuyInChips: p.totalBuyInChips,
-        buyInCount: p.buyInChipsList.length,
-        endingChipCount: p.endingChipCount ?? 0,
-        chipDifference: p.chipDifference ?? 0,
-        cashDifference: p.cashDifference ?? 0,
-        roi: p.roi ?? 0,
-    }));
+    const now = new Date().toISOString()
 
-    const totalBuyIn = playerSnapshots.reduce((sum, p) => sum + p.totalBuyInChips, 0);
-    const totalEnding = playerSnapshots.reduce((sum, p) => sum + p.endingChipCount, 0);
+    const playerSnapshots = players.map(player => {
+        const {
+            id,
+            nickname,
+            totalBuyInChips,
+            buyInChipsList,
+            settleChipCount = 0,
+            settleChipDiff = 0,
+            settleCashDiff = 0,
+            settleROI = 0,
+        } = player
+
+        return {
+            id,
+            nickname,
+            totalBuyInChips,
+            buyInCount: buyInChipsList.length,
+            endingChipCount: settleChipCount,
+            chipDifference: settleChipDiff,
+            cashDifference: settleCashDiff,
+            roiSum: settleROI,
+        }
+    })
+
+    const totalBuyIn = playerSnapshots.reduce((sum, p) => sum + p.totalBuyInChips, 0)
+    const totalEnding = playerSnapshots.reduce((sum, p) => sum + p.endingChipCount, 0)
 
     addGameSnapshot({
         id: game.gameId,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         smallBlind: game.smallBlind,
         bigBlind: game.bigBlind,
         baseCashAmount: game.baseCashAmount,
@@ -32,5 +48,5 @@ export const saveGameToHistory = () => {
         totalEnding,
         totalDiff: totalEnding - totalBuyIn,
         players: playerSnapshots,
-    });
-};
+    })
+}

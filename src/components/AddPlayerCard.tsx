@@ -56,6 +56,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
     const addPlayer = usePlayerStore((state) => state.addPlayer);
+    const players = usePlayerStore((state) => state.players); // Get current players from store
     const getGame = useGameStore((state) => state.getGame);
     const gameId = useGameStore((state) => state.gameId);
     const token = useGameStore((state) => state.token);
@@ -91,9 +92,16 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         loadUsers();
     }, []);
 
-    const filteredUsers = registeredUsers.filter(user =>
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.nickname.toLowerCase().includes(searchTerm.toLowerCase())
+    // Get the emails of existing players to filter them out
+    const existingPlayerEmails = players.map(player => (player.email ?? '').toLowerCase()).filter(email => email);
+
+    // Filter users: exclude those already added and match the search term
+    const filteredUsers = registeredUsers.filter(user => 
+        // Filter out existing players by email
+        !existingPlayerEmails.includes(user.email.toLowerCase()) && 
+        // Match search term
+        (user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.nickname.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const toggleSelect = (email: string) => {
@@ -161,7 +169,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             return;
         }
 
-        const baseChipAmount = getGame().baseChipAmount;
+
         selectedEmails.forEach(email => {
             const user = registeredUsers.find(u => u.email === email);
             if (!user) return;
@@ -175,7 +183,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 photoURL: user.photoURL,
                 buyInChipsList: [],
                 buyInCount: 1,
-                totalBuyInChips: baseChipAmount,
+                totalBuyInChips: getGame().baseChipAmount,
                 totalBuyInCash: getGame().baseCashAmount,
                 finalized: false,
                 isActive: true,
@@ -252,8 +260,13 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             <View style={styles.emptyContainer}>
                                 <Ionicons name="people" size={50} color="#ccc" />
                                 <Text style={styles.emptyText}>
-                                    {searchTerm ? '没有找到匹配的玩家' : '暂无已注册玩家'}
+                                    {searchTerm ? '没有找到匹配的玩家' : existingPlayerEmails.length > 0 ? '没有更多可添加的玩家' : '暂无已注册玩家'}
                                 </Text>
+                                {existingPlayerEmails.length > 0 && !searchTerm && (
+                                    <Text style={styles.emptySubText}>
+                                        所有已注册的玩家都已添加到游戏中
+                                    </Text>
+                                )}
                             </View>
                         ) : (
                             <ScrollView style={styles.userList}>
@@ -621,6 +634,12 @@ const styles = StyleSheet.create({
         marginTop: 12,
         color: '#666',
         fontSize: 15,
+        textAlign: 'center',
+    },
+    emptySubText: {
+        marginTop: 8,
+        color: '#999',
+        fontSize: 13,
         textAlign: 'center',
     },
     addSelectedButton: {

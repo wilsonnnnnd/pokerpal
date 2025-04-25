@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -27,7 +27,8 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
-import {HomePagestyles as styles} from '@/assets/styles';
+import { HomePagestyles as styles } from '@/assets/styles';
+
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -144,7 +145,6 @@ const HomeScreen = () => {
                                 style={styles.secondaryButton}
                                 iconColor="#3498db"
                             />
-
                         </View>
 
                     </View>
