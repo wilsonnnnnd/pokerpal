@@ -173,6 +173,7 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
             batch.set(emailRef, {
                 nickname: player.nickname,
                 uid: player.id,
+                photoURL: player.photoURL,
                 registered: true,
             }, { merge: true })
             operationCount++;
