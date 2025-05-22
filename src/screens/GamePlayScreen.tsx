@@ -45,6 +45,7 @@ import { Player } from '@/types';
 
 // Styles
 import { GamePlaystyles as styles } from '@/assets/styles';
+import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -62,7 +63,7 @@ type ModalState =
 export default function GamePlayScreen() {
     const navigation = useNavigation<HomeScreenNav>();
     const [modalState, setModalState] = useState<ModalState>(null);
-
+    const [showSettleSummary, setShowSettleSummary] = useState(false);
     // Refs
     const timerRef = useRef<CallTimerHandle>(null);
 
@@ -122,27 +123,26 @@ export default function GamePlayScreen() {
             return;
         }
 
+        // 弹出结算总览弹窗
+        setShowSettleSummary(true);
+    };
+
+    const handleConfirmSave = async () => {
         const totalBuyIn = players.reduce((sum, p) => sum + p.totalBuyInChips, 0);
         const totalEnding = players.reduce((sum, p) => sum + (p.settleChipCount || 0), 0);
         const diff = totalEnding - totalBuyIn;
         const gameId = useGameStore.getState().gameId;
 
-        const confirmed = await showPopup({
-            title: '结束游戏',
-            message: '确定要结束游戏并保存记录吗？',
-            isWarning: true,
-        });
-
-        if (await confirmed) {
-            saveGameToHistory();
-            await saveGameToFirebase(gameId, players);
-            useGameStore.getState().finalizeGame();
-            log('Game', `🏁 游戏结束，总差额 ${diff}`);
-            clearLogs();
-            resetPlayers();
-            navigation.navigate('Home');
-        }
+        setShowSettleSummary(false);
+        saveGameToHistory();
+        await saveGameToFirebase(gameId, players);
+        useGameStore.getState().finalizeGame();
+        log('Game', `🏁 游戏结束，总差额 ${diff}`);
+        clearLogs();
+        resetPlayers();
+        navigation.navigate('Home');
     };
+
 
     // Player action handlers
     const handleBuyIn = (player: Player) => {
@@ -361,6 +361,14 @@ export default function GamePlayScreen() {
                             />
                         </View>
                     </Modal>
+                )}
+
+                {showSettleSummary && (
+                    <SettleSummaryModal
+                        players={players}
+                        onConfirm={handleConfirmSave}
+                        onCancel={() => setShowSettleSummary(false)}
+                    />
                 )}
 
                 {modalState?.type === 'buy-in' && (

@@ -424,6 +424,7 @@ export const GamePlayerRankstyles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
     },
+    
 });
 
 export const GamePlaystyles = StyleSheet.create({
@@ -547,7 +548,50 @@ export const GamePlaystyles = StyleSheet.create({
     headerButton: {
         padding: 6,
         borderRadius: 8,
-    }
+    },
+    summaryModal: {
+        backgroundColor: 'white',
+        marginHorizontal: 20,
+        borderRadius: 12,
+        padding: 16,
+        elevation: 10,
+    },
+    summaryTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+        borderBottomWidth: 0.5,
+        borderColor: '#ccc',
+    },
+    summaryName: {
+        flex: 1,
+        fontWeight: '500',
+    },
+    summaryValue: {
+        width: 80,
+        textAlign: 'right',
+    },
+    summaryButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 16,
+    },
+    summaryCancelButton: {
+        flex: 1,
+        marginRight: 8,
+        backgroundColor: '#ccc',
+    },
+    summaryConfirmButton: {
+        flex: 1,
+        marginLeft: 8,
+    },
+    
 });
 
 export const GameHistorystyles = StyleSheet.create({

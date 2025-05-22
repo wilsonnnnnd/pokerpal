@@ -24,7 +24,6 @@ export const useGameStore = create<GameState>()(
                         baseCashAmount,
                         smallBlind,
                         bigBlind,
-                        startTime: new Date().toISOString(),
                         status: 'ongoing',
                         finalized: false,
                     }),
@@ -35,22 +34,22 @@ export const useGameStore = create<GameState>()(
                     bigBlind: get().bigBlind,
                     baseChipAmount: get().baseChipAmount,
                     baseCashAmount: get().baseCashAmount,
-                    startTime: get().startTime,
-                    endTime: get().endTime,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
                     status: get().status,
                 }),
 
                 finalizeGame: () => {
                     set({
                         finalized: true,
-                        endTime: new Date().toISOString(),
+
                         status: 'finished',
                     });
                 },
 
                 finishGame: () =>
                     set({
-                        endTime: new Date().toISOString(),
+
                         status: 'finished',
                     }),
 
@@ -61,8 +60,6 @@ export const useGameStore = create<GameState>()(
                         bigBlind: 0,
                         baseChipAmount: 0,
                         baseCashAmount: 0,
-                        startTime: null,
-                        endTime: null,
                         status: 'idle',
                         finalized: false,
                         token: null,
@@ -89,8 +86,6 @@ export const useGameStore = create<GameState>()(
                     bigBlind: state.bigBlind,
                     baseChipAmount: state.baseChipAmount,
                     baseCashAmount: state.baseCashAmount,
-                    startTime: state.startTime,
-                    endTime: state.endTime,
                     status: state.status,
                     finalized: state.finalized,
                     token: state.token, 

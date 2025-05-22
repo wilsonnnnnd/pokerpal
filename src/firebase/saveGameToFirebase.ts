@@ -15,6 +15,9 @@ import { playerDoc, gameDoc, userDoc } from '@/constants/namingDb'
 import Toast from 'react-native-toast-message'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { logInfo } from '@/utils/useLogger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { cacheGameForRetry } from '@/utils/gameCache'
+
 
 type GraphPoint = {
     gameId: string
@@ -229,6 +232,8 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         } else if (err.message) {
             errorMessage = err.message;
         }
+
+        await cacheGameForRetry(gameId, players || []);
         
         Toast.show({
             type: 'error',

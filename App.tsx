@@ -13,7 +13,7 @@ import LoginScreen from './src/screens/LoginScreen'; // ✅ 登录页面
 import { Header } from '@/components/Header';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
-
+import { retryCachedGames } from '@/utils/gameRetry';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './src/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -37,24 +37,31 @@ export default function App() {
   const user = useAuthStore((state) => state.user)
   const setAuthUser = useAuthStore((state) => state.login)
   const clearAuthUser = useAuthStore((state) => state.logout)
-  
+
+
   // ✅ 监听登录状态
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setAuthUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          displayName: firebaseUser.displayName ?? '',
-          photoURL: firebaseUser.photoURL ?? '',
-        })
-      } else {
-        clearAuthUser()
-      }
-      setIsAuthInitialized(true)
-    })
-    return unsubscribe
-  }, [])
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    if (firebaseUser) {
+      setAuthUser({
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName ?? '',
+        photoURL: firebaseUser.photoURL ?? '',
+      });
+
+      // ✅ 登录后重试缓存游戏
+      retryCachedGames();
+    } else {
+      clearAuthUser();
+    }
+
+    setIsAuthInitialized(true);
+  });
+
+  return unsubscribe;
+}, []);
+
   if (!isAuthInitialized) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -62,6 +69,7 @@ export default function App() {
       </View>
     );
   }
+
 
   return (
     <SafeAreaProvider>
