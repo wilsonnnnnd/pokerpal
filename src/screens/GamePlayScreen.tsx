@@ -134,8 +134,11 @@ export default function GamePlayScreen() {
         const gameId = useGameStore.getState().gameId;
 
         setShowSettleSummary(false);
+        console.log('Game', `🏁 游戏结束，总差额 ${diff}，总买入 ${totalBuyIn}，结算总筹码 ${totalEnding}`);
         saveGameToHistory();
+        console.log('Game', `🏁 保存游戏到 Firebase，游戏 ID: ${gameId}`);
         await saveGameToFirebase(gameId, players);
+        console.log('Game', `🏁 保存游戏到本地存储，游戏 ID: ${gameId}`);
         useGameStore.getState().finalizeGame();
         log('Game', `🏁 游戏结束，总差额 ${diff}`);
         clearLogs();
