@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientCard } from './GradientCard';
@@ -26,6 +26,10 @@ export function PlayerCard({
     const profit = (player.settleChipCount || 0) - player.totalBuyInChips;
     const isSettled = player.settleChipCount !== undefined;
 
+
+    useEffect(() => {
+        console.log('PlayerCard mounted for:', player);
+    }, [player]);
     return (
         <Pressable
             onLongPress={() => onLongPress(player)}

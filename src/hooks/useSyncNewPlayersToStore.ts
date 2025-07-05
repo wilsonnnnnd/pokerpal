@@ -12,10 +12,14 @@ function sanitizeRemotePlayer(remote: Partial<Player>, baseChipAmount: number): 
         email: (remote.email || '').toLowerCase(),
         photoURL: remote.photoURL || '',
         buyInChipsList: Array.isArray(remote.buyInChipsList) ? remote.buyInChipsList : [],
-        totalBuyInChips: remote.totalBuyInChips ?? baseChipAmount,
+        totalBuyInChips: baseChipAmount,
         isActive: remote.isActive ?? true,
         joinAt: remote.joinAt || new Date().toISOString(),
         isSyncing: remote.isSyncing ?? false,
+
+
+
+
 
         // 🆕 统一 settle 命名字段
         settleChipCount: remote.settleChipCount ?? undefined,
@@ -38,19 +42,20 @@ export function startPlayerSyncListener(
 ) {
     const { mergePlayers, setSyncing } = usePlayerStore.getState();
 
+    logFn('Sync', `📡 Attempting to start listener for gameId=${gameId}`);
     if (!enabled) {
-        logFn('Sync', '🛑 取消监听条件满足，终止远程玩家监听');
+        logFn('Sync', '🛑 Listener not enabled, skipping.');
         stopPlayerSyncListener(logFn);
         return;
     }
 
     if (currentGameIdRef === gameId) {
-        logFn('Sync', `⚠️ 已监听 gameId=${gameId}，跳过重复监听`);
+        logFn('Sync', `⚠️ Listener already active for gameId=${gameId}, skipping.`);
         return;
     }
 
     stopPlayerSyncListener(logFn);
-    logFn('Sync', `📡 开始监听远程玩家数据 gameId=${gameId}`);
+    logFn('Sync', `📡 Starting new listener for gameId=${gameId}`);
     currentGameIdRef = gameId;
     setSyncing(true);
 
@@ -58,8 +63,10 @@ export function startPlayerSyncListener(
     unsubscribeRef = onSnapshot(
         playerRef,
         (snapshot) => {
+            logFn('Sync', `✅ Received ${snapshot.docs.length} remote players for gameId=${gameId}`);
             const remotePlayers = snapshot.docs.map((doc) => {
                 const raw = doc.data();
+                logFn('Sync', `Player data: ${JSON.stringify(raw)}`);
                 return sanitizeRemotePlayer({ id: doc.id, ...raw }, baseChipAmount);
             });
 
@@ -70,6 +77,7 @@ export function startPlayerSyncListener(
         (error) => {
             console.error('Error syncing players:', error);
             setSyncing(false);
+            logFn('Sync', `❌ Error syncing players for gameId=${gameId}: ${error.message}`);
             Toast.show({
                 type: 'error',
                 text1: '同步失败',

@@ -73,6 +73,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
         // 清理函数，组件卸载或者依赖变化时执行
         return () => {
+            console.log('Stopping player sync listener');
             stopPlayerSyncListener(logInfo);
         };
     }, [activeTab, gameId]);

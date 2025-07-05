@@ -24,9 +24,6 @@ import { usePopup } from '@/components/PopupProvider';
 import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/firebase/config';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { HomePagestyles as styles } from '@/assets/styles';
 
 
@@ -38,10 +35,7 @@ const HomeScreen = () => {
     const { status, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
     const { confirmPopup } = usePopup();
-    const logout = async () => {
-        await signOut(auth)
-        useAuthStore.getState().logout()
-    }
+
     useEffect(() => {
         if (status === 'ongoing') {
             const confirmation = async () => {
@@ -132,16 +126,6 @@ const HomeScreen = () => {
                                 icon="account-group"
                                 variant="outlined"
                                 onPress={() => navigation.navigate('GamePlayerRank')}
-                                style={styles.secondaryButton}
-                                iconColor="#3498db"
-                            />
-                        </View>
-                        <View style={[styles.buttonRow, { justifyContent: 'center', }]}>
-                            <PrimaryButton
-                                title="登出"
-                                icon="logout"
-                                variant="outlined"
-                                onPress={() => logout()}
                                 style={styles.secondaryButton}
                                 iconColor="#3498db"
                             />

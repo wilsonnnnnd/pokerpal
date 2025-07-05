@@ -13,7 +13,6 @@ import { useGameStore } from '@/stores/useGameStore'
 import { Player } from '@/types'
 import { playerDoc, gameDoc, userDoc } from '@/constants/namingDb'
 import Toast from 'react-native-toast-message'
-import { useAuthStore } from '@/stores/useAuthStore'
 import { logInfo } from '@/utils/useLogger'
 import { cacheGameForRetry } from '@/utils/gameCache'
 import { preparePlayerGraphBatch } from './preparePlayerGraphBatch'
@@ -30,7 +29,7 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
     const batch = writeBatch(db)
     const rate = game.baseCashAmount / game.baseChipAmount
     const isOngoing = players?.length !== 0
-    const host = useAuthStore.getState().user?.displayName
+    const host = 'host'
     const originalGameState = { ...useGameStore.getState() }
 
     const gameRef = doc(db, gameDoc, gameId)
@@ -152,7 +151,7 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
             const saved = snap.data()?.history ?? []
             const savedIds = saved.map((i: any) => i.gameId).sort()
             const expectedIds = history.map(i => i.gameId).sort()
-            const match = JSON.stringify(savedIds) === JSON.stringify(expectedIds)
+
 
         }
 
