@@ -2,12 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     Modal,
     ActivityIndicator,
     ScrollView,
-    ImageBackground,
-    StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,7 +34,7 @@ const HomeScreen = () => {
     const { confirmPopup } = usePopup();
 
     useEffect(() => {
-        if (!finalized) {
+        if (!finalized  && gameId) {
             const confirmation = async () => {
                 try {
                     const result = await confirmPopup({
