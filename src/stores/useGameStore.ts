@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState } from '@/types';
+import { serverTimestamp } from 'firebase/firestore';
 
 export const useGameStore = create<GameState>()(
     devtools(
@@ -12,8 +13,8 @@ export const useGameStore = create<GameState>()(
                 bigBlind: 0,
                 baseChipAmount: 0,
                 baseCashAmount: 0,
-                startTime: null,
-                endTime: null,
+                createdAt: serverTimestamp(),
+                updatedAt: undefined,
                 status: 'idle',
                 finalized: false,
                 token: null,
@@ -27,29 +28,28 @@ export const useGameStore = create<GameState>()(
                         status: 'ongoing',
                         finalized: false,
                     }),
-                    setToken: (token: string) => set({ token }),
+                setToken: (token: string) => set({ token }),
                 getGame: () => ({
                     gameId: get().gameId,
                     smallBlind: get().smallBlind,
                     bigBlind: get().bigBlind,
                     baseChipAmount: get().baseChipAmount,
                     baseCashAmount: get().baseCashAmount,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
                     status: get().status,
                 }),
 
                 finalizeGame: () => {
                     set({
                         finalized: true,
-
                         status: 'finished',
                     });
                 },
 
                 finishGame: () =>
                     set({
-
+                        finalized: true,
                         status: 'finished',
                     }),
 
@@ -86,9 +86,11 @@ export const useGameStore = create<GameState>()(
                     bigBlind: state.bigBlind,
                     baseChipAmount: state.baseChipAmount,
                     baseCashAmount: state.baseCashAmount,
+                    createdAt: state.createdAt,
+                    updatedAt: state.updatedAt,
                     status: state.status,
                     finalized: state.finalized,
-                    token: state.token, 
+                    token: state.token,
                     setGame: state.setGame,
                     getGame: state.getGame,
                     finalizeGame: state.finalizeGame,

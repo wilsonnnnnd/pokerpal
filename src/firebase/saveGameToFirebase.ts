@@ -28,10 +28,9 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
     const game = useGameStore.getState()
     const batch = writeBatch(db)
     const rate = game.baseCashAmount / game.baseChipAmount
-    const isOngoing = players?.length !== 0
     const host = 'host'
     const originalGameState = { ...useGameStore.getState() }
-
+    console.info('Saving game to Firebase:', game);
     const gameRef = doc(db, gameDoc, gameId)
     batch.set(gameRef, {
         gameId,
@@ -41,10 +40,10 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         baseChipAmount: game.baseChipAmount,
         playerCount: players?.length ?? 0,
         createdBy: host,
-        createdAt: serverTimestamp(),
+        createdAt: game.createdAt,
         updatedAt: serverTimestamp(),
-        finalized: !isOngoing,
-        status: isOngoing ? 'ongoing' : 'finished',
+        finalized: game.finalized,
+        status: game.status,
         token: game.token,
     })
 

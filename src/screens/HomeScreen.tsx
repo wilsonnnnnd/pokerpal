@@ -137,6 +137,7 @@ const HomeScreen = () => {
                         <View style={styles.overlay}>
                             <GameSetupCard
                                 onConfirm={() => {
+                                    
                                     const { gameId } = useGameStore.getState(); // 重新获取 gameId
                                     setModalVisible(false);
                                     navigation.navigate('GamePlay', { gameId });

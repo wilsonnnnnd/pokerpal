@@ -33,7 +33,7 @@ import DecisionWheel from '@/components/DecisionWheel';
 
 // Utils
 import { useLogger } from '@/utils/useLogger';
-import { saveGameToHistory } from '@/utils/saveGameToHistory';
+import { saveGameToHistory } from '@/firebase/saveGameToHistory';
 import { saveGameToFirebase } from '@/firebase/saveGameToFirebase';
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
@@ -82,10 +82,6 @@ export default function GamePlayScreen() {
     const { confirmPopup: showPopup } = usePopup();
     const stats = useGameStats(players);
 
-    // Active players count for display
-    const activePlayers = players.filter(p => p.isActive).length;
-    const totalPlayers = players.length;
-
     // Header setup
     useFocusEffect(
         useCallback(() => {
@@ -133,13 +129,14 @@ export default function GamePlayScreen() {
         const diff = totalEnding - totalBuyIn;
         const gameId = useGameStore.getState().gameId;
 
+
+        console.log('Game', `🏁 保存游戏到本地存储，游戏 ID: ${gameId}`);
+        useGameStore.getState().finalizeGame();
         setShowSettleSummary(false);
         console.log('Game', `🏁 游戏结束，总差额 ${diff}，总买入 ${totalBuyIn}，结算总筹码 ${totalEnding}`);
         saveGameToHistory();
         console.log('Game', `🏁 保存游戏到 Firebase，游戏 ID: ${gameId}`);
         await saveGameToFirebase(gameId, players);
-        console.log('Game', `🏁 保存游戏到本地存储，游戏 ID: ${gameId}`);
-        useGameStore.getState().finalizeGame();
         log('Game', `🏁 游戏结束，总差额 ${diff}`);
         clearLogs();
         resetPlayers();
