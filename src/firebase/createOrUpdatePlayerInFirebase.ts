@@ -22,7 +22,7 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
             email,
             photoURL: player.photoURL || '',
             isActive: true,
-            createdAt: serverTimestamp(),
+            created: new Date().toISOString(),
         }, { merge: true });
 
         // 2️⃣ 写入 email → uid 映射（用于登录白名单校验）

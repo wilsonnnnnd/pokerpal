@@ -11,6 +11,7 @@ import { Palette as color } from '@/constants';
 import { GameSnapshot } from '@/types';
 import Toast from 'react-native-toast-message';
 import {GameHistorystyles as styles} from '@/assets/styles';
+import { gameDoc } from '@/constants/namingDb';
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function GameHistoryScreen() {
@@ -22,7 +23,7 @@ export default function GameHistoryScreen() {
         const fetchGames = async () => {
             setLoading(true);
             try {
-                const snapshot = await getDocs(collection(db, 'games'));
+                const snapshot = await getDocs(collection(db, gameDoc));
                 const result: GameSnapshot[] = [];
 
                 for (const docSnap of snapshot.docs) {
@@ -30,7 +31,7 @@ export default function GameHistoryScreen() {
                     const gameId = data.gameId;
 
                     // 获取玩家子集合
-                    const playersSnapshot = await getDocs(collection(db, 'games', gameId, 'players'));
+                    const playersSnapshot = await getDocs(collection(db, gameDoc, gameId, 'players'));
                     const players = playersSnapshot.docs.map((playerDoc) => {
                         const data = playerDoc.data();
                         const email = data.email || '';
@@ -49,8 +50,8 @@ export default function GameHistoryScreen() {
 
                     result.push({
                         id: gameId,
-                        createdAt: data.createdAt,
-                        updatedAt: data.updatedAt,
+                        created: data.created,
+                        updated: data.updated,
                         smallBlind: data.smallBlind,
                         bigBlind: data.bigBlind,
                         baseCashAmount: data.baseCashAmount,
@@ -65,8 +66,8 @@ export default function GameHistoryScreen() {
 
                 // 按时间排序，最新的游戏在前面
                 result.sort((a, b) => {
-                    const dateA = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt.toDate();
-                    const dateB = typeof b.createdAt === 'string' ? new Date(b.createdAt) : b.createdAt.toDate();
+                    const dateA = typeof a.created === 'string' ? new Date(a.created) : a.created.toDate();
+                    const dateB = typeof b.created === 'string' ? new Date(b.created) : b.created.toDate();
                     return dateB.getTime() - dateA.getTime();
                 });
                 setHistory(result);
@@ -113,9 +114,9 @@ export default function GameHistoryScreen() {
 
     const renderGameCard = ({ item }: { item: GameSnapshot }) => {
         const { winner, loser } = getWinnerAndLoser(item);
-        const gameDate = typeof item.createdAt === 'string' 
-            ? new Date(item.createdAt) 
-            : item.createdAt.toDate();
+        const gameDate = typeof item.created === 'string' 
+            ? new Date(item.created) 
+            : item.created.toDate();
         const day = gameDate.toLocaleDateString('zh-CN', { day: '2-digit' });
         const month = gameDate.toLocaleDateString('zh-CN', { month: '2-digit' });
         const time = gameDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });

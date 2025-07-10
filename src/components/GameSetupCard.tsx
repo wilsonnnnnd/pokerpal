@@ -174,8 +174,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 bigBlind: gameData.bigBlind?? 0,
                 baseChipAmount: gameData.baseChipAmount?? 0,
                 baseCashAmount: gameData.baseCashAmount?? 0,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                created: new Date().toISOString(),
+                updated: new Date().toISOString(),
             });
 
             // 记录游戏设置
@@ -186,8 +186,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 bigBlind: gameData.bigBlind,
                 baseChipAmount: gameData.baseChipAmount,
                 baseCashAmount: gameData.baseCashAmount,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
+                created: new Date().toISOString(),
+                updated: new Date().toISOString(),
             })}`);
 
             // 同步到Firebase

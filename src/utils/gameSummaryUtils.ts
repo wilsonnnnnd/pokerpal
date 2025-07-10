@@ -17,7 +17,7 @@ interface Player {
 }
 
 interface Game {
-    createdAt: string;
+    created: string;
     smallBlind: number;
     bigBlind: number;
     players: Player[];
@@ -35,8 +35,8 @@ export const generateGameSummary = (game: Game): string => {
         `${p.nickname}: ${p.chipDifference >= 0 ? '+' : ''}${p.chipDifference} 筹码`
     ).join('\n');
 
-    const gameDate = new Date(game.createdAt).toLocaleDateString('zh-CN');
-    const gameTime = new Date(game.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const gameDate = new Date(game.created).toLocaleDateString('zh-CN');
+    const gameTime = new Date(game.created).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
     return `🃏 德州扑克战绩速报 🃏
   ----------------------------

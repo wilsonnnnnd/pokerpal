@@ -4,9 +4,7 @@ import {
     setDoc,
     writeBatch,
     increment,
-    serverTimestamp,
     getDoc,
-    FieldValue,
     Timestamp,
 } from 'firebase/firestore'
 import { useGameStore } from '@/stores/useGameStore'
@@ -21,7 +19,7 @@ type GraphPoint = {
     gameId: string
     diff: number
     roi: number
-    ts: Timestamp | FieldValue
+    ts: Timestamp
 }
 
 export async function saveGameToFirebase(gameId: string, players?: Player[]): Promise<void> {
@@ -40,8 +38,8 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         baseChipAmount: game.baseChipAmount,
         playerCount: players?.length ?? 0,
         createdBy: host,
-        createdAt: game.createdAt,
-        updatedAt: serverTimestamp(),
+        created: game.created,
+        updated: new Date().toISOString(),
         finalized: game.finalized,
         status: game.status,
         token: game.token,
@@ -82,7 +80,7 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
             photoURL: player.photoURL || '',
             isActive: true,
             role: 'player',
-            [userSnap.exists() ? 'updatedAt' : 'createdAt']: serverTimestamp(),
+            [userSnap.exists() ? 'updated' : 'created']: new Date().toISOString(),
         }
 
         batch.set(userRef, userData, { merge: true })
@@ -115,12 +113,12 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
             operationCount++
         }
 
-        const gameHistoryRef = doc(db, userDoc, player.id, 'games', gameId)
+        const gameHistoryRef = doc(db, userDoc, player.id, gameDoc, gameId)
         const gameHistorySnap = await getDoc(gameHistoryRef)
         if (!gameHistorySnap.exists()) {
             batch.set(gameHistoryRef, {
                 gameId,
-                createdAt: serverTimestamp(),
+                created: new Date().toISOString(),
                 settleCashAmount: player.settleCashAmount ?? null,
                 settleCashDiff: player.settleCashDiff ?? null,
                 settleROI: player.settleROI ?? null,
@@ -131,9 +129,9 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         }
         const graphResult = await preparePlayerGraphBatch(player, gameId, batch)
 
-        if (graphResult) {
-            graphWrites.push(graphResult)
-
+        if (graphResult !== null) {
+            console.log('Graph Result:', graphResult);
+            graphWrites.push(graphResult);
         }
     }
 
@@ -148,10 +146,6 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         for (const { ref, history } of graphWrites) {
             const snap = await getDoc(ref)
             const saved = snap.data()?.history ?? []
-            const savedIds = saved.map((i: any) => i.gameId).sort()
-            const expectedIds = history.map(i => i.gameId).sort()
-
-
         }
 
         Toast.show({
@@ -164,18 +158,9 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
     } catch (err: any) {
         console.error('Error saving game to Firebase:', err)
         useGameStore.setState(originalGameState)
-
-        let errorMessage = '游戏保存失败，请检查网络'
-        if (err?.code === 'permission-denied') {
-            errorMessage = '权限不足，需要管理员账户'
-        } else if (err?.code === 'auth/admin-restricted-operation') {
-            errorMessage = '管理员操作受限，请重新登录'
-        } else if (err.message) {
-            errorMessage = err.message
-        }
-
         await cacheGameForRetry(gameId, players || [])
 
+        const errorMessage = err?.message || '未知错误';
         Toast.show({
             type: 'error',
             text1: '❌ 上传失败',

@@ -46,7 +46,7 @@ export default function GameDetailScreen() {
 
     // 日期格式化
     const gameDate = new Date(
-        typeof game.createdAt === 'string' ? game.createdAt : game.createdAt.toDate()
+        typeof game.created === 'string' ? game.created : game.created.toDate()
     );
     const dateString = gameDate.toLocaleDateString('en-AU', {
         year: 'numeric',

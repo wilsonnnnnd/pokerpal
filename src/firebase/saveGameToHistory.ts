@@ -38,8 +38,8 @@ export const saveGameToHistory = () => {
 
     addGameSnapshot({
         id: game.gameId,
-        createdAt: now,
-        updatedAt: now,
+        created: now,
+        updated: now,
         smallBlind: game.smallBlind,
         bigBlind: game.bigBlind,
         baseCashAmount: game.baseCashAmount,
