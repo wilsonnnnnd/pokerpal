@@ -14,7 +14,6 @@ export const useGameStore = create<GameState>()(
                 baseCashAmount: 0,
                 created: new Date().toISOString(),
                 updated: undefined,
-                status: 'idle',
                 finalized: false,
                 token: null,
                 setGame: ({ gameId, baseChipAmount, baseCashAmount, smallBlind, bigBlind }) =>
@@ -24,8 +23,8 @@ export const useGameStore = create<GameState>()(
                         baseCashAmount,
                         smallBlind,
                         bigBlind,
-                        status: 'ongoing',
                         finalized: false,
+                        created: new Date().toISOString(),
                     }),
                 setToken: (token: string) => set({ token }),
                 getGame: () => ({
@@ -34,23 +33,20 @@ export const useGameStore = create<GameState>()(
                     bigBlind: get().bigBlind,
                     baseChipAmount: get().baseChipAmount,
                     baseCashAmount: get().baseCashAmount,
-                    created: new Date().toISOString(),
-                    updated: new Date().toISOString(),
-                    status: get().status,
+
                 }),
 
                 finalizeGame: () => {
                     set({
                         finalized: true,
-
-                        status: 'finished',
+                        updated: new Date().toISOString(),
                     });
                 },
 
                 finishGame: () =>
                     set({
                         finalized: true,
-                        status: 'finished',
+                        updated: new Date().toISOString(),
                     }),
 
                 resetGame: () =>
@@ -60,7 +56,6 @@ export const useGameStore = create<GameState>()(
                         bigBlind: 0,
                         baseChipAmount: 0,
                         baseCashAmount: 0,
-                        status: 'idle',
                         finalized: false,
                         token: null,
                     }),
@@ -88,7 +83,6 @@ export const useGameStore = create<GameState>()(
                     baseCashAmount: state.baseCashAmount,
                     created: state.created,
                     updated: state.updated,
-                    status: state.status,
                     finalized: state.finalized,
                     token: state.token,
                     setGame: state.setGame,

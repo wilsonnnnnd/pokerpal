@@ -46,17 +46,14 @@ export default function GameDetailScreen() {
 
     // 日期格式化
     const gameDate = new Date(
-        typeof game.created === 'string' ? game.created : game.created.toDate()
+        game.created ? (typeof game.created === 'string' ? game.created : game.created.toDate()) : new Date(0)
     );
-    const dateString = gameDate.toLocaleDateString('en-AU', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    });
-    const timeString = gameDate.toLocaleTimeString('en-AU', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const dateString = String(gameDate.getFullYear()) + '-' +
+        String(gameDate.getMonth() + 1).padStart(2, '0') + '-' +
+        String(gameDate.getDate()).padStart(2, '0');
+    const timeString = String(gameDate.getHours()).padStart(2, '0') + ':' +
+        String(gameDate.getMinutes()).padStart(2, '0');
+        
 
     // 生成随机头像颜色
     const generateAvatarColor = (name: string) => {

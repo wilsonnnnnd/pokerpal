@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type GameStatus = 'idle' | 'ongoing' | 'finished';
+
 export type GameState = {
     gameId: string;
     smallBlind: number;
@@ -9,7 +9,7 @@ export type GameState = {
     baseCashAmount: number;
     created: string | Timestamp;
     updated?: string | Timestamp;
-    status: GameStatus;
+
     finalized: boolean;
     token: string | null;
     setToken: (token: string) => void;
@@ -27,9 +27,6 @@ export type GameState = {
         gameId: string;
         baseChipAmount: number;
         baseCashAmount: number;
-        created: string | Timestamp;
-        updated: string | Timestamp;
-        status: GameStatus;
     };
 
     finishGame: () => void;
@@ -57,7 +54,7 @@ export type GameSnapshot = {
     totalBuyIn: number;
     totalEnding: number;
     totalDiff: number;
-    created: string | Timestamp;
+    created: string | Timestamp | null;
     updated: string | Timestamp;
     players: PlayerSnapshot[];
 };

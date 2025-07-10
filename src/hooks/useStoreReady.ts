@@ -8,13 +8,13 @@ export function useStoreReady() {
         player: false,
     });
 
-    const gameStatus = useGameStore((state) => state.status);
+    const gameStatus = useGameStore((state) => state.finalized ? 'finished' : 'ongoing');
     const players = usePlayerStore((state) => state.players);
 
     const playerReadySet = useRef(false); // 用于避免无限更新
 
     useEffect(() => {
-        if (gameStatus === 'idle' || gameStatus === 'ongoing' || gameStatus === 'finished') {
+        if ( gameStatus === 'ongoing' || gameStatus === 'finished') {
             setReadyFlags((prev) => ({ ...prev, game: true }));
         }
     }, [gameStatus]);

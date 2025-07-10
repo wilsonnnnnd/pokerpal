@@ -10,12 +10,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { GameSnapshot } from '@/types';
 import Toast from 'react-native-toast-message';
-import {GameHistorystyles as styles} from '@/assets/styles';
+import { GameHistorystyles as styles } from '@/assets/styles';
 import { gameDoc } from '@/constants/namingDb';
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function GameHistoryScreen() {
     const { history, setHistory, clearHistory } = useGameHistoryStore();
+    console.log('GameHistoryScreen history:', history);
     const navigation = useNavigation<HomeScreenNav>();
     const [loading, setLoading] = useState(true);
 
@@ -48,9 +49,10 @@ export default function GameHistoryScreen() {
                         };
                     });
 
+                    const created = data.created || new Date(0); // Fallback to epoch if `created` is undefined
                     result.push({
                         id: gameId,
-                        created: data.created,
+                        created,
                         updated: data.updated,
                         smallBlind: data.smallBlind,
                         bigBlind: data.bigBlind,
@@ -66,8 +68,8 @@ export default function GameHistoryScreen() {
 
                 // 按时间排序，最新的游戏在前面
                 result.sort((a, b) => {
-                    const dateA = typeof a.created === 'string' ? new Date(a.created) : a.created.toDate();
-                    const dateB = typeof b.created === 'string' ? new Date(b.created) : b.created.toDate();
+                    const dateA = a.created ? (typeof a.created === 'string' ? new Date(a.created) : a.created.toDate()) : new Date(0);
+                    const dateB = b.created ? (typeof b.created === 'string' ? new Date(b.created) : b.created.toDate()) : new Date(0);
                     return dateB.getTime() - dateA.getTime();
                 });
                 setHistory(result);
@@ -91,17 +93,6 @@ export default function GameHistoryScreen() {
         };
     }, []);
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
-
     const getWinnerAndLoser = (game: GameSnapshot) => {
         if (game.players.length === 0) return { winner: null, loser: null };
 
@@ -114,13 +105,19 @@ export default function GameHistoryScreen() {
 
     const renderGameCard = ({ item }: { item: GameSnapshot }) => {
         const { winner, loser } = getWinnerAndLoser(item);
-        const gameDate = typeof item.created === 'string' 
-            ? new Date(item.created) 
-            : item.created.toDate();
-        const day = gameDate.toLocaleDateString('zh-CN', { day: '2-digit' });
-        const month = gameDate.toLocaleDateString('zh-CN', { month: '2-digit' });
-        const time = gameDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-        const year = gameDate.getFullYear();
+        const gameDate = item.created
+            ? item.created instanceof Date
+                ? item.created
+                : typeof item.created === 'string'
+                    ? new Date(item.created)
+                    : item.created.toDate()
+            : new Date(0); // Fallback to epoch if `created` is null
+
+        const day = String(gameDate.getDate()).padStart(2, '0')
+        const month = String(gameDate.getMonth() + 1).padStart(2, '0'); 
+        const time = String(gameDate.getHours()).padStart(2, '0') + ':' + String(gameDate.getMinutes()).padStart(2, '0');
+        console.log('Formatted Date:', day, month, time);
+        const year = String(gameDate.getFullYear());
 
         return (
             <TouchableOpacity
@@ -153,7 +150,7 @@ export default function GameHistoryScreen() {
                         <View style={styles.statItem}>
                             <MaterialCommunityIcons name="bank" size={18} color={color.highLighter || "#d46613"} />
                             <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{item.totalBuyIn/1000 + "K"}</Text>
+                                <Text style={styles.statValue}>{item.totalBuyIn / 1000 + "K"}</Text>
                                 <Text style={styles.statLabel}>总买入</Text>
                             </View>
                         </View>

@@ -41,7 +41,6 @@ export async function saveGameToFirebase(gameId: string, players?: Player[]): Pr
         created: game.created,
         updated: new Date().toISOString(),
         finalized: game.finalized,
-        status: game.status,
         token: game.token,
     })
 

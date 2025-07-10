@@ -32,12 +32,12 @@ type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 const HomeScreen = () => {
     const navigation = useNavigation<HomeScreenNav>();
     const [modalVisible, setModalVisible] = useState(false);
-    const { status, gameId } = useGameStore((state) => state);
+    const { finalized, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
     const { confirmPopup } = usePopup();
 
     useEffect(() => {
-        if (status === 'ongoing') {
+        if (!finalized) {
             const confirmation = async () => {
                 try {
                     const result = await confirmPopup({
@@ -139,6 +139,7 @@ const HomeScreen = () => {
                                 onConfirm={() => {
                                     
                                     const { gameId } = useGameStore.getState(); // 重新获取 gameId
+                                    console.log('Game ID:', useGameStore.getState());
                                     setModalVisible(false);
                                     navigation.navigate('GamePlay', { gameId });
                                 }}
