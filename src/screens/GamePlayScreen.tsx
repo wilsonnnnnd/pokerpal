@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     FlatList,
@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     Modal,
     StatusBar,
+    BackHandler,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
@@ -129,13 +130,13 @@ export default function GamePlayScreen() {
         const diff = totalEnding - totalBuyIn;
         const gameId = useGameStore.getState().gameId;
 
-
-        console.log('Game', `🏁 保存游戏到本地存储，游戏 ID: ${gameId}`);
+        
+        log('Game', `🏁 保存游戏到本地存储，游戏 ID: ${gameId}`);
         useGameStore.getState().finalizeGame();
         setShowSettleSummary(false);
-        console.log('Game', `🏁 游戏结束，总差额 ${diff}，总买入 ${totalBuyIn}，结算总筹码 ${totalEnding}`);
+        log('Game', `🏁 游戏结束，总差额 ${diff}，总买入 ${totalBuyIn}，结算总筹码 ${totalEnding}`);
         saveGameToHistory();
-        console.log('Game', `🏁 保存游戏到 Firebase，游戏 ID: ${gameId}`);
+        log('Game', `🏁 保存游戏到 Firebase，游戏 ID: ${gameId}`);
         await saveGameToFirebase(gameId, players);
         log('Game', `🏁 游戏结束，总差额 ${diff}`);
         clearLogs();
@@ -184,6 +185,32 @@ export default function GamePlayScreen() {
             }
         }
     };
+
+    // Disable back button
+    useEffect(() => {
+        const handleBackPress = () => {
+            if (!finalized) {
+                log('Game', '❌ 禁止返回，游戏未结束');
+                return true; // Prevent default back action
+            }
+            return false; // Allow default back action
+        };
+
+        BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+        return () => {
+            BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+        };
+    }, [finalized]);
+
+    // Disable swipe gesture
+    useFocusEffect(
+        React.useCallback(() => {
+            navigation.setOptions({
+                gestureEnabled: finalized, // Enable gesture only if game is finalized
+            });
+        }, [finalized])
+    );
 
     return (
         <>
