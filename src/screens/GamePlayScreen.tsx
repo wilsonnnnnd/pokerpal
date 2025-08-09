@@ -35,7 +35,7 @@ import DecisionWheel from '@/components/DecisionWheel';
 // Utils
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory';
-import { saveGameToFirebase } from '@/firebase/saveGameToFirebase';
+import { saveGameToFirebase } from '@/firebase/saveGame'
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';

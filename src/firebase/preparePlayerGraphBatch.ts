@@ -1,67 +1,47 @@
+/**
+ * preparePlayerGraphBatch
+ * -----------------------
+ * 生成/合并玩家盈利曲线，加入外部批处理；按 gameId 幂等，仅保留最近 N 条。
+ */
 import { db } from '@/firebase/config'
-import { doc, getDoc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore'
+import { doc, getDoc, Timestamp, WriteBatch } from 'firebase/firestore'
 import { Player } from '@/types'
 import { userDoc } from '@/constants/namingDb'
-import { logInfo } from '@/utils/useLogger'
 
-type GraphPoint = {
-    gameId: string;
-    diff: number;
-    roi: number;
-    ts: Timestamp;
-};
+export type GraphPoint = {
+    gameId: string
+    diff: number
+    roi: number
+    ts: Timestamp
+}
 
 export async function preparePlayerGraphBatch(
     player: Player,
     gameId: string,
-    batch: ReturnType<typeof writeBatch>
-): Promise<{ ref: ReturnType<typeof doc>, history: GraphPoint[] } | null> {
-    if (!player.finalized || player.settleCashDiff == null || player.settleROI == null) {
-        return null;
+    batch: WriteBatch,
+    limitN = 10
+) {
+    const graphRef = doc(db, userDoc, player.id, 'graph', 'profit')
+    const snap = await getDoc(graphRef)
+    const existed: GraphPoint[] = (snap.exists() ? (snap.data()?.history ?? []) : []) as GraphPoint[]
+
+    const map = new Map<string, GraphPoint>()
+    for (const p of existed) {
+        if (p?.gameId) map.set(p.gameId, p)
     }
 
-    const graphRef = doc(db, userDoc, player.id, 'graphData', 'summary');
-    const snapshot = await getDoc(graphRef);
-
-    const newEntry: GraphPoint = {
+    const point: GraphPoint = {
         gameId,
-        diff: player.settleCashDiff,
-        roi: player.settleROI,
+        diff: player.settleCashDiff ?? 0,
+        roi: player.settleROI ?? 0,
         ts: Timestamp.now(),
-    };
-
-    const graphMap = new Map<string, GraphPoint>();
-    if (snapshot.exists()) {
-        const data = snapshot.data();
-        const history = Array.isArray(data.history) ? data.history : [];
-        for (const item of history) {
-            try {
-                const isValidTimestamp = item.ts instanceof Timestamp;
-                if (item.gameId && isValidTimestamp) {
-                    graphMap.set(item.gameId, item);
-                } else {
-                    logInfo('Error', `❌ 无效 graph 数据: ${JSON.stringify(item)}`);
-                }
-            } catch (e) {
-                console.error('🔥 遍历 graph history 出错:', e);
-            }
-        }
     }
+    map.set(gameId, point)
 
-    graphMap.set(gameId, newEntry);
-
-    const sortedHistory = Array.from(graphMap.values())
+    const history = Array.from(map.values())
         .sort((a, b) => b.ts.toMillis() - a.ts.toMillis())
-        .slice(0, 10);
+        .slice(0, limitN)
 
-    batch.set(
-        graphRef,
-        {
-            history: sortedHistory,
-            updated: Timestamp.now(),
-        },
-        { merge: true }
-    );
-
-    return { ref: graphRef, history: sortedHistory };
+    batch.set(graphRef, { history, updated: Timestamp.now() }, { merge: true })
+    return { ref: graphRef, history }
 }

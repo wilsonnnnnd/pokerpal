@@ -15,7 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
 import { useLogStore } from '@/stores/useLogStore';
-import { saveGameToFirebase } from '@/firebase/saveGameToFirebase';
+import { saveGameToFirebase } from '@/firebase/saveGame'
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';

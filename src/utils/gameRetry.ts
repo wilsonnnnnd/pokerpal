@@ -1,5 +1,4 @@
-
-import { saveGameToFirebase } from '@/firebase/saveGameToFirebase';
+import { saveGameToFirebase } from '@/firebase/saveGame'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export async function retryCachedGames() {
