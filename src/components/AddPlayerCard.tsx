@@ -14,13 +14,13 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { useGameStore } from '@/stores/useGameStore';
-import { logInfo } from '@/utils/useLogger';
+import { logInfo, logSuccess } from '@/utils/useLogger';
 import QRCode from 'react-native-qrcode-svg';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { userByEmailDoc } from '@/constants/namingDb';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,7 +73,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
         // 清理函数，组件卸载或者依赖变化时执行
         return () => {
-            console.log('Stopping player sync listener');
+            logSuccess('停止玩家同步监听', 'AddPlayerCard');
             stopPlayerSyncListener(logInfo);
         };
     }, [activeTab, gameId]);
@@ -122,7 +122,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             playerId: generateSecureId('player'),
             nickname,
             email: email.trim().toLowerCase(),
-            joinAt: new Date().toISOString(),
+            joinAt: serverTimestamp(),
             photoURL: undefined,
             buyInChipsList: [],
             buyInCount: 1,
@@ -148,7 +148,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
     const getQRCodeLink = () => {
         if (!gameId || !token) return '';
-        return `https://hdpoker.xyz/join/${gameId}?token=${token}`;
+        return `https://hdpoker.xyz/join/${gameId}?token=${encodeURIComponent(token)}`;
     };
 
     const handleCopyLink = () => {
@@ -180,7 +180,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 playerId: user.uid,
                 nickname: user.nickname,
                 email,
-                joinAt: new Date().toISOString(),
+                joinAt: serverTimestamp(),
                 photoURL: user.photoURL,
                 buyInChipsList: [],
                 buyInCount: 1,

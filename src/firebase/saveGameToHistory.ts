@@ -1,13 +1,14 @@
 import { useGameStore } from '@/stores/useGameStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useGameHistoryStore } from '@/stores/useGameHistoryStore'
+import { serverTimestamp } from 'firebase/firestore'
 
 export const saveGameToHistory = () => {
     const game = useGameStore.getState()
     const players = usePlayerStore.getState().players
     const addGameSnapshot = useGameHistoryStore.getState().addGameSnapshot
 
-    const now = new Date().toISOString()
+    const now = serverTimestamp()
 
     const playerSnapshots = players.map(player => {
         const {

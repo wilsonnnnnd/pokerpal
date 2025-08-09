@@ -4,6 +4,7 @@ import {
     serverTimestamp,
     writeBatch,
     Timestamp,
+    FieldValue,
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
 import { userDoc } from '@/constants/namingDb'
@@ -13,7 +14,7 @@ export type GraphPoint = {
     gameId: string
     diff: number
     roi: number
-    ts: Timestamp | String
+    ts: Timestamp | String | FieldValue
 }
 
 /**
@@ -33,7 +34,7 @@ export async function addPlayerGraphEntry(
         gameId,
         diff,
         roi,
-        ts: new Date().toISOString(), // Firestore 会自动替换为服务器时间
+        ts: serverTimestamp(), // Firestore 会自动替换为服务器时间
     }
 
     let history: GraphPoint[] = []
@@ -47,7 +48,7 @@ export async function addPlayerGraphEntry(
 
     batch.set(graphRef, {
         history: merged,
-        updated: new Date().toISOString(),
+        updated: serverTimestamp(),
     }, { merge: true })
 }
 
@@ -77,6 +78,13 @@ export function mergeGraphHistory(history: GraphPoint[], newEntry: GraphPoint): 
 /**
  * ✅ 提取时间戳（毫秒数）
  */
-function getTimestampValue(ts: Timestamp | String): number {
-    return ts instanceof Timestamp ? ts.toMillis() : 0
+function getTimestampValue(ts: Timestamp | String | FieldValue): number {
+    if (ts instanceof Timestamp) {
+        return ts.toMillis();
+    }
+    if (typeof ts === 'string') {
+        return 0; // Handle string case if needed
+    }
+    // Handle FieldValue case (e.g., serverTimestamp)
+    return 0;
 }

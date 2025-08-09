@@ -1,10 +1,12 @@
+import { FieldValue, Timestamp } from "firebase/firestore";
+
 export type Player = {
     id: string;
     nickname: string;
     email?: string;
     photoURL?: string;
     isActive?: boolean;
-    joinAt: string;
+    joinAt: string | Timestamp | FieldValue; // 使用 Firestore 的时间戳类型
     buyInChipsList: number[];
     totalBuyInChips: number;
     endCashAmount?: number;

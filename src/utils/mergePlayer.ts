@@ -1,4 +1,5 @@
 import { Player } from '@/types'
+import { serverTimestamp } from 'firebase/firestore'
 
 /**
  * 合并本地和远程玩家数据，优先保留本地已有的有效信息
@@ -30,7 +31,7 @@ export function mergePlayerData(local: Player, remote: Player): Player {
         finalized: local.finalized ?? remote.finalized ?? false,
 
         // 时间戳类字段
-        joinAt: local.joinAt || remote.joinAt || new Date().toISOString(),
+        joinAt: local.joinAt || remote.joinAt || serverTimestamp(),
 
         // 本地状态控制
         isSyncing: local.isSyncing ?? false,

@@ -46,7 +46,7 @@ export default function GameDetailScreen() {
 
     // 日期格式化
     const gameDate = new Date(
-        game.created ? (typeof game.created === 'string' ? game.created : game.created.toDate()) : new Date(0)
+        game.created ? (typeof game.created === 'string' ? game.created : ('toDate' in game.created ? game.created.toDate() : new Date(0))) : new Date(0)
     );
     const dateString = String(gameDate.getFullYear()) + '-' +
         String(gameDate.getMonth() + 1).padStart(2, '0') + '-' +

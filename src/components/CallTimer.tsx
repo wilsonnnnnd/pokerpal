@@ -15,6 +15,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
+import { logError } from '@/utils/useLogger';
 
 /**
  * 德州扑克Call Timer组件的引用接口
@@ -190,7 +191,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
                 setSoundsLoaded(true);
             } catch (error) {
-                console.log('加载音效失败', error);
+                logError('加载音效失败', error instanceof Error ? error.message : String(error));
             } finally {
                 setIsLoadingSound(false);
             }
@@ -205,7 +206,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 }
                 setSoundsLoaded(false);
             } catch (error) {
-                console.log('卸载音效失败', error);
+                logError('卸载音效失败', error instanceof Error ? error.message : String(error));
             }
         };
 
@@ -277,7 +278,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     await warningRef.current.setPositionAsync(0);
                     await warningRef.current.playAsync();
                 } catch (error) {
-                    console.log('播放警告音效失败', error);
+                    logError('播放警告音效失败', error instanceof Error ? error.message : String(error));
                 }
             }
         };
@@ -289,7 +290,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     await soundRef.current.setPositionAsync(0);
                     await soundRef.current.playAsync();
                 } catch (error) {
-                    console.log('播放滴答音效失败', error);
+                    logError('播放滴答音效失败', error instanceof Error ? error.message : String(error));
                 }
             }
         };
@@ -301,7 +302,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     await timeupRef.current.setPositionAsync(0);
                     await timeupRef.current.playAsync();
                 } catch (error) {
-                    console.log('播放结束音效失败', error);
+                    logError('播放结束音效失败', error instanceof Error ? error.message : String(error));
                 }
             }
         };
@@ -338,7 +339,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     }
                 }
             } catch (error) {
-                console.log('触发触觉反馈失败', error);
+                logError('触发触觉反馈失败', error instanceof Error ? error.message : String(error));
             }
         };
 

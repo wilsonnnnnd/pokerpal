@@ -35,6 +35,11 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
     const game = useGameStore.getState()
     const originalGameState = { ...game }
     const rate = calcRate(game.baseCashAmount, game.baseChipAmount)
+
+    if (rate === 0 && players.some(p => p.totalBuyInChips > 0)) {
+        throw new Error('基础筹码为 0 导致汇率为 0，请检查游戏设置')
+    }
+
     const createdBy = 'host' // TODO: 替换为真实 UID
 
     logInfo('Saving game to Firebase', { gameId, playerCount: players.length })

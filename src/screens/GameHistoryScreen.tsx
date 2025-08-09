@@ -4,7 +4,7 @@ import { useGameHistoryStore } from '@/stores/useGameHistoryStore';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
@@ -16,7 +16,6 @@ type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function GameHistoryScreen() {
     const { history, setHistory, clearHistory } = useGameHistoryStore();
-    console.log('GameHistoryScreen history:', history);
     const navigation = useNavigation<HomeScreenNav>();
     const [loading, setLoading] = useState(true);
 
@@ -68,8 +67,20 @@ export default function GameHistoryScreen() {
 
                 // 按时间排序，最新的游戏在前面
                 result.sort((a, b) => {
-                    const dateA = a.created ? (typeof a.created === 'string' ? new Date(a.created) : a.created.toDate()) : new Date(0);
-                    const dateB = b.created ? (typeof b.created === 'string' ? new Date(b.created) : b.created.toDate()) : new Date(0);
+                    const dateA = a.created 
+                        ? (typeof a.created === 'string' 
+                            ? new Date(a.created) 
+                            : a.created instanceof Timestamp 
+                                ? a.created.toDate() 
+                                : new Date(0)) 
+                        : new Date(0);
+                    const dateB = b.created 
+                        ? (typeof b.created === 'string' 
+                            ? new Date(b.created) 
+                            : b.created instanceof Timestamp 
+                                ? b.created.toDate() 
+                                : new Date(0)) 
+                        : new Date(0);
                     return dateB.getTime() - dateA.getTime();
                 });
                 setHistory(result);
@@ -110,13 +121,12 @@ export default function GameHistoryScreen() {
                 ? item.created
                 : typeof item.created === 'string'
                     ? new Date(item.created)
-                    : item.created.toDate()
+                    : item.created instanceof Timestamp ? item.created.toDate() : new Date(0)
             : new Date(0); // Fallback to epoch if `created` is null
 
         const day = String(gameDate.getDate()).padStart(2, '0')
         const month = String(gameDate.getMonth() + 1).padStart(2, '0'); 
         const time = String(gameDate.getHours()).padStart(2, '0') + ':' + String(gameDate.getMinutes()).padStart(2, '0');
-        console.log('Formatted Date:', day, month, time);
         const year = String(gameDate.getFullYear());
 
         return (

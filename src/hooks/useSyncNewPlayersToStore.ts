@@ -1,4 +1,4 @@
-import { collection, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { collection, onSnapshot, serverTimestamp, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
 import { usePlayerStore } from '@/stores/usePlayerStore';
@@ -14,7 +14,7 @@ function sanitizeRemotePlayer(remote: Partial<Player>, baseChipAmount: number): 
         buyInChipsList: Array.isArray(remote.buyInChipsList) ? remote.buyInChipsList : [],
         totalBuyInChips: baseChipAmount,
         isActive: remote.isActive ?? true,
-        joinAt: remote.joinAt || new Date().toISOString(),
+        joinAt: remote.joinAt || serverTimestamp(),
         isSyncing: remote.isSyncing ?? false,
 
 

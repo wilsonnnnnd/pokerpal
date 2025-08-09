@@ -27,9 +27,6 @@ export function PlayerCard({
     const isSettled = player.settleChipCount !== undefined;
 
 
-    useEffect(() => {
-        console.log('PlayerCard mounted for:', player);
-    }, [player]);
     return (
         <Pressable
             onLongPress={() => onLongPress(player)}

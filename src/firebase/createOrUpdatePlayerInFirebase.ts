@@ -2,6 +2,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
 import { userByEmailDoc, userDoc } from '@/constants/namingDb';
+import { logInfo } from '@/utils/useLogger';
 
 export async function createOrUpdatePlayerInFirebase(player: Player): Promise<void> {
     if (!player.id || !player.email) {
@@ -22,7 +23,7 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
             email,
             photoURL: player.photoURL || '',
             isActive: true,
-            created: new Date().toISOString(),
+            created: serverTimestamp(),
         }, { merge: true });
 
         // 2️⃣ 写入 email → uid 映射（用于登录白名单校验）
@@ -31,7 +32,7 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
             registered: true,
         });
 
-        console.log(`✅ 玩家 ${player.nickname} 信息已写入 Firebase`);
+        logInfo(`✅ 玩家信息已写入：${player.nickname} (${uid})`, `email: ${email}`);
     } catch (error) {
         console.error('❌ 写入玩家信息失败:', error);
     }

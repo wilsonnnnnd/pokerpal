@@ -43,7 +43,6 @@ export function makeGamePayload(gameId: string, game: any, playerCount: number, 
         finalized: game.finalized ?? false,                         // 是否已结束
         status: game.finalized ? 'finalized' : 'open',              // 游戏状态
         token: game.token ?? null,                                   // 游戏令牌（可选）
-        playersEmailCount: Number.isFinite(playerCount) ? playerCount : 0, // 玩家邮箱数量
     }
 }
 // 将游戏主数据写入 Firestore
@@ -65,9 +64,6 @@ export function queuePlayerGameWrite(
     const totalBuyInCash = player.totalBuyInChips * rate
     bb.set(playerRef, {
         playerId: player.id,
-        nickname: player.nickname,
-        email: player.email || null,
-        photoURL: player.photoURL || null,
         buyInCount: player.buyInChipsList.length,
         totalBuyInCash,
         settleCashAmount: player.settleCashAmount ?? null,

@@ -27,7 +27,6 @@ export function SettleSummaryModal({
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={{ paddingVertical: 8 }}
                         renderItem={({ item }) => {
-                            console.log(item);
                             const cashDiff = ((item.settleChipCount || 0) - item.totalBuyInChips)/(baseChipAmount/baseCashAmount);
                             return (
                                 <View style={styles.summaryRow}>

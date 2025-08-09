@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase/firestore";
+import { FieldValue, Timestamp } from "firebase/firestore";
 
 
 export type GameState = {
@@ -7,8 +7,8 @@ export type GameState = {
     bigBlind: number;
     baseChipAmount: number;
     baseCashAmount: number;
-    created: string | Timestamp;
-    updated?: string | Timestamp;
+    created: string | Timestamp | FieldValue;
+    updated?: string | Timestamp | FieldValue;
 
     finalized: boolean;
     token: string | null;
@@ -19,8 +19,8 @@ export type GameState = {
         bigBlind: number;
         baseChipAmount: number;
         baseCashAmount: number;
-        created: string | Timestamp;
-        updated: string | Timestamp;
+        created: string | Timestamp | FieldValue;
+        updated: string | Timestamp | FieldValue;
     }) => void;
 
     getGame: () => {
@@ -54,8 +54,8 @@ export type GameSnapshot = {
     totalBuyIn: number;
     totalEnding: number;
     totalDiff: number;
-    created: string | Timestamp | null;
-    updated: string | Timestamp;
+    created: string | Timestamp | FieldValue;
+    updated: string | Timestamp | FieldValue;
     players: PlayerSnapshot[];
 };
 

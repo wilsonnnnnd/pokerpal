@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState } from '@/types';
+import { serverTimestamp } from 'firebase/firestore';
 
 export const useGameStore = create<GameState>()(
     devtools(
@@ -12,7 +13,7 @@ export const useGameStore = create<GameState>()(
                 bigBlind: 0,
                 baseChipAmount: 0,
                 baseCashAmount: 0,
-                created: new Date().toISOString(),
+                created: serverTimestamp(),
                 updated: undefined,
                 finalized: false,
                 token: null,
@@ -24,7 +25,7 @@ export const useGameStore = create<GameState>()(
                         smallBlind,
                         bigBlind,
                         finalized: false,
-                        created: new Date().toISOString(),
+                        created: serverTimestamp(),
                     }),
                 setToken: (token: string) => set({ token }),
                 getGame: () => ({
@@ -39,14 +40,14 @@ export const useGameStore = create<GameState>()(
                 finalizeGame: () => {
                     set({
                         finalized: true,
-                        updated: new Date().toISOString(),
+                        updated: serverTimestamp(),
                     });
                 },
 
                 finishGame: () =>
                     set({
                         finalized: true,
-                        updated: new Date().toISOString(),
+                        updated: serverTimestamp(),
                     }),
 
                 resetGame: () =>
