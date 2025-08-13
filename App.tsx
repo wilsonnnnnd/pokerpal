@@ -20,7 +20,7 @@ export type RootStackParamList = {
   AddPlayer: undefined;
   GamePlay: { gameId: string };
   GameHistory: undefined;
-  GameDetail: { gameId: string };
+  GameDetail: { game: any };
   GamePlayerRank: undefined;
 };
 

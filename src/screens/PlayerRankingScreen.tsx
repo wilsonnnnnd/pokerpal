@@ -4,49 +4,58 @@ import {
     Text,
     TextInput,
     FlatList,
-    StyleSheet,
     TouchableOpacity,
     RefreshControl,
     ActivityIndicator,
     Image,
+    StyleSheet,
 } from 'react-native';
-import { collection, getDocs, limit, orderBy, query, startAfter } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { userDoc } from '@/constants/namingDb';
-import { AggregatedPlayer, SortType, FirebasePlayer } from '@/types';
 import Toast from 'react-native-toast-message';
-import {GamePlayerRankstyles as styles} from '@/assets/styles';
+import { GamePlayerRankstyles as styles } from '@/assets/styles';
 
-// 提取出常量
+// ===== 常量：服务端可排序字段（必须与 Firestore 索引一致）=====
 const SORT_TYPES = {
-    TOTAL_PROFIT: 'totalProfit',    // ✅ Firestore 字段：totalProfit
-    ROI: 'roiSum',                  // ✅ Firestore 字段：roiSum（后续你再前端算平均）
-    APPEARANCES: 'gamesPlayed',    // ✅ Firestore 字段：gamesPlayed
-};
+    TOTAL_PROFIT: 'totalProfit', // 总收益（现金口径）
+    ROI: 'averageROI',               // ROI 总和（前端再 / gamesPlayed 求平均）
+    APPEARANCES: 'gamesPlayed',  // 参与场次
+} as const;
+
 const AVATAR_COLORS = ['#FFC107', '#FF9800', '#FF5722', '#4CAF50', '#2196F3', '#9C27B0', '#673AB7'];
 
-// 将子组件提取出来提高性能
+// ===== 类型（与 Firestore 聚合结构一致）=====
+export type AggregatedPlayer = {
+    id: string;
+    nickname: string;
+    totalProfit: number; // 现金收益累计
+    averageROI: number;      // ROI 累计（平均时除以 gamesPlayed）
+    gamesPlayed: number;
+    photoURL?: string;
+};
+
+// ===== 头像子项（保持你原样）=====
 const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index: number }) => {
+    const safeName = item.nickname || '未知玩家';
     const avatarColor = useMemo(() => {
-        const colorIndex = item.nickname.charCodeAt(0) % AVATAR_COLORS.length;
-        return AVATAR_COLORS[colorIndex];
-    }, [item.nickname]);
-    
-    const initialLetter = item.nickname.charAt(0).toUpperCase();
-    const roi = item.gamesPlayed > 0
-        ? ((item.roiSum / item.gamesPlayed) * 100).toFixed(1)
-        : '0.0';
-    const isRoiPositive = item.roiSum >= 0;
-    const isCashPositive = item.totalProfit >= 0;
+        const ch = safeName.charCodeAt(0) || 0;
+        return AVATAR_COLORS[ch % AVATAR_COLORS.length];
+    }, [safeName]);
+
+    // 平均 ROI（%）
+    const roiAvg = item.gamesPlayed > 0 ? ((Number(item.averageROI) || 0) / item.gamesPlayed) * 100 : 0;
+    const roiText = roiAvg.toFixed(1);
+    const isRoiPositive = roiAvg >= 0;
+    const isCashPositive = (Number(item.totalProfit) || 0) >= 0;
 
     const renderRankBadge = () => {
         let badgeColor = '#E0E0E0';
         if (index === 0) badgeColor = '#FFD700';
         else if (index === 1) badgeColor = '#C0C0C0';
         else if (index === 2) badgeColor = '#CD7F32';
-
         return (
             <View style={[styles.rankBadge, { backgroundColor: badgeColor }]}>
                 <Text style={styles.rankBadgeText}>{index + 1}</Text>
@@ -55,43 +64,31 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
     };
 
     return (
-        <View style={[
-            styles.playerCard,
-            index < 3 && styles.topPlayerCard
-        ]}>
+        <View style={[styles.playerCard, index < 3 && styles.topPlayerCard]}>
             <View style={styles.playerHeader}>
                 {renderRankBadge()}
 
                 <View style={styles.avatar}>
                     {item.photoURL ? (
-                        <Image
-                            source={{ uri: item.photoURL }}
-                            style={styles.avatarImage}
-                        />
+                        <Image source={{ uri: item.photoURL }} style={styles.avatarImage} />
                     ) : (
                         <View style={[styles.avatarFallback, { backgroundColor: avatarColor }]}>
-                            <Text style={styles.avatarText}>{initialLetter}</Text>
+                            <Text style={styles.avatarText}>{safeName.charAt(0).toUpperCase()}</Text>
                         </View>
                     )}
                 </View>
 
                 <View style={styles.nameContainer}>
-                    <Text style={styles.playerName}>{item.nickname}</Text>
+                    <Text style={styles.playerName}>{safeName}</Text>
                     <View style={styles.gamesContainer}>
                         <MaterialCommunityIcons name="cards-playing-outline" size={14} color="#7f8c8d" />
-                        <Text style={styles.gamesText}>{item.gamesPlayed} 场游戏</Text>
+                        <Text style={styles.gamesText}>{Number(item.gamesPlayed) || 0} 场游戏</Text>
                     </View>
                 </View>
 
-                <View style={[
-                    styles.profitBadge,
-                    { backgroundColor: isCashPositive ? '#e8f5e9' : '#ffebee' }
-                ]}>
-                    <Text style={[
-                        styles.profitText,
-                        { color: isCashPositive ? '#4CAF50' : '#F44336' }
-                    ]}>
-                        {isCashPositive ? '+' : ''}{item.totalProfit.toFixed(2)}
+                <View style={[styles.profitBadge, { backgroundColor: isCashPositive ? '#e8f5e9' : '#ffebee' }]}>
+                    <Text style={[styles.profitText, { color: isCashPositive ? '#4CAF50' : '#F44336' }]}>
+                        {isCashPositive ? '+' : ''}{(Number(item.totalProfit) || 0).toFixed(2)}
                     </Text>
                 </View>
             </View>
@@ -100,7 +97,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 <View style={styles.statItem}>
                     <MaterialCommunityIcons name="calendar-check" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
-                        <Text style={styles.statValue}>{item.gamesPlayed}</Text>
+                        <Text style={styles.statValue}>{Number(item.gamesPlayed) || 0}</Text>
                         <Text style={styles.statLabel}>场次</Text>
                     </View>
                 </View>
@@ -108,29 +105,17 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 <View style={styles.statItem}>
                     <MaterialCommunityIcons name="cash-multiple" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
-                        <Text style={[
-                            styles.statValue,
-                            { color: isCashPositive ? '#2ecc71' : '#e74c3c' }
-                        ]}>
-                            ${Math.abs(item.totalProfit).toFixed(2)}
+                        <Text style={[styles.statValue, { color: isCashPositive ? '#2ecc71' : '#e74c3c' }]}>
+                            ${Math.abs(Number(item.totalProfit) || 0).toFixed(2)}
                         </Text>
                         <Text style={styles.statLabel}>{isCashPositive ? '盈利' : '亏损'}</Text>
                     </View>
                 </View>
 
                 <View style={styles.statItem}>
-                    <MaterialCommunityIcons
-                        name="chart-line"
-                        size={16}
-                        color={color.highLighter}
-                    />
+                    <MaterialCommunityIcons name="chart-line" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
-                        <Text style={[
-                            styles.statValue,
-                            { color: isRoiPositive ? '#2ecc71' : '#e74c3c' }
-                        ]}>
-                            {roi}%
-                        </Text>
+                        <Text style={[styles.statValue, { color: isRoiPositive ? '#2ecc71' : '#e74c3c' }]}>{roiText}%</Text>
                         <Text style={styles.statLabel}>ROI</Text>
                     </View>
                 </View>
@@ -139,74 +124,73 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
     );
 });
 
-// 空列表组件
+// ===== 空列表组件 =====
 const EmptyListComponent = React.memo(({ keyword }: { keyword: string }) => (
     <View style={styles.emptyContainer}>
-        <MaterialCommunityIcons
-            name={keyword ? "account-search" : "account-group"}
-            size={60}
-            color="#bdc3c7"
-        />
-        <Text style={styles.emptyTitle}>
-            {keyword ? "未找到匹配玩家" : "暂无玩家数据"}
-        </Text>
-        <Text style={styles.emptyText}>
-            {keyword
-                ? "尝试使用其他关键词搜索"
-                : "完成游戏后玩家数据将在此显示"
-            }
-        </Text>
+        <MaterialCommunityIcons name={keyword ? 'account-search' : 'account-group'} size={60} color="#bdc3c7" />
+        <Text style={styles.emptyTitle}>{keyword ? '未找到匹配玩家' : '暂无玩家数据'}</Text>
+        <Text style={styles.emptyText}>{keyword ? '尝试使用其他关键词搜索' : '完成游戏后玩家数据将在此显示'}</Text>
     </View>
 ));
 
 export default function PlayerRankingScreen() {
     const [players, setPlayers] = useState<AggregatedPlayer[]>([]);
     const [keyword, setKeyword] = useState('');
-    const [sortBy, setSortBy] = useState(SORT_TYPES.TOTAL_PROFIT);
+    const [sortBy, setSortBy] = useState<typeof SORT_TYPES[keyof typeof SORT_TYPES]>(SORT_TYPES.TOTAL_PROFIT);
+
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [lastDoc, setLastDoc] = useState<any>(null); // 🌟 分页核心
+
+    // 分页核心
+    const PAGE_SIZE = 20;
+    const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const fetchPlayers = useCallback(async (isRefresh = false) => {
-        if (!isRefresh && (loadingMore || !hasMore)) return;
 
-        if (isRefresh) {
-            setLoading(true);
-            setLastDoc(null);
-            setHasMore(true);
-        } else {
-            setLoadingMore(true);
-        }
-
+    // 从 Firestore 拉一页
+    const fetchPage = useCallback(async (reset = false) => {
         try {
-            const ref = collection(db, userDoc);
-            let q = query(ref, orderBy(sortBy, 'desc'), limit(20));
-
-            if (!isRefresh && lastDoc) {
-                q = query(q, orderBy(sortBy, 'desc'), startAfter(lastDoc), limit(20));
+            if (reset) {
+                setLoading(true);
+                setHasMore(true);
+                setLastDoc(null);
+            } else {
+                if (!hasMore || loadingMore) return;
+                setLoadingMore(true);
             }
 
-            const snapshot = await getDocs(q);
-            const docs = snapshot.docs;
+            // ✅ 只使用一次 orderBy(sortBy, 'desc')
+            const baseRef = collection(db, userDoc);
+            let q = query(baseRef, orderBy(sortBy, 'desc'), limit(PAGE_SIZE));
+            if (!reset && lastDoc) {
+                q = query(baseRef, orderBy(sortBy, 'desc'), startAfter(lastDoc), limit(PAGE_SIZE));
+            }
 
-            const newList = docs.map((doc) => {
-                const data = doc.data();
+            const snap = await getDocs(q);
+            const docs = snap.docs;
+
+            const page: AggregatedPlayer[] = docs.map((d) => {
+                const data: any = d.data() ?? {};
                 return {
-                    id: doc.id,
+                    id: d.id,
                     nickname: data.nickname ?? '未知玩家',
-                    totalProfit: data.totalProfit ?? 0,
-                    roiSum: data.roiSum ?? 0,
-                    gamesPlayed: data.gamesPlayed ?? 0,
+                    totalProfit: Number(data.totalProfit) || 0,
+                    averageROI: Number(data.averageROI) || 0,
+                    gamesPlayed: Number(data.gamesPlayed) || 0,
                     photoURL: data.photoURL ?? '',
                 };
             });
 
-            setPlayers((prev) => isRefresh ? newList : [...prev, ...newList]);
-            setLastDoc(docs[docs.length - 1]);
-            setHasMore(docs.length === 20);
-        } catch (error) {
-            console.error(error);
+            if (reset) {
+                setPlayers(page);
+            } else {
+                setPlayers(prev => [...prev, ...page]);
+            }
+
+            setLastDoc(docs[docs.length - 1] ?? null);
+            setHasMore(docs.length === PAGE_SIZE);
+        } catch (err) {
+            console.error(err);
             Toast.show({
                 type: 'error',
                 text1: '加载失败',
@@ -217,61 +201,80 @@ export default function PlayerRankingScreen() {
             setLoadingMore(false);
             setRefreshing(false);
         }
-    }, [lastDoc, sortBy, loadingMore, hasMore]);
+    }, [sortBy, lastDoc, hasMore, loadingMore]);
 
+    // 首次 & 排序变化：重新拉首屏
     useEffect(() => {
-        fetchPlayers(true); // 🌟 排序时刷新
+        fetchPage(true);
     }, [sortBy]);
 
-
+    // 下拉刷新
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        fetchPlayers(true);
-    }, [fetchPlayers]);
+        fetchPage(true);
+    }, [fetchPage]);
 
-    const clearKeyword = useCallback(() => {
-        setKeyword('');
-    }, []);
+    // 触底加载
+    const onEndReached = useCallback(() => {
+        if (!loading && !refreshing && hasMore && !loadingMore) {
+            fetchPage(false);
+        }
+    }, [loading, refreshing, hasMore, loadingMore, fetchPage]);
 
-    const handleSortByTotalProfit = useCallback(() => {
-        setSortBy(SORT_TYPES.TOTAL_PROFIT);
-    }, []);
+    const clearKeyword = useCallback(() => setKeyword(''), []);
 
-    const handleSortByRoi = useCallback(() => {
-        setSortBy(SORT_TYPES.ROI);
-    }, []);
+    // 切换排序（服务端字段）
+    const handleSortByTotalProfit = useCallback(() => setSortBy(SORT_TYPES.TOTAL_PROFIT), []);
+    const handleSortByRoi = useCallback(() => setSortBy(SORT_TYPES.ROI), []);
+    const handleSortByAppearances = useCallback(() => setSortBy(SORT_TYPES.APPEARANCES), []);
 
-    const handleSortByAppearances = useCallback(() => {
-        setSortBy(SORT_TYPES.APPEARANCES);
-    }, []);
-
+    // 本地搜索 +（为了 UI 一致）本地再排序一次（与服务端一致的 key）
     const filteredPlayers = useMemo(() => {
-        return players
-            .filter((p) => p.nickname.toLowerCase().includes(keyword.toLowerCase()))
-            .sort((a, b) => {
-                if (sortBy === SORT_TYPES.TOTAL_PROFIT) return b.totalProfit - a.totalProfit;
-                if (sortBy === SORT_TYPES.ROI)
-                    return b.gamesPlayed > 0 && a.gamesPlayed > 0
-                        ? b.roiSum / b.gamesPlayed - a.roiSum / a.gamesPlayed
-                        : 0;
-                if (sortBy === SORT_TYPES.APPEARANCES) return b.gamesPlayed - a.gamesPlayed;
-                return 0;
-            });
+        const kw = keyword.trim().toLowerCase();
+        const list = kw ? players.filter(p => (p.nickname || '').toLowerCase().includes(kw)) : players;
+
+        return list.slice().sort((a, b) => {
+            if (sortBy === SORT_TYPES.TOTAL_PROFIT) return (b.totalProfit || 0) - (a.totalProfit || 0);
+            if (sortBy === SORT_TYPES.ROI) {
+                const ar = a.gamesPlayed > 0 ? (a.averageROI / a.gamesPlayed) : 0;
+                const br = b.gamesPlayed > 0 ? (b.averageROI / b.gamesPlayed) : 0;
+                return br - ar;
+            }
+            if (sortBy === SORT_TYPES.APPEARANCES) return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);
+            return 0;
+        });
     }, [players, keyword, sortBy]);
 
-    const keyExtractor = useCallback((item: AggregatedPlayer): string => item.id, []);
+    const keyExtractor = useCallback((item: AggregatedPlayer) => item.id, []);
     const renderItem = useCallback(({ item, index }: { item: AggregatedPlayer; index: number }) => (
         <PlayerItem item={item} index={index} />
     ), []);
 
-    const renderEmptyComponent = useCallback(() => (
-        <EmptyListComponent keyword={keyword} />
-    ), [keyword]);
+    const renderEmptyComponent = useCallback(() => <EmptyListComponent keyword={keyword} />, [keyword]);
+
+    const ListFooter = useMemo(() => {
+        if (loadingMore) {
+            return (
+                <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={'#d46613'} />
+                    <Text style={{ marginTop: 8, color: '#7f8c8d' }}>加载更多...</Text>
+                </View>
+            );
+        }
+        if (!hasMore && players.length > 0) {
+            return (
+                <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                    <Text style={{ color: '#9e9e9e' }}>没有更多了</Text>
+                </View>
+            );
+        }
+        return null;
+    }, [loadingMore, hasMore, players.length]);
 
     if (loading && !refreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={"#d46613"} />
+                <ActivityIndicator size="large" color={'#d46613'} />
                 <Text style={styles.loadingText}>加载排行榜数据...</Text>
             </View>
         );
@@ -279,6 +282,7 @@ export default function PlayerRankingScreen() {
 
     return (
         <View style={styles.container}>
+            {/* 搜索栏 */}
             <View style={styles.header}>
                 <View style={styles.searchContainer}>
                     <MaterialCommunityIcons name="magnify" size={20} color="#7f8c8d" />
@@ -297,6 +301,7 @@ export default function PlayerRankingScreen() {
                 </View>
             </View>
 
+            {/* 排序按钮 */}
             <View style={styles.sortContainer}>
                 <View style={styles.sortButtonsContainer}>
                     <TouchableOpacity
@@ -343,21 +348,20 @@ export default function PlayerRankingScreen() {
                 </View>
             </View>
 
+            {/* 列表 */}
             <FlatList
                 data={filteredPlayers}
                 keyExtractor={keyExtractor}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        colors={["#d46613"]}
-                    />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#d46613']} />
                 }
                 ListEmptyComponent={renderEmptyComponent}
+                onEndReachedThreshold={0.5}
+                onEndReached={onEndReached}
+                ListFooterComponent={ListFooter}
             />
         </View>
     );
 }
-

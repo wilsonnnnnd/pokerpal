@@ -28,28 +28,60 @@ export function calcRate(baseCashAmount: number, baseChipAmount: number) {
 }
 
 // 构建游戏主数据的 payload
-export function makeGamePayload(gameId: string, game: any, playerCount: number, createdBy: string) {
+export function makeCreateGamePayload(game: {
+    gameId: string;
+    smallBlind: number;
+    bigBlind: number;
+    baseCashAmount: number;
+    baseChipAmount: number;
+    finalized?: boolean;
+    token?: string | null;
+    createdBy?: string;
+    playerCount?: number;
+}) {
+    const rate = game.baseChipAmount === 0 ? 0 : game.baseCashAmount / game.baseChipAmount;
+
     return {
-        gameId,                                                     // 游戏 ID
-        smallBlind: game.smallBlind,                               // 小盲注
-        bigBlind: game.bigBlind,                                   // 大盲注
-        baseCashAmount: game.baseCashAmount,                       // 初始现金
-        baseChipAmount: game.baseChipAmount,                       // 初始筹码
-        rate: calcRate(game.baseCashAmount, game.baseChipAmount), // 汇率
-        playerCount,                                               // 玩家数量
-        createdBy,                                                  // 创建者 UID
-        created: game.created ?? serverTimestamp(),                 // 创建时间
-        updated: serverTimestamp(),                                 // 更新时间
-        finalized: game.finalized ?? false,                         // 是否已结束
-        status: game.finalized ? 'finalized' : 'open',              // 游戏状态
-        token: game.token ?? null,                                   // 游戏令牌（可选）
-    }
+        gameId: game.gameId,
+        smallBlind: game.smallBlind,
+        bigBlind: game.bigBlind,
+        baseCashAmount: game.baseCashAmount,
+        baseChipAmount: game.baseChipAmount,
+        rate,
+        playerCount: game.playerCount ?? 0,
+        createdBy: game.createdBy ?? null,
+
+        // ✅ 只有创建时写 created
+        created: serverTimestamp(),
+
+        // 更新字段可以在创建时也写一次，问题不大
+        updated: serverTimestamp(),
+        finalized: !!game.finalized,
+        status: game.finalized ? 'finalized' : 'open',
+        token: game.token ?? null,
+    };
 }
-// 将游戏主数据写入 Firestore
-export function queueGameDocWrite(bb: BatchBuilder, db: any, gameId: string, payload: any) {
-    const gameRef = doc(db, gameDoc, gameId)
-    bb.set(gameRef, payload)
-    return gameRef
+
+export function makeUpdateGamePayload(patch: Partial<{
+    smallBlind: number;
+    bigBlind: number;
+    baseCashAmount: number;
+    baseChipAmount: number;
+    finalized: boolean;
+    status: string;
+    token: string | null;
+    playerCount: number;
+}>) {
+    const base: any = { ...patch };
+
+    // 如传了汇率相关数据，顺带算 rate
+    if (typeof patch.baseCashAmount === 'number' && typeof patch.baseChipAmount === 'number') {
+        base.rate = patch.baseChipAmount === 0 ? 0 : patch.baseCashAmount / patch.baseChipAmount;
+    }
+
+    // ✅ 只在更新时写 updated，不要带上 created
+    base.updated = serverTimestamp();
+    return base;
 }
 
 // 将玩家数据写入 Firestore
@@ -64,6 +96,7 @@ export function queuePlayerGameWrite(
     const totalBuyInCash = player.totalBuyInChips * rate
     bb.set(playerRef, {
         playerId: player.id,
+        nickname: player.nickname,
         buyInCount: player.buyInChipsList.length,
         totalBuyInCash,
         settleCashAmount: player.settleCashAmount ?? null,

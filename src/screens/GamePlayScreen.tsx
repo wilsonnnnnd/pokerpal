@@ -36,7 +36,7 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
-import { saveGameToFirebase } from '@/firebase/saveGame';         // 统一远端保存入口
+import { finalizeGameOnServer, saveGameToFirebase } from '@/firebase/saveGame';         // 统一远端保存入口
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
@@ -46,6 +46,8 @@ import { calcRate } from '@/firebase/gameWriters';                // 汇率计�
 import { RootStackParamList } from '../../App';
 import { Player } from '@/types';
 import { GamePlaystyles as styles } from '@/assets/styles';
+import Toast from 'react-native-toast-message';
+
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -59,12 +61,37 @@ type ModalState =
     | { type: 'Insurance' }
     | null;
 
+async function retry<T>(
+    fn: () => Promise<T>,
+    attempts = 3,
+    baseDelayMs = 600
+): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < attempts; i++) {
+        try {
+            return await fn();
+        } catch (e) {
+            lastErr = e;
+            if (i < attempts - 1) {
+                const delay = baseDelayMs * Math.pow(2, i); // 600, 1200, 2400...
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+    }
+    throw lastErr;
+}
+
+
 export default function GamePlayScreen() {
     const navigation = useNavigation<HomeScreenNav>();
     const [modalState, setModalState] = useState<ModalState>(null);
     const [showSettleSummary, setShowSettleSummary] = useState(false);
     const timerRef = useRef<CallTimerHandle>(null);
-
+    const [isLoading, setIsLoading] = useState(false);
+    const submittingRef = useRef(false);
+    type SubmitPhase = 'idle' | 'saving' | 'finalizing' | 'done';
+    const [submitPhase, setSubmitPhase] = useState<SubmitPhase>('idle');
+    const [pendingFinalize, setPendingFinalize] = useState(false);
     // ===== Store hooks =====
     const players = usePlayerStore((state) => state.players);
     const addBuyIn = usePlayerStore((state) => state.addBuyIn);
@@ -127,44 +154,134 @@ export default function GamePlayScreen() {
         setShowSettleSummary(true); // 打开结算汇总弹窗
     }, [players]);
 
-    // ===== 确认结束并保存（离线缓存 + 远端保存）=====
-    const handleConfirmSave = useCallback(async () => {
-        // 现金口径统计（和后端一致）
-        const totalBuyInCash = players.reduce((sum, p) => sum + p.totalBuyInChips * rate, 0);
-        const totalEndingCash = players.reduce((sum, p) => sum + (p.settleChipCount || 0) * rate, 0);
-        const diffCash = totalEndingCash - totalBuyInCash;
-        const gameId = useGameStore.getState().gameId;
+    const handleRetryFinalizeOnly = useCallback(async () => {
+        if (submittingRef.current || isLoading) return;
+        submittingRef.current = true;
+        setIsLoading(true);
 
-        // 1) 本地先校验差额，失败就不调用远端保存（提升 UX）
-        if (Math.abs(diffCash) > 0.01) {
-            log('Game', `❌ 结算不平衡：差额(现金) = ${diffCash}`);
-            // 这里可以用你自己的 Toast/弹窗替代
-            // showPopup({ title: '错误', isWarning: true, message: `结算不平衡：差额(现金) = ${diffCash}` });
-            return;
-        }
-
-        // 2) 先写本地离线缓存，但不要标记 finalized
-        log('Game', `🏁 保存游戏到本地存储（离线缓存），游戏 ID: ${gameId}`);
-        saveGameToHistory();
-
-        // 3) 远端保存，成功后再 finalize；失败不改变 finalized，保证仍可编辑
         try {
-            log('Game', `🏁 保存游戏到 Firebase，游戏 ID: ${gameId}`);
-            // 这里会触发所有玩家的 upsertUserAndCounters 等操作
-            // 设置游戏为 finalized
-            useGameStore.getState().finalizeGame();
-            await saveGameToFirebase(gameId, players);
+            const gameId = useGameStore.getState().gameId;
 
-            // ✅ 关闭弹窗、清理、返回首页
+            setSubmitPhase('finalizing');
+            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+
+            useGameStore.getState().finalizeGame();
+            setPendingFinalize(false);
+            setSubmitPhase('done');
+
             setShowSettleSummary(false);
             clearLogs();
             resetPlayers();
             navigation.navigate('Home');
+
+            Toast.show({
+                type: 'success',
+                text1: '✅ 完成提交成功',
+                position: 'bottom',
+            });
         } catch (e: any) {
-            // ❌ 失败保持未 finalize，用户可继续修改后重试
-            log('Game', `❌ 保存失败：${e?.message || e}`);
+            Toast.show({
+                type: 'error',
+                text1: '重试失败',
+                text2: e?.message || '',
+                position: 'bottom',
+            });
+        } finally {
+            setIsLoading(false);
+            submittingRef.current = false;
         }
-    }, [players, rate]);
+    }, []);
+
+
+
+    // ===== 确认结束并保存（离线缓存 + 远端保存）=====
+    const handleConfirmSave = useCallback(async () => {
+        // ===== 防抖：硬防抖 + UI 防抖 =====
+        if (submittingRef.current || isLoading) return;
+        submittingRef.current = true;
+        setIsLoading(true);
+
+        console.log('Game', '🏁 确认结束并保存');
+        try {
+            // 现金口径校验
+            const game = useGameStore.getState();
+            const gameId = game.gameId;
+            const rate = calcRate(game.baseCashAmount, game.baseChipAmount);
+
+            const totalBuyInCash = players.reduce((sum, p) => sum + p.totalBuyInChips * rate, 0);
+            const totalEndingCash = players.reduce((sum, p) => sum + (p.settleChipCount || 0) * rate, 0);
+            const diffCash = totalEndingCash - totalBuyInCash;
+
+            if (Math.abs(diffCash) > 0.01) {
+                Toast.show({
+                    type: 'error',
+                    text1: '结算不平衡',
+                    text2: `差额 = ${diffCash.toFixed(2)}（请检查结算）`,
+                    position: 'bottom',
+                });
+                return;
+            }
+
+            // 1) 本地离线缓存（失败不继续）
+            try {
+                saveGameToHistory();
+            } catch (e: any) {
+                Toast.show({
+                    type: 'error',
+                    text1: '保存失败',
+                    text2: `保存到本地存储失败：${e?.message || e}`,
+                });
+                return;
+            }
+
+            // 2) 远端保存（明细）——带自动重试
+            setSubmitPhase('saving');
+            await retry(() => saveGameToFirebase(gameId, players), 3, 700);
+
+            // 3) finalize 落库（只写 updated/status，不触碰 created）——带自动重试
+            setSubmitPhase('finalizing');
+            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+
+            // 4) 本地 finalize（最后一步，保证远端成功后再改本地）
+            useGameStore.getState().finalizeGame();
+            setPendingFinalize(false);
+            setSubmitPhase('done');
+
+            // 5) 清理与导航
+            setShowSettleSummary(false);
+            clearLogs();
+            resetPlayers();
+            navigation.navigate('Home');
+
+            Toast.show({
+                type: 'success',
+                text1: '🎉 已结束并上传',
+                position: 'bottom',
+            });
+        } catch (e: any) {
+            // 区分 “已保存但 finalize 失败”的场景
+            if (submitPhase === 'finalizing') {
+                setPendingFinalize(true); // 进入可“补 finalize”状态
+                Toast.show({
+                    type: 'error',
+                    text1: '已保存，但未完成提交',
+                    text2: '网络波动导致完成提交失败，请点击“重试完成提交”。',
+                    position: 'bottom',
+                });
+            } else {
+                Toast.show({
+                    type: 'error',
+                    text1: '上传失败',
+                    text2: e?.message || '',
+                    position: 'bottom',
+                });
+            }
+        } finally {
+            setSubmitPhase(prev => (prev === 'done' ? 'done' : 'idle'));
+            setIsLoading(false);
+            submittingRef.current = false;
+        }
+    }, [players]);
 
 
     // ===== 返回键拦截：未结束前禁止返回 =====
@@ -419,18 +536,26 @@ export default function GamePlayScreen() {
 
                                 {/* 结束游戏按钮 */}
                                 <PrimaryButton
-                                    title="结束游戏"
-                                    onPress={handleGameFinishPrompt}
+                                    title={
+                                        pendingFinalize
+                                            ? (isLoading ? '完成提交中…' : '重试完成提交')
+                                            : (isLoading
+                                                ? (submitPhase === 'saving' ? '保存中…' : submitPhase === 'finalizing' ? '完成提交中…' : '提交中…')
+                                                : '结束游戏')
+                                    }
+                                    onPress={pendingFinalize ? handleRetryFinalizeOnly : handleGameFinishPrompt}
                                     style={styles.endGameButton}
                                     textStyle={styles.endGameButtonText}
-                                    icon="stop-circle-outline"
+                                    icon={pendingFinalize ? 'refresh' : 'stop-circle-outline'}
                                     iconColor="#fff"
                                     iconSize={24}
                                     iconPosition="left"
                                     size="large"
                                     rounded
                                     fullWidth
+                                    disabled={isLoading || finalized}
                                 />
+
                             </>
                         )
                     }
@@ -474,6 +599,7 @@ export default function GamePlayScreen() {
                         players={players}
                         onConfirm={handleConfirmSave}
                         onCancel={() => setShowSettleSummary(false)}
+                        isLoading={isLoading}
                     />
                 )}
 

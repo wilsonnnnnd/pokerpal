@@ -1,14 +1,13 @@
+// src/firebase/saveGameToHistory.ts
+// =================================
 import { useGameStore } from '@/stores/useGameStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useGameHistoryStore } from '@/stores/useGameHistoryStore'
-import { serverTimestamp } from 'firebase/firestore'
 
 export const saveGameToHistory = () => {
     const game = useGameStore.getState()
     const players = usePlayerStore.getState().players
     const addGameSnapshot = useGameHistoryStore.getState().addGameSnapshot
-
-    const now = serverTimestamp()
 
     const playerSnapshots = players.map(player => {
         const {
@@ -17,7 +16,6 @@ export const saveGameToHistory = () => {
             totalBuyInChips,
             buyInChipsList,
             settleChipCount = 0,
-            settleChipDiff = 0,
             settleCashDiff = 0,
             settleROI = 0,
         } = player
@@ -28,7 +26,6 @@ export const saveGameToHistory = () => {
             totalBuyInChips,
             buyInCount: buyInChipsList.length,
             endingChipCount: settleChipCount,
-            chipDifference: settleChipDiff,
             cashDifference: settleCashDiff,
             roiSum: settleROI,
         }
@@ -39,8 +36,9 @@ export const saveGameToHistory = () => {
 
     addGameSnapshot({
         id: game.gameId,
-        created: now,
-        updated: now,
+        // ✅ 本地毫秒数（可序列化）
+        createdMs: game.createdMs ?? Date.now(),
+        updatedMs: game.updatedMs ?? Date.now(),
         smallBlind: game.smallBlind,
         bigBlind: game.bigBlind,
         baseCashAmount: game.baseCashAmount,

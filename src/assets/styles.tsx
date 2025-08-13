@@ -997,15 +997,7 @@ export const GameDetailstyles = StyleSheet.create({
         fontWeight: '600',
         color: color.valueText,
     },
-    profitBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-    },
-    profitText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
+
     playerStats: {
         flexDirection: 'row',
         flexWrap: 'wrap',

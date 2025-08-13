@@ -6,7 +6,7 @@ export type Player = {
     email?: string;
     photoURL?: string;
     isActive?: boolean;
-    joinAt: string | Timestamp | FieldValue; // 使用 Firestore 的时间戳类型
+    joinAt: Timestamp; // 使用 Firestore 的时间戳类型
     buyInChipsList: number[];
     totalBuyInChips: number;
     endCashAmount?: number;

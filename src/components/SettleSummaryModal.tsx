@@ -9,10 +9,12 @@ export function SettleSummaryModal({
     players,
     onConfirm,
     onCancel,
+    isLoading = false,
 }: {
     players: Player[];
     onConfirm: () => void;
     onCancel: () => void;
+    isLoading?: boolean;
 }) {
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
@@ -57,6 +59,7 @@ export function SettleSummaryModal({
                             title="确认保存"
                             onPress={onConfirm}
                             style={styles.summaryConfirmButton}
+                            disabled={isLoading}
                         />
                     </View>
                 </View>

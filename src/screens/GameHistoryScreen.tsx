@@ -1,138 +1,165 @@
+// src/screens/GameHistoryScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { FlatList, Text, View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { useGameHistoryStore } from '@/stores/useGameHistoryStore';
+import { FlatList, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
+
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/firebase/config';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Palette as color } from '@/constants';
-import { GameSnapshot } from '@/types';
+import { Palette as color, Palette } from '@/constants';
 import Toast from 'react-native-toast-message';
+
 import { GameHistorystyles as styles } from '@/assets/styles';
-import { gameDoc } from '@/constants/namingDb';
+import { gameDoc, playerDoc } from '@/constants/namingDb';
+import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
+import { GameHistoryItem, PlayerItem } from '@/types';
+
+
+
+// ---- 导航类型 ----
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+// ---- 时区/展示工具（仅用于卡片日期显示）----
+const deviceTZ = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return undefined; }
+})();
+const fmt = (ms: number, opts: Intl.DateTimeFormatOptions) =>
+    new Date(ms).toLocaleString(undefined, { timeZone: deviceTZ, ...opts });
+const getLocalDateParts = (ms: number) => ({
+    day: fmt(ms, { day: '2-digit' }),
+    month: fmt(ms, { month: '2-digit' }),
+    year: fmt(ms, { year: 'numeric' }),
+    time: fmt(ms, { hour: '2-digit', minute: '2-digit', hour12: false }),
+});
+// Firestore Timestamp/ISO/Date/number -> ms
+const tsToMs = (v: any, fallbackMs: number = Date.now()): number => {
+    if (!v) return fallbackMs;
+    if (typeof v?.toDate === 'function') return v.toDate().getTime();
+    if (typeof v === 'string') {
+        const t = new Date(v).getTime();
+        return Number.isFinite(t) ? t : fallbackMs;
+    }
+    if (typeof v === 'number') return v;
+    if (v instanceof Date) return v.getTime();
+    return fallbackMs;
+};
+// 货币格式（不带本地化符号，统一两位小数）
+const money = (n: number) => Number(n).toFixed(0);
+
 export default function GameHistoryScreen() {
-    const { history, setHistory, clearHistory } = useGameHistoryStore();
     const navigation = useNavigation<HomeScreenNav>();
     const [loading, setLoading] = useState(true);
+    const [items, setItems] = useState<GameHistoryItem[]>([]);
 
     useEffect(() => {
-        const fetchGames = async () => {
+        (async () => {
             setLoading(true);
             try {
-                const snapshot = await getDocs(collection(db, gameDoc));
-                const result: GameSnapshot[] = [];
+                // 1) 取游戏列表（按 created 倒序）
+                const qGames = query(collection(db, gameDoc), orderBy('created', 'desc'));
+                const snapshot = await getDocs(qGames);
+                const gameDocs = snapshot.docs;
 
-                for (const docSnap of snapshot.docs) {
-                    const data = docSnap.data();
-                    const gameId = data.gameId;
+                // 2) 并发构建每个游戏的口径列表项
+                const list: GameHistoryItem[] = await Promise.all(
+                    gameDocs.map(async (docSnap) => {
+                        const data = docSnap.data() ?? {};
+                        const gameId = String(data.gameId ?? docSnap.id);
 
-                    // 获取玩家子集合
-                    const playersSnapshot = await getDocs(collection(db, gameDoc, gameId, 'players'));
-                    const players = playersSnapshot.docs.map((playerDoc) => {
-                        const data = playerDoc.data();
-                        const email = data.email || '';
-                        const nickname = data.nickname || email.split('@')[0] || '未知玩家';
+                        // 2.1 拉 players 子集合（以 Firestore 为主）
+                        const playersSnap = await getDocs(collection(db, gameDoc, gameId, playerDoc));
+
+                        // 2.2 批量查用户档案，减少读次数
+                        const playerIds = playersSnap.docs.map(d => String(d.id)).filter(Boolean);
+                        const profilesMap = await fetchUserProfilesMap(playerIds);
+
+                        // 2.3 组装玩家（只保留字段）
+                        const players: PlayerItem[] = playersSnap.docs.map(pdoc => {
+                            const pdata = pdoc.data() ?? {};
+                            const uid = String(pdoc.id);
+
+                            const profileData = profilesMap.get(uid);
+                            const { displayName, photoUrl } = resolveNameAndPhoto({
+                                id: uid,
+                                playerData: pdata,
+                                profileData,
+                            });
+
+                            return {
+                                id: uid,
+                                nickname: displayName,
+                                photoUrl,
+                                buyInCount: Number(pdata.buyInCount) || 0,
+                                totalBuyInCash: Number(pdata.totalBuyInCash) || 0,
+                                settleCashAmount: Number(pdata.settleCashAmount) || 0,
+                                settleCashDiff: Number(pdata.settleCashDiff) || 0,
+                                settleROI: Number(pdata.settleROI) || 0,
+                            };
+                        });
+
+                        // 2.4 汇总
+                        let totalBuyInCash = 0, totalEndingCash = 0, totalDiffCash = 0;
+                        for (const p of players) {
+                            totalBuyInCash += p.totalBuyInCash;
+                            totalEndingCash += p.settleCashAmount;
+                            totalDiffCash += p.settleCashDiff;
+                        }
+
+                        // 2.5 时间归一
+                        const createdMs = tsToMs(data.created);
+                        const updatedMs = tsToMs(data.updated, createdMs);
 
                         return {
-                            id: playerDoc.id,
-                            nickname,
-                            cashDifference: data.settleCashDiff ?? 0,
-                            roiSum: data.settleROI ?? 0,
-                            totalBuyInChips: data.totalBuyInChips ?? 0,
-                            buyInCount: data.buyInCount ?? 0,
-                            endingChipCount: data.endingChipCount ?? 0,
+                            id: gameId,
+                            smallBlind: Number(data.smallBlind ?? 0),
+                            bigBlind: Number(data.bigBlind ?? 0),
+                            createdMs,
+                            updatedMs,
+                            totalBuyInCash,
+                            totalEndingCash,
+                            totalDiffCash,
+                            players,
                         };
-                    });
+                    })
+                );
 
-                    const created = data.created || new Date(0); // Fallback to epoch if `created` is undefined
-                    result.push({
-                        id: gameId,
-                        created,
-                        updated: data.updated,
-                        smallBlind: data.smallBlind,
-                        bigBlind: data.bigBlind,
-                        baseCashAmount: data.baseCashAmount,
-                        baseChipAmount: data.baseChipAmount,
-                        totalBuyIn: players.reduce((sum, p) => sum + p.totalBuyInChips, 0),
-                        totalEnding: players.reduce((sum, p) => sum + p.endingChipCount, 0),
-                        totalDiff: players.reduce((sum, p) => sum + p.endingChipCount, 0),
-                        players, // 直接使用，无需二次 map
-                    });
-
-                }
-
-                // 按时间排序，最新的游戏在前面
-                result.sort((a, b) => {
-                    const dateA = a.created 
-                        ? (typeof a.created === 'string' 
-                            ? new Date(a.created) 
-                            : a.created instanceof Timestamp 
-                                ? a.created.toDate() 
-                                : new Date(0)) 
-                        : new Date(0);
-                    const dateB = b.created 
-                        ? (typeof b.created === 'string' 
-                            ? new Date(b.created) 
-                            : b.created instanceof Timestamp 
-                                ? b.created.toDate() 
-                                : new Date(0)) 
-                        : new Date(0);
-                    return dateB.getTime() - dateA.getTime();
-                });
-                setHistory(result);
-            } catch (error) {
+                // 3) 以 updatedMs 倒序（最新在前）
+                list.sort((a, b) => b.updatedMs - a.updatedMs);
+                setItems(list);
+            } catch (e) {
                 Toast.show({
                     type: 'error',
                     text1: '加载游戏历史失败',
-                    text2: '请检查网络连接或稍后再试。',
-                    visibilityTime: 2000,
+                    text2: '请检查网络或稍后重试',
                     position: 'bottom',
+                    visibilityTime: 2000,
                 });
-
             } finally {
                 setLoading(false);
             }
-        };
-        fetchGames();
-
-        return () => {
-            clearHistory();
-        };
+        })();
     }, []);
 
-    const getWinnerAndLoser = (game: GameSnapshot) => {
-        if (game.players.length === 0) return { winner: null, loser: null };
-
-        const sortedPlayers = [...game.players].sort((a, b) => b.cashDifference - a.cashDifference);
-        return {
-            winner: sortedPlayers[0],
-            loser: sortedPlayers[sortedPlayers.length - 1]
-        };
+    // —— 大赢家/大输家（按 settleCashDiff）——
+    const pickTop = (game: GameHistoryItem) => {
+        if (!game.players.length) return { winner: null, loser: null };
+        const sorted = [...game.players].sort((a, b) => b.settleCashDiff - a.settleCashDiff);
+        return { winner: sorted[0], loser: sorted[sorted.length - 1] };
     };
 
-    const renderGameCard = ({ item }: { item: GameSnapshot }) => {
-        const { winner, loser } = getWinnerAndLoser(item);
-        const gameDate = item.created
-            ? item.created instanceof Date
-                ? item.created
-                : typeof item.created === 'string'
-                    ? new Date(item.created)
-                    : item.created instanceof Timestamp ? item.created.toDate() : new Date(0)
-            : new Date(0); // Fallback to epoch if `created` is null
-
-        const day = String(gameDate.getDate()).padStart(2, '0')
-        const month = String(gameDate.getMonth() + 1).padStart(2, '0'); 
-        const time = String(gameDate.getHours()).padStart(2, '0') + ':' + String(gameDate.getMinutes()).padStart(2, '0');
-        const year = String(gameDate.getFullYear());
+    // —— 渲染卡片 ——  
+    const renderGameCard = ({ item }: { item: GameHistoryItem }) => {
+        const { winner, loser } = pickTop(item);
+        const { day, month, year, time } = getLocalDateParts(item.createdMs);
 
         return (
             <TouchableOpacity
                 style={styles.card}
-                onPress={() => navigation.navigate('GameDetail', { gameId: item.id })}
+                // 只传 gameId；详情页完全以 Firestore 为主
+                onPress={() => navigation.navigate('GameDetail', { game: item })}
                 activeOpacity={0.7}
             >
                 <View style={styles.dateContainer}>
@@ -147,62 +174,53 @@ export default function GameHistoryScreen() {
                 <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
                         <View style={styles.blindsContainer}>
-                            <MaterialCommunityIcons name="poker-chip" size={20} color={color.highLighter || "#d46613"} />
+                            <MaterialCommunityIcons name="poker-chip" size={20} color={color.highLighter || '#d46613'} />
                             <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
                         </View>
-
                         <View style={styles.playerCountContainer}>
                             <Text style={styles.playerCountText}>{item.players.length}人参与</Text>
                         </View>
                     </View>
 
+                    {/* 统计 */}
                     <View style={styles.statsContainer}>
                         <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="bank" size={18} color={color.highLighter || "#d46613"} />
+                            <MaterialCommunityIcons name="bank" size={18} color={color.highLighter || '#d46613'} />
                             <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{item.totalBuyIn / 1000 + "K"}</Text>
-                                <Text style={styles.statLabel}>总买入</Text>
+                                <Text style={styles.statValue}>{money(item.totalBuyInCash)}</Text>
+                                <Text style={styles.statLabel}>总买入筹码</Text>
                             </View>
                         </View>
 
                         <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="calculator-variant" size={18} color={color.highLighter || "#d46613"} />
+                            <MaterialCommunityIcons name="calculator-variant" size={18} color={color.highLighter || '#d46613'} />
                             <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>
-                                    {(
-                                        Number(
-                                            item.players.reduce(
-                                                (sum, p) =>
-                                                    sum +
-                                                    (Number(p.cashDifference) / (Number(item.baseCashAmount) / Number(item.baseChipAmount))) +
-                                                    Number(p.totalBuyInChips),
-                                                0
-                                            ).toFixed(0)
-                                        ) / 1000
-                                    ) + "K"}
-                                </Text>
-
-                                <Text style={styles.statLabel}>结算总额</Text>
+                                <Text style={styles.statValue}>{money(item.totalEndingCash)}</Text>
+                                <Text style={styles.statLabel}>结算筹码</Text>
                             </View>
                         </View>
 
                         <View style={styles.statItem}>
                             <MaterialCommunityIcons
-                                name={item.totalDiff >= 0 ? "alert-circle-check" : "alert-circle"}
+                                name={item.totalDiffCash >= 0 ? 'arrow-up-bold-circle' : 'arrow-down-bold-circle'}
                                 size={18}
-                                color={item.totalDiff >= 0 ? "#4CAF50" : "#F44336"}
+                                color={item.totalDiffCash >= 0 ? Palette.success : Palette.error}
                             />
                             <View style={styles.statTexts}>
-                                <Text style={[styles.statValue, {
-                                    color: item.totalDiff >= 0 ? "#4CAF50" : "#F44336"
-                                }]}>
-                                    {item.totalDiff >= 0 ? '+' : ''}{item.totalDiff}
+                                <Text
+                                    style={[
+                                        styles.statValue,
+                                        { color: item.totalDiffCash >= 0 ? Palette.success : Palette.error },
+                                    ]}
+                                >
+                                    {item.totalDiffCash >= 0 ? '+' : '-'}{(Math.abs(item.totalDiffCash))}
                                 </Text>
-                                <Text style={styles.statLabel}>差额</Text>
+                                <Text style={styles.statLabel}>总差额</Text>
                             </View>
                         </View>
                     </View>
 
+                    {/* 最大赢家/输家 */}
                     {winner && loser && (
                         <View style={styles.playersContainer}>
                             <View style={styles.playerRow}>
@@ -210,8 +228,8 @@ export default function GameHistoryScreen() {
                                     <MaterialCommunityIcons name="trophy" size={16} color="#FFD700" />
                                     <Text style={styles.playerName}>{winner.nickname}</Text>
                                 </View>
-                                <Text style={[styles.playerProfit, { color: "#4CAF50" }]}>
-                                    +{winner.cashDifference}
+                                <Text style={[styles.playerProfit, { color: Palette.success }]}>
+                                    +${money(winner.settleCashDiff)}
                                 </Text>
                             </View>
 
@@ -220,8 +238,8 @@ export default function GameHistoryScreen() {
                                     <MaterialCommunityIcons name="emoticon-sad" size={16} color="#9E9E9E" />
                                     <Text style={styles.playerName}>{loser.nickname}</Text>
                                 </View>
-                                <Text style={[styles.playerProfit, { color: "#F44336" }]}>
-                                    {loser.cashDifference}
+                                <Text style={[styles.playerProfit, { color: Palette.error }]}>
+                                    -${money(Math.abs(loser.settleCashDiff))}
                                 </Text>
                             </View>
                         </View>
@@ -238,7 +256,7 @@ export default function GameHistoryScreen() {
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={"#d46613"} />
+                <ActivityIndicator size="large" color={'#d46613'} />
                 <Text style={styles.loadingText}>加载游戏历史...</Text>
             </View>
         );
@@ -247,17 +265,13 @@ export default function GameHistoryScreen() {
     return (
         <View style={styles.container}>
             <FlatList
-                data={history}
+                data={items}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.list}
                 renderItem={renderGameCard}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons
-                            name="cards"
-                            size={60}
-                            color="#BDBDBD"
-                        />
+                        <MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />
                         <Text style={styles.emptyText}>暂无游戏记录</Text>
                         <Text style={styles.emptySubText}>开始一局新游戏吧！</Text>
                     </View>
@@ -266,4 +280,3 @@ export default function GameHistoryScreen() {
         </View>
     );
 }
-

@@ -15,14 +15,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
 import { useLogStore } from '@/stores/useLogStore';
-import { saveGameToFirebase } from '@/firebase/saveGame'
+import { createGameOnServer } from '@/firebase/saveGame'
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
-import { serverTimestamp } from 'firebase/firestore';
-
 interface GameSetupCardProps {
     onConfirm: () => void;
     onCancel?: () => void;
@@ -65,7 +63,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             .test(
                 'is-greater-than-small-blind',
                 '大盲注必须大于或等于小盲注',
-                function(value) {
+                function (value) {
                     const { smallBlind } = this.parent;
                     return !value || !smallBlind || value >= smallBlind;
                 }
@@ -87,7 +85,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const handleInputChange = (field: string, value: string) => {
         // 仅允许数字输入
         const numericValue = value.replace(/[^0-9]/g, '');
-        
+
         // 更新表单值
         setFormValues(prev => ({
             ...prev,
@@ -111,10 +109,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             const fieldSchema = yup.object().shape({
                 [field]: gameSchema.fields[field as keyof typeof gameSchema.fields]
             });
-            
+
             // 验证字段
             fieldSchema.validateSync({ [field]: value ? Number(value) : undefined }, { abortEarly: false });
-            
+
             // 如果验证通过，清除错误
             if (errors[field]) {
                 setErrors(prev => {
@@ -142,7 +140,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         validateField(field, formValues[field as keyof typeof formValues]);
     };
 
-    const handleStartGame = () => {
+    const handleStartGame = async () => {
 
         try {
             // 隐藏键盘
@@ -150,11 +148,11 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
 
             // 转换值为数字类型
             const gameData = {
-                smallBlind: formValues.smallBlind ? parseInt(formValues.smallBlind) : undefined,
-                bigBlind: formValues.bigBlind ? parseInt(formValues.bigBlind) : undefined,
-                baseChipAmount: formValues.baseChipAmount ? parseInt(formValues.baseChipAmount) : undefined,
-                baseCashAmount: formValues.baseCashAmount ? parseFloat(formValues.baseCashAmount) : undefined,
-
+                // 用 Number 更直观（string -> number），配合 yup 校验
+                smallBlind: formValues.smallBlind ? Number(formValues.smallBlind) : undefined,
+                bigBlind: formValues.bigBlind ? Number(formValues.bigBlind) : undefined,
+                baseChipAmount: formValues.baseChipAmount ? Number(formValues.baseChipAmount) : undefined,
+                baseCashAmount: formValues.baseCashAmount ? Number(formValues.baseCashAmount) : undefined,
             };
 
             // 验证数据
@@ -163,7 +161,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             const gameId = generateSecureId('game');
             const token = generateToken(); // 👈 生成 token
             setToken(token); // 👈 存入全局 Zustand
-            
+
             // 清除错误
             setErrors({});
 
@@ -171,42 +169,37 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             setGame({
                 gameId,
                 smallBlind: gameData.smallBlind ?? 0,
-                bigBlind: gameData.bigBlind?? 0,
-                baseChipAmount: gameData.baseChipAmount?? 0,
-                baseCashAmount: gameData.baseCashAmount?? 0,
-                created: serverTimestamp(),
-                updated: serverTimestamp(),
+                bigBlind: gameData.bigBlind ?? 0,
+                baseChipAmount: gameData.baseChipAmount ?? 0,
+                baseCashAmount: gameData.baseCashAmount ?? 0,
             });
 
             // 记录游戏设置
-            log('Game', `游戏设置: ${JSON.stringify({ 
-                gameId, 
+            log('Game', `游戏设置: ${JSON.stringify({
+                gameId,
                 token,
                 smallBlind: gameData.smallBlind,
                 bigBlind: gameData.bigBlind,
                 baseChipAmount: gameData.baseChipAmount,
                 baseCashAmount: gameData.baseCashAmount,
-                created: serverTimestamp(),
-                updated: serverTimestamp(),
+                created: new Date().toISOString(),
+                updated: new Date().toISOString(),
             })}`);
 
             // 同步到Firebase
-            saveGameToFirebase(gameId)
-                .then(() => {
-                    log('Firebase', `✅ 游戏 ${gameId} 数据同步成功`);
-                    onConfirm();
-                })
-                .catch((err) => {
+            await createGameOnServer({
+                gameId,
+                smallBlind: gameData.smallBlind ?? 0,
+                bigBlind: gameData.bigBlind ?? 0,
+                baseChipAmount: gameData.baseChipAmount ?? 0,
+                baseCashAmount: gameData.baseCashAmount ?? 0,
+                finalized: false,
+                token,
+                // 视情况附加：createdBy / playerCount 等
+            });
 
-                    Toast.show({
-                        type: 'error',
-                        text1: '上传失败',
-                        text2: '游戏数据上传失败，请稍后再试',
-                        visibilityTime: 2000,
-                        position: 'bottom',
-                    });
-                    onConfirm(); // 仍然继续进入游戏
-                });
+            log('Firebase', `✅ 游戏 ${gameId} 创建成功(created 由服务器写入)`);
+            onConfirm();
         } catch (error) {
             if (error instanceof yup.ValidationError) {
                 // 格式化验证错误
@@ -226,7 +219,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                     position: 'bottom',
                 });
             } else {
-
+                onConfirm();
                 Toast.show({
                     type: 'error',
                     text1: '未知错误',
