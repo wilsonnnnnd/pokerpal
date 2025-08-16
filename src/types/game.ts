@@ -1,69 +1,107 @@
-/** ========================
-
- * ======================== */
-// 子集合 players 的结构（以你截图为准）
+// ===== 子集合 players（现金口径）=====
 export type PlayerSnapshotCash = {
-    playerId: string;
-    nickname: string;
-    totalBuyInCash: number;
-    settleCashAmount: number;
-    settleCashDiff: number;
-    settleROI: number;
-    buyInCount: number;
-    photoUrl?: string | null;
+  playerId: string;
+  nickname: string;
+  totalBuyInCash: number;   // 现金总买入
+  settleCashAmount: number; // 结算现金
+  settleCashDiff: number;   // 盈亏（正盈利，负亏损）
+  settleROI: number;        // 小数，例如 0.2 表示 20%
+  buyInCount: number;
+  photoUrl?: string | null; // ✅ 统一为 photoUrl
 };
 
-// Game 主文档（以 Firestore 为准）
+// ===== Game 主文档（以 Firestore 为准）=====
 export type GameDocFS = {
-    gameId: string;           // 文档里的 gameId（通常与 docId 相同）
-    smallBlind?: number;
-    bigBlind?: number;
-    baseCashAmount?: number;
-    baseChipAmount?: number;
-    rate?: number;
-    playerCount?: number;
-    status?: string;          // e.g. "finalized"
-    finalized?: boolean;
-    createdBy?: string | null;
-    token?: string;
-    created: any;             // Firestore Timestamp 或毫秒
-    updated: any;             // Firestore Timestamp 或毫秒
+  gameId: string;            // 通常与 docId 相同
+  smallBlind?: number;
+  bigBlind?: number;
+  baseCashAmount?: number;
+  baseChipAmount?: number;
+  rate?: number;             // 可选汇率（如有）
+  playerCount?: number;
+  status?: string;           // "finalized" 等
+  finalized?: boolean;
+  createdBy?: string | null;
+  token?: string | null;
+  created: any;              // Firestore Timestamp | number(ms) | Date
+  updated: any;              // Firestore Timestamp | number(ms) | Date
 };
 
-// 归一化后给 UI 使用
+// ===== 归一化给 UI 使用 =====
 export type GameSnapshotUI = {
-    id: string;                 // = gameId / docId
-    smallBlind?: number;
-    bigBlind?: number;
-    rate?: number;
-    createdMs: number;
-    updatedMs: number;
-    totalBuyInCash: number;     // Σ totalBuyInCash
-    totalEndingCash: number;    // Σ settleCashAmount
-    totalDiffCash: number;      // Σ settleCashDiff
-    players: PlayerSnapshotCash[];
+  id: string;                 // = gameId / docId
+  smallBlind?: number;
+  bigBlind?: number;
+  rate?: number;
+  createdMs: number;          // 毫秒
+  updatedMs: number;          // 毫秒
+  totalBuyInCash: number;     // Σ totalBuyInCash
+  totalEndingCash: number;    // Σ settleCashAmount
+  totalDiffCash: number;      // Σ settleCashDiff
+  players: PlayerSnapshotCash[];
 };
 
-// ---- 类型：只保留口径 ----
+// ===== 排行列表条目（只保留现金口径）=====
 export type PlayerItem = {
-    id: string;                // = playerId
-    nickname: string;
-    photoUrl?: string | null;
-    buyInCount: number;
-    totalBuyInCash: number;
-    settleCashAmount: number;
-    settleCashDiff: number;    // 正盈利 负亏损
-    settleROI: number;         // 小数，例如 0.2 => 20%
+  id: string;                 // = playerId
+  nickname: string;
+  photoUrl?: string | null;
+  buyInCount: number;
+  totalBuyInCash: number;
+  settleCashAmount: number;
+  settleCashDiff: number;     // 正盈利 负亏损
+  settleROI: number;          // 小数，例如 0.2 => 20%
 };
 
 export type GameHistoryItem = {
-    id: string;                // = gameId
-    smallBlind?: number;
-    bigBlind?: number;
-    createdMs: number;
-    updatedMs: number;
-    totalBuyInCash: number;    // Σ totalBuyInCash
-    totalEndingCash: number;   // Σ settleCashAmount
-    totalDiffCash: number;     // Σ settleCashDiff
-    players: PlayerItem[];
+  id: string;                 // = gameId
+  smallBlind?: number;
+  bigBlind?: number;
+  createdMs: number;
+  updatedMs: number;
+  totalBuyInCash: number;     // Σ totalBuyInCash
+  totalEndingCash: number;    // Σ settleCashAmount
+  totalDiffCash: number;      // Σ settleCashDiff
+  players: PlayerItem[];
+};
+
+// ====== GameState（给 useGameStore 用）======
+export type GameState = {
+  gameId: string;
+  smallBlind: number;
+  bigBlind: number;
+  baseChipAmount: number;
+  baseCashAmount: number;
+
+  createdMs: number | null;   // ✅ 统一 null | number
+  updatedMs: number | null;   // ✅ 统一 null | number
+
+  finalized: boolean;
+  token: string | null;
+
+  // actions
+  setGame: (args: {
+    gameId: string;
+    baseChipAmount: number;
+    baseCashAmount: number;
+    smallBlind: number;
+    bigBlind: number;
+    rate?: number;
+  }) => void;
+
+  setToken: (token: string | null) => void;
+
+  setFromFirestore: (doc: Partial<GameDocFS> & { gameId: string }) => void;
+
+  getGame: () => {
+    gameId: string;
+    baseChipAmount: number;
+    baseCashAmount: number;
+  };
+
+  getCreatedTs: () => import('firebase/firestore').Timestamp | null;
+  getUpdatedTs: () => import('firebase/firestore').Timestamp | null;
+
+  finalizeGame: () => void;
+  resetGame: () => void;
 };

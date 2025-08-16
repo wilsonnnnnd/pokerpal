@@ -1,12 +1,12 @@
 /**
  * preparePlayerGraphBatch
  * -----------------------
- * 生成/合并玩家盈利曲线，加入外部批处理；按 gameId 幂等，仅保留最近 N 条。
+ * 生成/合并玩家盈利曲线，加入外部批处理；按 gameId 幂等，仅保留最近 10 条。
  */
 import { db } from '@/firebase/config'
 import { doc, getDoc, Timestamp, WriteBatch } from 'firebase/firestore'
 import { Player } from '@/types'
-import { userDoc } from '@/constants/namingDb'
+import { userDoc, userGraphDoc, userRecordDoc } from '@/constants/namingDb'
 
 export type GraphPoint = {
     gameId: string
@@ -21,8 +21,8 @@ export async function preparePlayerGraphBatch(
     batch: WriteBatch,
     limitN = 10
 ) {
-    // 路径：users/{uid}/graph/profit
-    const graphRef = doc(db, userDoc, player.id, 'graph', 'profit')
+    // 路径：users/{uid}/graph/record
+    const graphRef = doc(db, userDoc, player.id, userGraphDoc, userRecordDoc)
     const snap = await getDoc(graphRef)
     const existed: GraphPoint[] = (snap.exists() ? (snap.data()?.history ?? []) : []) as GraphPoint[]
 

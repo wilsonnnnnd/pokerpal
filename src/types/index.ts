@@ -6,4 +6,4 @@ export { Player, PlayerState } from './player';
 
 export { HeaderSlotStore, PrimaryButtonProps, MsgPopUpProps } from './layout';
 
-export { PlayerSnapshotCash, GameDocFS, GameSnapshotUI, PlayerItem, GameHistoryItem } from './game';
+export { PlayerSnapshotCash, GameDocFS, GameSnapshotUI, PlayerItem, GameHistoryItem,GameState } from './game';

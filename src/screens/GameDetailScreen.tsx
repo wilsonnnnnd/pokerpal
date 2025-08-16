@@ -167,7 +167,7 @@ export default function GameDetailScreen() {
         offPlayers = onSnapshot(
             query(playersRef, orderBy('playerId', 'asc')),
             snap => {
-                latestPlayers = snap.docs.map(d => d.data());
+                latestPlayers = snap.docs.map(d => ({ __docId: d.id, ...d.data() }));
                 emit();
             },
             err => {
@@ -383,11 +383,11 @@ export default function GameDetailScreen() {
                 </View>
 
                 <View style={styles.playerListContainer}>
-                    {game.players.map(p => {
+                    {game.players.map((p, idx) => {
                         const diff = Number(p.settleCashDiff) || 0;
                         const roi = Number(p.settleROI) || 0;
                         return (
-                            <View style={styles.playerCard} key={p.playerId}>
+                            <View style={styles.playerCard} key={`${p.playerId || 'row'}-${idx}`}>
                                 <View style={styles.playerCardHeader}>
                                     <View style={styles.playerIdentity}>
                                         <View style={styles.avatar}>
