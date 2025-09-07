@@ -21,6 +21,7 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
+import { getDeviceId } from '@/utils/deviceInfo';
 interface GameSetupCardProps {
     onConfirm: () => void;
     onCancel?: () => void;
@@ -185,6 +186,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 created: new Date().toISOString(),
                 updated: new Date().toISOString(),
             })}`);
+            const createdBy = await getDeviceId() // 设备 ID 作为创建者标识（可改为用户 ID）
 
             // 同步到Firebase
             await createGameOnServer({
@@ -195,6 +197,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 baseCashAmount: gameData.baseCashAmount ?? 0,
                 finalized: false,
                 token,
+                createdBy : createdBy ?? null,
                 // 视情况附加：createdBy / playerCount 等
             });
 
