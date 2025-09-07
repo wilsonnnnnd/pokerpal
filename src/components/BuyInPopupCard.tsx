@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Animated, Image } from 'react-native';
 import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { Player } from '@/types';
 import { useLogStore } from '@/stores/useLogStore';
+import { useGameStore } from '@/stores/useGameStore';
 
 
 type Props = {
@@ -16,12 +17,16 @@ type Props = {
 export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) => {
     const [amount, setAmount] = useState('');
     const [isFocused, setIsFocused] = useState(false);
-    const presetValues = [
-        { value: 1000, label: "+1K" },
-        { value: 2000, label: "+2K" },
-        { value: 5000, label: "+5K" },
-        { value: 10000, label: "+10K" }
-    ];
+    // 防止连续快速点击快捷按钮
+    const [quickDisabled, setQuickDisabled] = useState(false);
+    // 根据当前游戏的大盲生成：bigBlind * 100 / 200 / 500 / 1000
+    const bigBlind = useGameStore.getState().bigBlind ?? 1;
+    
+    const multipliers = [100, 200, 500, 1000];
+    const presetValues = multipliers.map(m => ({
+        value: bigBlind * m,
+        label: `+${m}`
+    }));
 
     const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -50,9 +55,16 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
     };
 
     const appendPreset = (value: number) => {
-        const current = parseInt(amount || '0', 10);
-        const sum = isNaN(current) ? value : current + value;
-        setAmount(sum.toString());
+        if (quickDisabled) return;
+        setQuickDisabled(true);
+        try {
+            const current = parseInt(amount || '0', 10);
+            const sum = isNaN(current) ? value : current + value;
+            setAmount(sum.toString());
+        } finally {
+            // 短暂解锁，防止连续点击（300ms）
+            setTimeout(() => setQuickDisabled(false), 300);
+        }
     };
 
     // 生成玩家头像颜色
@@ -65,6 +77,9 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
     const avatarColor = generateAvatarColor(player.nickname);
     const initialLetter = player.nickname.charAt(0).toUpperCase();
 
+    // 优先使用玩家已有头像 URL（avatarUrl / photoURL），否则使用首字母色块作为头像
+    const avatarUrl = (player as any).avatarUrl || (player as any).photoURL || null;
+
     return (
         <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
             <KeyboardAvoidingView
@@ -74,9 +89,13 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                 <View style={styles.card}>
                     <View style={styles.header}>
                         <View style={styles.headerContent}>
-                            <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-                                <Text style={styles.avatarText}>{initialLetter}</Text>
-                            </View>
+                            {avatarUrl ? (
+                                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                            ) : (
+                                <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
+                                    <Text style={styles.avatarText}>{initialLetter}</Text>
+                                </View>
+                            )}
                             <View style={styles.headerTextContainer}>
                                 <Text style={styles.title}>追加买入</Text>
                                 <Text style={styles.subtitle}>{player.nickname}</Text>
@@ -118,9 +137,10 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                             {presetValues.map((item) => (
                                 <TouchableOpacity
                                     key={item.value}
-                                    style={styles.quickBtn}
+                                    style={[styles.quickBtn, quickDisabled && styles.quickBtnDisabled]}
                                     onPress={() => appendPreset(item.value)}
                                     activeOpacity={0.7}
+                                    disabled={quickDisabled}
                                 >
                                     <Text style={styles.quickText}>{item.label}</Text>
                                 </TouchableOpacity>
@@ -206,6 +226,11 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    avatarImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
     },
     avatarText: {
         fontSize: 20,
@@ -294,6 +319,9 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 1,
         borderColor: '#e0e0e0',
+    },
+    quickBtnDisabled: {
+        opacity: 0.6,
     },
     quickText: {
         fontSize: 14,

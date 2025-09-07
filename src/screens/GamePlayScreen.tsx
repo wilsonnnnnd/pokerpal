@@ -504,7 +504,7 @@ export default function GamePlayScreen() {
                                                 icon="arrow-up-bold-box"
                                                 text={
                                                     display.mostBuyIn
-                                                        ? `${display.mostBuyIn.nickname} (${display.mostBuyIn.totalBuyInChips}`
+                                                        ? `${display.mostBuyIn.nickname} (${display.mostBuyIn.totalBuyInChips})`
                                                         : '--'
                                                 }
                                                 label="最多买入"
@@ -514,7 +514,7 @@ export default function GamePlayScreen() {
                                                 icon="arrow-down-bold-box"
                                                 text={
                                                     display.leastBuyIn
-                                                        ? `${display.leastBuyIn.nickname} (${display.leastBuyIn.totalBuyInChips}`
+                                                        ? `${display.leastBuyIn.nickname} (${display.leastBuyIn.totalBuyInChips})`
                                                         : '--'
                                                 }
                                                 label="最少买入"
