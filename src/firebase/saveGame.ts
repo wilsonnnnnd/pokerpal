@@ -23,8 +23,8 @@ import {
 import { BatchBuilder } from './batchBuilder'
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { gameDoc } from '@/constants/namingDb'
+import { getDeviceId } from '@/utils/deviceInfo'
 
-const createdBy = 'host'
 
 function validateSettlement(players: Player[]) {
 	if (!players?.length) return
@@ -98,7 +98,8 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 	const gameRef = doc(db, gameDoc, gameId)
 	const snap = await getDoc(gameRef)
 	const isCreate = !snap.exists()
-
+	const createdBy = await (async () => await getDeviceId())() // 设备 ID 作为创建者标识（可改为用户 ID）
+	
 	const gamePayload = isCreate
 		? makeCreateGamePayload({
 			gameId,

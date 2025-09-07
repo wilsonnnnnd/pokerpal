@@ -4,3 +4,4 @@ export const userByEmailDoc = 'users-by-email';
 export const gameDoc = 'games';
 export const userGraphDoc = 'graph';
 export const userRecordDoc = 'record';
+export const deviceKey = "pokerpal-device-id"
