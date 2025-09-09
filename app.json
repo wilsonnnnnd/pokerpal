@@ -13,9 +13,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wilsonnnnd.pokerpal",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
-    
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/PokerPal.png",
