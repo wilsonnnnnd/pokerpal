@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Platform } from 'react-native';
 import { useHeaderSlot } from '@/stores/useHeaderSlotStore';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const titles: Record<string, string> = {
     Home: '主页',
@@ -19,6 +20,7 @@ export const Header = () => {
     const { title, right, left } = useHeaderSlot();
     const route = useRoute();
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
 
     const shouldShowBack = route.name !== 'Home' && !left;
 
@@ -29,7 +31,7 @@ export const Header = () => {
     );
 
     return (
-        <View style={[styles.header, { backgroundColor: color.card }]}>
+        <View style={[styles.header, { backgroundColor: color.card, paddingTop: insets.top, height: 56 + (Platform.OS === 'ios' ? insets.top : 0) }]}>
             <StatusBar barStyle="dark-content" backgroundColor={color.card} animated />
             <View style={styles.left}>{shouldShowBack ? defaultBackButton : left}</View>
             <Text style={styles.title}>{titles[route.name] || '页面'}</Text>
