@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from './src/screens/HomeScreen';
+import LoginScreen from './src/screens/LoginScreen';
 import GamePlayScreen from './src/screens/GamePlayScreen';
 import GameHistoryScreen from './src/screens/GameHistoryScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
@@ -15,6 +16,7 @@ import Toast from 'react-native-toast-message';
 
 
 export type RootStackParamList = {
+  Login: undefined;
   Home: undefined;
   GameSetup: undefined;
   AddPlayer: undefined;
@@ -34,11 +36,13 @@ export default function App() {
       <PopupProvider>
         <NavigationContainer ref={navigationRef}>
           <Stack.Navigator
+            initialRouteName="Login"
             screenOptions={{
               header: () => <Header />,
             }}>
 
             <>
+              <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="GamePlay" component={GamePlayScreen} />
               <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
