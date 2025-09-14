@@ -1,0 +1,129 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import Toast from 'react-native-toast-message';
+import { auth, db } from '@/firebase/config';
+import { signInWithCredential, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { userDoc, userByEmailDoc } from '@/constants/namingDb';
+import { useNavigation } from '@react-navigation/native';
+import { Palette as color } from '@/constants';
+
+GoogleSignin.configure({
+    // NOTE: Ensure you set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in env for web client id
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+});
+
+export default function LoginScreen() {
+    const navigation = useNavigation();
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        // optional: check if already signed in
+    }, []);
+
+    const saveUserProfile = async (user: { uid: string; email?: string | null; displayName?: string | null; photoURL?: string | null; isAnonymous?: boolean }) => {
+        try {
+            const uid = user.uid;
+            const data: any = {
+                nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
+                email: user.email ?? '',
+                photoURL: user.photoURL ?? '',
+                isActive: true,
+                role: user.isAnonymous ? 'guest' : 'player',
+                updated: serverTimestamp(),
+            };
+
+            await setDoc(doc(db, userDoc, uid), {
+                ...data,
+                created: serverTimestamp(),
+            }, { merge: true });
+
+            if (user.email) {
+                const key = String(user.email).toLowerCase().trim();
+                await setDoc(doc(db, userByEmailDoc, key), {
+                    uid,
+                    nickname: data.nickname,
+                    photoURL: data.photoURL,
+                    registered: true,
+                    lastLinkedAt: serverTimestamp(),
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('saveUserProfile error', error);
+        }
+    };
+
+    const onGoogleSignIn = async () => {
+        setLoading(true);
+        try {
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+            const userInfo = await GoogleSignin.signIn();
+            // getTokens returns idToken/accessToken with correct typing
+            const tokens = await GoogleSignin.getTokens();
+
+            // Create a Firebase credential with the token
+            const googleCredential = GoogleAuthProvider.credential(tokens.idToken);
+            const userCred = await signInWithCredential(auth as any, googleCredential);
+
+            const u = userCred.user;
+            await saveUserProfile({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous });
+
+            Toast.show({ type: 'success', text1: '登录成功', text2: `欢迎 ${u.displayName ?? '玩家'}` });
+            // Navigate to Home
+            // @ts-ignore
+            navigation.navigate('Home');
+        } catch (error: any) {
+            console.error('Google sign in error', error);
+            Toast.show({ type: 'error', text1: '登录失败', text2: error?.message ?? String(error) });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onGuest = async () => {
+        setLoading(true);
+        try {
+            const cred = await signInAnonymously(auth as any);
+            const u = cred.user;
+            await saveUserProfile({ uid: u.uid, isAnonymous: u.isAnonymous });
+            Toast.show({ type: 'success', text1: '已以访客身份登录' });
+            // @ts-ignore
+            navigation.navigate('Home');
+        } catch (error: any) {
+            console.error('Anonymous sign-in error', error);
+            Toast.show({ type: 'error', text1: '访客登录失败', text2: error?.message ?? String(error) });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor={color.background} />
+            <Image source={require('../../src/assets/PokerPal.png')} style={styles.logo} />
+            <Text style={styles.title}>欢迎使用 PokerPal</Text>
+
+            <TouchableOpacity style={styles.googleBtn} onPress={onGoogleSignIn} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.googleText}>使用 Google 登录</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.guestBtn} onPress={onGuest} disabled={loading}>
+                <Text style={styles.guestText}>以访客身份继续</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.note}>无需输入密码，授权后将保存昵称与头像以便统计与邀请。</Text>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+    logo: { width: 140, height: 140, marginBottom: 20, resizeMode: 'contain' },
+    title: { fontSize: 20, marginBottom: 24, color: '#222' },
+    googleBtn: { backgroundColor: '#4285F4', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 12 },
+    googleText: { color: '#fff', fontWeight: '600' },
+    guestBtn: { backgroundColor: '#ddd', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
+    guestText: { color: '#222', fontWeight: '600' },
+    note: { marginTop: 16, color: '#666', fontSize: 12, textAlign: 'center' },
+});

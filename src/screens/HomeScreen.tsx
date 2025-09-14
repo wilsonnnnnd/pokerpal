@@ -5,6 +5,8 @@ import {
     Modal,
     ActivityIndicator,
     ScrollView,
+    Image,
+    TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,12 +24,16 @@ import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
+import { auth } from '@/firebase/config';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen = () => {
     const navigation = useNavigation<HomeScreenNav>();
+    const [user, setUser] = useState<{ uid: string; email?: string | null; displayName?: string | null; photoURL?: string | null; isAnonymous?: boolean; profile?: UserProfile } | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const { finalized, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
@@ -73,6 +79,21 @@ const HomeScreen = () => {
         }
     }, []);
 
+    // Subscribe to auth state and fetch profile
+    useEffect(() => {
+        const unsub = onAuthStateChanged(auth as any, async (u) => {
+            if (!u) {
+                setUser(null);
+                return;
+            }
+
+            const profile = await fetchUserProfile(u.uid);
+            setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
+        });
+
+        return () => unsub();
+    }, []);
+
     if (!isReady) {
         return (
             <View style={styles.loadingContainer}>
@@ -95,39 +116,82 @@ const HomeScreen = () => {
                         />
                         <Text style={styles.title}>德州扑克筹码记录器</Text>
                         <Text style={styles.subtitle}>为荷官设计，专注每一局记录 ✍️</Text>
+
+                        {/* user card */}
+                        {user && (
+                            <View style={styles.userCard}>
+                                <View style={styles.userInfoContainer}>
+                                    <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
+                                        {user.photoURL ? (
+                                            <Image source={{ uri: user.photoURL }} style={styles.userAvatar} />
+                                        ) : (
+                                            <View style={styles.userAvatar}>
+                                                <Text style={{ color: color.text, fontWeight: '700' }}>{(user.displayName || '访客').slice(0, 1)}</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.userName}>{user.displayName ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
+                                        <Text style={styles.userEmail}>{user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
+                                        <Text style={[styles.userEmail, { marginTop: 6 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.buttonsSection}>
-                        <PrimaryButton
-                            title="开始游戏"
-                            icon="play-circle"
-                            iconColor="#fff"
-                            onPress={() => setModalVisible(true)}
-                            style={styles.startGameButton}
-                            size="large"
-                            fullWidth={true}
-                        />
-
-                        <View style={styles.buttonRow}>
+                        <View style={styles.actionsCard}>
                             <PrimaryButton
-                                title="游戏历史"
-                                icon="history"
-                                variant="outlined"
-                                onPress={() => navigation.navigate('GameHistory')}
-                                style={styles.secondaryButton}
-                                iconColor="#3498db"
+                                title="开始游戏"
+                                icon="play-circle"
+                                iconColor={color.lightText}
+                                onPress={() => setModalVisible(true)}
+                                style={[styles.startGameButton, { borderRadius: 10 }]}
+                                size="large"
+                                fullWidth={true}
                             />
 
+                            <View style={[styles.buttonRow, { marginTop: 12 }]}>
+                                <PrimaryButton
+                                    title="游戏历史"
+                                    icon="history"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('GameHistory')}
+                                    style={styles.secondaryButton}
+                                    iconColor={color.info}
+                                />
+
+                                <PrimaryButton
+                                    title="玩家排行"
+                                    icon="account-group"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('GamePlayerRank')}
+                                    style={styles.secondaryButton}
+                                    iconColor={color.info}
+                                />
+                            </View>
+
                             <PrimaryButton
-                                title="玩家排行"
-                                icon="account-group"
+                                title="退出登录"
+                                icon="logout"
                                 variant="outlined"
-                                onPress={() => navigation.navigate('GamePlayerRank')}
-                                style={styles.secondaryButton}
-                                iconColor="#3498db"
+                                onPress={async () => {
+                                    try {
+                                        await signOut(auth as any);
+                                        useGameStore.getState().resetGame();
+                                        usePlayerStore.getState().resetPlayers();
+                                        Toast.show({ type: 'success', text1: '已退出登录' });
+                                        navigation.navigate('Login');
+                                    } catch (e) {
+                                        Toast.show({ type: 'error', text1: '退出登录失败' });
+                                    }
+                                }}
+                                style={styles.logoutButton}
+                                iconColor={color.error}
                             />
                         </View>
-
                     </View>
                     {/* 新游戏设置弹窗 */}
                     <Modal visible={modalVisible} transparent animationType="fade">

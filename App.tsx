@@ -13,6 +13,8 @@ import GamePlayerRankScreen from './src/screens/PlayerRankingScreen';
 import { Header } from '@/components/Header';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/firebase/config';
 
 
 export type RootStackParamList = {
@@ -30,11 +32,42 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const [initializing, setInitializing] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth as any, (user) => {
+      // Wait for navigation to be ready to avoid navigation errors
+      const tryNavigate = () => {
+        if (!navigationRef.isReady()) {
+          setTimeout(tryNavigate, 50);
+          return;
+        }
+
+        if (user) {
+          // already logged in -> go to Home
+          navigationRef.navigate('Home');
+        } else {
+          // not logged in -> go to Login
+          navigationRef.navigate('Login');
+        }
+        setInitializing(false);
+      };
+
+      tryNavigate();
+    });
+
+    return () => unsub();
+  }, [navigationRef]);
 
   return (
     <SafeAreaProvider>
       <PopupProvider>
         <NavigationContainer ref={navigationRef}>
+          {initializing && (
+            <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" />
+            </View>
+          )}
           <Stack.Navigator
             initialRouteName="Login"
             screenOptions={{
@@ -42,7 +75,7 @@ export default function App() {
             }}>
 
             <>
-              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="GamePlay" component={GamePlayScreen} />
               <Stack.Screen name="GameHistory" component={GameHistoryScreen} />

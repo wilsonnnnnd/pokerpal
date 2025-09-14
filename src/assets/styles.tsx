@@ -153,10 +153,62 @@ export const HomePagestyles = StyleSheet.create({
         marginTop: 40,
         marginBottom: 40,
     },
+    userCard: {
+        width: '100%',
+        backgroundColor: color.lightBackground,
+        borderRadius: 12,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: color.shadowLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        elevation: 2,
+        marginTop: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: color.borderColor,
+    },
+    userInfoContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userAvatar: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        marginRight: 12,
+        overflow: 'hidden',
+        backgroundColor: color.lightGray,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    userName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: color.valueText,
+    },
+    userEmail: {
+        fontSize: 12,
+        color: color.mutedText,
+    },
     buttonsSection: {
         width: '100%',
         alignItems: 'center',
         marginBottom: 40,
+    },
+    actionsCard: {
+        width: '100%',
+        backgroundColor: color.lightBackground,
+        borderRadius: 12,
+        padding: 16,
+        shadowColor: color.shadowLight,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 1,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: color.borderColor,
     },
     footerSection: {
         width: '100%',
@@ -196,6 +248,12 @@ export const HomePagestyles = StyleSheet.create({
         borderColor: color.info,
     },
 
+    logoutButton: {
+        marginTop: 12,
+        borderColor: color.error,
+        backgroundColor: 'transparent',
+    },
+
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -204,7 +262,7 @@ export const HomePagestyles = StyleSheet.create({
     },
     footerText: {
         fontSize: 12,
-        color: '#95a5a6',
+        color: color.mutedText,
         textAlign: 'center',
     },
 });
