@@ -26,7 +26,7 @@ export const Header = () => {
 
     const defaultBackButton = (
         <TouchableOpacity onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={color.title} />
         </TouchableOpacity>
     );
 
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#000',
+    color: color.title,
         textAlign: 'center',
     },
     right: { flex: 1, alignItems: 'flex-end' },

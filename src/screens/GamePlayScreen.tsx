@@ -36,7 +36,9 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
-import { finalizeGameOnServer, saveGameToFirebase } from '@/firebase/saveGame';         // 统一远端保存入口
+// Remote save functions are kept for optional cloud sync but primary store is local DB
+// import { finalizeGameOnServer, saveGameToFirebase } from '@/firebase/saveGame';
+import localDb from '@/services/localDb';
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
@@ -161,10 +163,8 @@ export default function GamePlayScreen() {
 
         try {
             const gameId = useGameStore.getState().gameId;
-
+            // Perform local finalize (remote finalize removed when using local DB)
             setSubmitPhase('finalizing');
-            await retry(() => finalizeGameOnServer(gameId), 3, 700);
-
             useGameStore.getState().finalizeGame();
             setPendingFinalize(false);
             setSubmitPhase('done');
@@ -224,7 +224,29 @@ export default function GamePlayScreen() {
 
             // 1) 本地离线缓存（失败不继续）
             try {
+                // save snapshot to in-memory store
                 saveGameToHistory();
+                // also persist history snapshot to local DB for durability
+                const game = useGameStore.getState();
+                const snapshotPayload = {
+                    id: game.gameId,
+                    createdMs: game.createdMs ?? Date.now(),
+                    updatedMs: game.updatedMs ?? Date.now(),
+                    smallBlind: game.smallBlind,
+                    bigBlind: game.bigBlind,
+                    baseCashAmount: game.baseCashAmount,
+                    baseChipAmount: game.baseChipAmount,
+                    players: players.map(p => ({
+                        id: p.id,
+                        nickname: p.nickname,
+                        buyInCount: p.buyInChipsList?.length ?? 0,
+                        totalBuyInCash: p.totalBuyInChips ?? 0,
+                        settleCashAmount: p.settleCashDiff ?? 0,
+                        settleCashDiff: p.settleCashDiff ?? 0,
+                        settleROI: p.settleROI ?? 0,
+                    })),
+                };
+                await localDb.saveHistoryLocal(game.gameId, snapshotPayload);
             } catch (e: any) {
                 Toast.show({
                     type: 'error',
@@ -234,13 +256,18 @@ export default function GamePlayScreen() {
                 return;
             }
 
-            // 2) 远端保存（明细）——带自动重试
+            // 2) 本地保存（替代远端）——保存游戏明细到本地 SQLite
             setSubmitPhase('saving');
-            await retry(() => saveGameToFirebase(gameId, players), 3, 700);
+            try {
+                const game = useGameStore.getState();
+                await localDb.saveGameLocal(gameId, { game, players });
+            } catch (err) {
+                throw err;
+            }
 
-            // 3) finalize 落库（只写 updated/status，不触碰 created）——带自动重试
+            // 3) finalize 本地状态
             setSubmitPhase('finalizing');
-            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+            useGameStore.getState().finalizeGame();
 
             // 4) 本地 finalize（最后一步，保证远端成功后再改本地）
             useGameStore.getState().finalizeGame();
@@ -379,7 +406,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => timerRef.current?.show()}
                     >
-                        <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
+                        <MaterialCommunityIcons name="timer-outline" size={22} color={color.lightText} />
                         <Text style={styles.toolButtonText}>计时器</Text>
                     </TouchableOpacity>
 
@@ -387,7 +414,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => setModalState({ type: 'Insurance' })}
                     >
-                        <MaterialCommunityIcons name="calculator" size={22} color="#fff" />
+                        <MaterialCommunityIcons name="calculator" size={22} color={color.lightText} />
                         <Text style={styles.toolButtonText}>保险计算</Text>
                     </TouchableOpacity>
 
@@ -395,7 +422,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => setModalState({ type: 'wheel' })}
                     >
-                        <MaterialCommunityIcons name="rotate-3d-variant" size={22} color="#fff" />
+                        <MaterialCommunityIcons name="rotate-3d-variant" size={22} color={color.lightText} />
                         <Text style={styles.toolButtonText}>决策转盘</Text>
                     </TouchableOpacity>
                 </View>
@@ -435,7 +462,7 @@ export default function GamePlayScreen() {
                                 {/* ===== 分析卡片（展示筹码 + 现金）===== */}
                                 <View style={styles.analysisCard}>
                                     <LinearGradient
-                                        colors={['#f5f7fa', '#e4e7eb']}
+                                        colors={[color.lightGray, color.mediumGray]}
                                         style={styles.analysisHeader}
                                     >
                                         <MaterialCommunityIcons
@@ -482,7 +509,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="赢家"
-                                                iconColor="#FFD700"
+                                                iconColor={color.card}
                                             />
                                             <InfoRow
                                                 icon="emoticon-cry-outline"
@@ -492,7 +519,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="输家"
-                                                iconColor="#FF6B6B"
+                                                iconColor={color.error}
                                             />
                                         </View>
 
@@ -547,7 +574,7 @@ export default function GamePlayScreen() {
                                     style={styles.endGameButton}
                                     textStyle={styles.endGameButtonText}
                                     icon={pendingFinalize ? 'refresh' : 'stop-circle-outline'}
-                                    iconColor="#fff"
+                                    iconColor={color.lightText}
                                     iconSize={24}
                                     iconPosition="left"
                                     size="large"

@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.6)',
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: color.lightBackground,
         borderRadius: 16,
         padding: 20,
     },
@@ -94,11 +94,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: color.valueText,
     },
     label: {
         fontSize: 14,
-        color: '#7f8c8d',
+        color: color.valueLabel,
         marginBottom: 12,
     },
     inputContainer: {
@@ -106,19 +106,19 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: color.borderColor || color.mediumGray,
         borderRadius: 8,
         padding: 10,
         fontSize: 16,
-        color: '#2c3e50',
-        backgroundColor: '#f9f9f9',
+        color: color.valueText,
+        backgroundColor: color.lightGray,
     },
     inputFocused: {
         borderColor: color.highLighter,
-        backgroundColor: '#fff',
+        backgroundColor: color.lightBackground,
     },
     button: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: color.success,
         paddingVertical: 12,
         borderRadius: 8,
         alignItems: 'center',
@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
     buttonText: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#fff',
+        color: color.lightText,
     },
 });

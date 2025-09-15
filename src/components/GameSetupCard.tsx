@@ -12,10 +12,13 @@ import {
 import { useGameStore } from '@/stores/useGameStore';
 import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Palette as color } from '@/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
 import { useLogStore } from '@/stores/useLogStore';
-import { createGameOnServer } from '@/firebase/saveGame'
+// Remote create is optional; primary creation is local DB
+// import { createGameOnServer } from '@/firebase/saveGame'
+import localDb from '@/services/localDb';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
@@ -188,8 +191,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             })}`);
             const createdBy = await getDeviceId() // 设备 ID 作为创建者标识（可改为用户 ID）
 
-            // 同步到Firebase
-            await createGameOnServer({
+            // 保存到本地 DB（替代远端创建）
+            await localDb.saveGameLocal(gameId, {
                 gameId,
                 smallBlind: gameData.smallBlind ?? 0,
                 bigBlind: gameData.bigBlind ?? 0,
@@ -197,11 +200,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 baseCashAmount: gameData.baseCashAmount ?? 0,
                 finalized: false,
                 token,
-                createdBy : createdBy ?? null,
-                // 视情况附加：createdBy / playerCount 等
+                createdBy: createdBy ?? null,
             });
 
-            log('Firebase', `✅ 游戏 ${gameId} 创建成功(created 由服务器写入)`);
+            log('LocalDB', `✅ 游戏 ${gameId} 本地创建成功`);
             onConfirm();
         } catch (error) {
             if (error instanceof yup.ValidationError) {
@@ -280,7 +282,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.card}>
                         <View style={styles.header}>
-                            <MaterialCommunityIcons name="gamepad-variant" size={28} color="#3498db" />
+                            <MaterialCommunityIcons name="gamepad-variant" size={28} color={color.info} />
                             <Text style={styles.title}>游戏设置</Text>
                         </View>
 
@@ -337,12 +339,12 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                         />
 
                         <View style={styles.buttonGroup}>
-                            {onCancel && (
+                {onCancel && (
                                 <PrimaryButton
                                     title="取消"
                                     icon="close"
                                     iconPosition="left"
-                                    iconColor='#e74c3c'
+                    iconColor={color.error}
                                     onPress={onCancel}
                                     variant="outlined"
                                     style={styles.cancelButton}
@@ -377,8 +379,8 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         borderRadius: 20,
         padding: 24,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
+        backgroundColor: color.lightBackground,
+        shadowColor: color.shadowLight,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
@@ -393,7 +395,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginLeft: 10,
-        color: '#2c3e50',
+        color: color.valueText,
     },
     buttonGroup: {
         flexDirection: 'row',
@@ -402,12 +404,12 @@ const styles = StyleSheet.create({
         marginTop: 24,
     },
     cancelButton: {
-        borderColor: '#7f8c8d',
+        borderColor: color.valueLabel,
         flex: 1,
         marginRight: 12,
     },
     confirmButton: {
-        backgroundColor: '#27ae60',
+        backgroundColor: color.success,
         flex: 2,
     },
 });

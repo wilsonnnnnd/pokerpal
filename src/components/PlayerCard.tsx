@@ -51,21 +51,20 @@ export function PlayerCard({
                         <View style={styles.nameContainer}>
                             <Text style={styles.name}>{player.nickname}</Text>
                             <View style={styles.statusContainer}>
-                                <View style={[styles.statusIndicator, { backgroundColor: player.isActive ? '#4CAF50' : '#9E9E9E' }]} />
+                                <View style={[styles.statusIndicator, { backgroundColor: player.isActive ? color.success : color.weakGray }]} />
                                 <Text style={styles.statusText}>{player.isActive ? '在场' : '已离场'}</Text>
                             </View>
                         </View>
                     </View>
 
                     {isSettled && (
-                        <View style={[styles.profitBadge, { backgroundColor: profit >= 0 ? '#e8f5e9' : '#ffebee' }]}>
+                        <View style={[styles.profitBadge, { backgroundColor: profit >= 0 ? color.success + '22' : color.error + '22' }]}>
                             <MaterialCommunityIcons
                                 name={profit >= 0 ? 'arrow-up' : 'arrow-down'}
                                 size={16}
-                                color={profit >= 0 ? '#4CAF50' : '#F44336'}
+                                color={profit >= 0 ? color.success : color.error}
                             />
-                            <Text style={[styles.profitText, { color: profit >= 0 ? '#4CAF50' : '#F44336' }]}>
-                                {profit >= 0 ? '+' : ''}{profit}
+                            <Text style={[styles.profitText, { color: profit >= 0 ? color.success : color.error }]}>\n+                                {profit >= 0 ? '+' : ''}{profit}
                             </Text>
                         </View>
                     )}
@@ -132,7 +131,7 @@ export function PlayerCard({
                     <PrimaryButton
                         title="追加买入"
                         icon="plus"
-                        iconColor="#fff"
+                        iconColor={color.lightText}
                         onPress={() => onBuyIn(player)}
                         style={[
                             styles.buyinButton, 
@@ -147,7 +146,7 @@ export function PlayerCard({
                     <PrimaryButton
                         title={player.isActive ? '离开游戏' : '返回游戏'}
                         icon={player.isActive ? 'logout' : 'arrow-right'}
-                        iconColor="#fff"
+                        iconColor={color.lightText}
                         onPress={() => onToggle(player)}
                         style={[
                             player.isActive ? styles.leaveButton : styles.returnButton,
@@ -165,7 +164,8 @@ export function PlayerCard({
 }
 
 const generatePlayerAvatar = (name: string) => {
-    const colors = ['#FFC107', '#FF9800', '#FF5722', '#4CAF50', '#2196F3', '#9C27B0', '#673AB7'];
+    // use palette tokens and a few related semantic tokens
+    const colors = [color.primary, color.success, color.info, color.confirm, color.cancel, color.warning, color.strongGray];
     const colorIndex = name.charCodeAt(0) % colors.length;
     return colors[colorIndex];
 };
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     avatarText: { 
         fontSize: 20, 
         fontWeight: 'bold', 
-        color: 'white' 
+        color: color.lightText 
     },
     cardHeader: { 
         flexDirection: 'row', 
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16, 
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#eaeaea',
+    borderBottomColor: color.mediumGray,
     },
     avatarAndName: { 
         flexDirection: 'row', 
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     name: { 
         fontSize: 18, 
         fontWeight: '700', 
-        color: '#2c3e50' 
+    color: color.valueText 
     },
     statusContainer: { 
         flexDirection: 'row', 
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     },
     statusText: { 
         fontSize: 12, 
-        color: '#7f8c8d' 
+        color: color.valueLabel 
     },
     profitBadge: { 
         flexDirection: 'row', 
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     },
     detailsContainer: { 
         padding: 16, 
-        backgroundColor: '#fff' 
+        backgroundColor: color.lightBackground 
     },
     detailsRow: {
         flexDirection: 'row',
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8f9fa',
+    backgroundColor: color.lightGray,
         padding: 10,
         borderRadius: 12,
         marginHorizontal: 4,
@@ -282,45 +282,45 @@ const styles = StyleSheet.create({
     detailValue: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#2c3e50',
+    color: color.valueText,
     },
     detailLabel: {
         fontSize: 12,
-        color: '#7f8c8d',
+    color: color.valueLabel,
         marginTop: 2,
     },
     actions: { 
         flexDirection: 'row', 
         padding: 16, 
         borderTopWidth: 1, 
-        borderTopColor: '#eaeaea', 
-        backgroundColor: '#f8f9fa',
+        borderTopColor: color.mediumGray, 
+        backgroundColor: color.lightGray,
         gap: 16,
     },
     buyinButton: { 
         flex: 1,
-        backgroundColor: '#4CAF50',
+        backgroundColor: color.success,
         borderRadius: 12,
     },
     leaveButton: { 
         flex: 1,
-        backgroundColor: '#F44336',
+        backgroundColor: color.error,
         borderRadius: 12,
     },
     returnButton: { 
         flex: 1,
-        backgroundColor: '#2196F3',
+        backgroundColor: color.info,
         borderRadius: 12,
     },
     leaveText: { 
         fontSize: 14, 
         fontWeight: '600', 
-        color: '#FFFFFF' 
+        color: color.lightText 
     },
     buyinText: { 
         fontSize: 14, 
         fontWeight: '600', 
-        color: '#FFFFFF' 
+        color: color.lightText 
     },
     disabledButton: { 
         opacity: 0.5 

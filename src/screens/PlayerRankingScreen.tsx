@@ -25,7 +25,7 @@ const SORT_TYPES = {
     APPEARANCES: 'gamesPlayed',  // 参与场次
 } as const;
 
-const AVATAR_COLORS = ['#FFC107', '#FF9800', '#FF5722', '#4CAF50', '#2196F3', '#9C27B0', '#673AB7'];
+const AVATAR_COLORS = [color.card, color.warning, color.cancel, color.success, color.info, color.primary, color.strongGray];
 
 // ===== 类型（与 Firestore 聚合结构一致）=====
 export type AggregatedPlayer = {
@@ -52,10 +52,10 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
     const isCashPositive = (Number(item.totalProfit) || 0) >= 0;
 
     const renderRankBadge = () => {
-        let badgeColor = '#E0E0E0';
-        if (index === 0) badgeColor = '#FFD700';
-        else if (index === 1) badgeColor = '#C0C0C0';
-        else if (index === 2) badgeColor = '#CD7F32';
+    let badgeColor = color.mediumGray;
+    if (index === 0) badgeColor = color.card;
+    else if (index === 1) badgeColor = color.weakGray;
+    else if (index === 2) badgeColor = color.borderColor;
         return (
             <View style={[styles.rankBadge, { backgroundColor: badgeColor }]}>
                 <Text style={styles.rankBadgeText}>{index + 1}</Text>
@@ -81,13 +81,13 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 <View style={styles.nameContainer}>
                     <Text style={styles.playerName}>{safeName}</Text>
                     <View style={styles.gamesContainer}>
-                        <MaterialCommunityIcons name="cards-playing-outline" size={14} color="#7f8c8d" />
+                        <MaterialCommunityIcons name="cards-playing-outline" size={14} color={color.valueLabel} />
                         <Text style={styles.gamesText}>{Number(item.gamesPlayed) || 0} 场游戏</Text>
                     </View>
                 </View>
 
-                <View style={[styles.profitBadge, { backgroundColor: isCashPositive ? '#e8f5e9' : '#ffebee' }]}>
-                    <Text style={[styles.profitText, { color: isCashPositive ? '#4CAF50' : '#F44336' }]}>
+                <View style={[styles.profitBadge, { backgroundColor: isCashPositive ? color.confirm : color.cancel }]}>
+                    <Text style={[styles.profitText, { color: isCashPositive ? color.success : color.error }]}>
                         {isCashPositive ? '+' : ''}{(Number(item.totalProfit) || 0).toFixed(2)}
                     </Text>
                 </View>
@@ -105,7 +105,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 <View style={styles.statItem}>
                     <MaterialCommunityIcons name="cash-multiple" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
-                        <Text style={[styles.statValue, { color: isCashPositive ? '#2ecc71' : '#e74c3c' }]}>
+                        <Text style={[styles.statValue, { color: isCashPositive ? color.success : color.error }]}> 
                             ${Math.abs(Number(item.totalProfit) || 0).toFixed(2)}
                         </Text>
                         <Text style={styles.statLabel}>{isCashPositive ? '盈利' : '亏损'}</Text>
@@ -115,7 +115,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 <View style={styles.statItem}>
                     <MaterialCommunityIcons name="chart-line" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
-                        <Text style={[styles.statValue, { color: isRoiPositive ? '#2ecc71' : '#e74c3c' }]}>{roiText}%</Text>
+                        <Text style={[styles.statValue, { color: isRoiPositive ? color.success : color.error }]}>{roiText}%</Text>
                         <Text style={styles.statLabel}>ROI</Text>
                     </View>
                 </View>
@@ -127,7 +127,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
 // ===== 空列表组件 =====
 const EmptyListComponent = React.memo(({ keyword }: { keyword: string }) => (
     <View style={styles.emptyContainer}>
-        <MaterialCommunityIcons name={keyword ? 'account-search' : 'account-group'} size={60} color="#bdc3c7" />
+        <MaterialCommunityIcons name={keyword ? 'account-search' : 'account-group'} size={60} color={color.weakGray} />
         <Text style={styles.emptyTitle}>{keyword ? '未找到匹配玩家' : '暂无玩家数据'}</Text>
         <Text style={styles.emptyText}>{keyword ? '尝试使用其他关键词搜索' : '完成游戏后玩家数据将在此显示'}</Text>
     </View>
@@ -256,15 +256,15 @@ export default function PlayerRankingScreen() {
         if (loadingMore) {
             return (
                 <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={'#d46613'} />
-                    <Text style={{ marginTop: 8, color: '#7f8c8d' }}>加载更多...</Text>
+                    <ActivityIndicator size="small" color={color.primary} />
+                    <Text style={{ marginTop: 8, color: color.valueLabel }}>加载更多...</Text>
                 </View>
             );
         }
-        if (!hasMore && players.length > 0) {
+            if (!hasMore && players.length > 0) {
             return (
                 <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-                    <Text style={{ color: '#9e9e9e' }}>没有更多了</Text>
+                    <Text style={{ color: color.weakGray }}>没有更多了</Text>
                 </View>
             );
         }
@@ -274,7 +274,7 @@ export default function PlayerRankingScreen() {
     if (loading && !refreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={'#d46613'} />
+                <ActivityIndicator size="large" color={color.primary} />
                 <Text style={styles.loadingText}>加载排行榜数据...</Text>
             </View>
         );
@@ -283,19 +283,19 @@ export default function PlayerRankingScreen() {
     return (
         <View style={styles.container}>
             {/* 搜索栏 */}
-            <View style={styles.header}>
+                <View style={styles.header}>
                 <View style={styles.searchContainer}>
-                    <MaterialCommunityIcons name="magnify" size={20} color="#7f8c8d" />
+                    <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
                     <TextInput
                         placeholder="搜索玩家昵称..."
                         value={keyword}
                         onChangeText={setKeyword}
                         style={styles.searchInput}
-                        placeholderTextColor="#95a5a6"
+                        placeholderTextColor={color.weakGray}
                     />
                     {keyword.length > 0 && (
                         <TouchableOpacity onPress={clearKeyword}>
-                            <MaterialCommunityIcons name="close-circle" size={16} color="#95a5a6" />
+                            <MaterialCommunityIcons name="close-circle" size={16} color={color.weakGray} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -308,11 +308,7 @@ export default function PlayerRankingScreen() {
                         style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
                         onPress={handleSortByTotalProfit}
                     >
-                        <MaterialCommunityIcons
-                            name="cash"
-                            size={16}
-                            color={sortBy === SORT_TYPES.TOTAL_PROFIT ? '#FFFFFF' : '#666666'}
-                        />
+                        <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
                         <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
                             累计收益
                         </Text>
@@ -322,11 +318,7 @@ export default function PlayerRankingScreen() {
                         style={[styles.sortButton, sortBy === SORT_TYPES.ROI && styles.sortButtonActive]}
                         onPress={handleSortByRoi}
                     >
-                        <MaterialCommunityIcons
-                            name="percent"
-                            size={16}
-                            color={sortBy === SORT_TYPES.ROI ? '#FFFFFF' : '#666666'}
-                        />
+                        <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
                         <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
                             平均 ROI
                         </Text>
@@ -336,11 +328,7 @@ export default function PlayerRankingScreen() {
                         style={[styles.sortButton, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonActive]}
                         onPress={handleSortByAppearances}
                     >
-                        <MaterialCommunityIcons
-                            name="calendar-multiple"
-                            size={16}
-                            color={sortBy === SORT_TYPES.APPEARANCES ? '#FFFFFF' : '#666666'}
-                        />
+                        <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
                         <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
                             参与场次
                         </Text>
@@ -349,13 +337,12 @@ export default function PlayerRankingScreen() {
             </View>
 
             {/* 列表 */}
-            <FlatList
-                data={filteredPlayers}
+                <FlatList data={filteredPlayers}
                 keyExtractor={keyExtractor}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#d46613']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.primary]} />
                 }
                 ListEmptyComponent={renderEmptyComponent}
                 onEndReachedThreshold={0.5}

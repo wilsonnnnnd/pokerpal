@@ -213,17 +213,13 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         <View style={styles.qrContainer}>
                             <Text style={styles.qrTitle}>扫描二维码加入游戏</Text>
                             <View style={styles.qrWrapper}>
-                                <QRCode
-                                    value={getQRCodeLink()}
-                                    size={200}
-                                    backgroundColor="#fff"
-                                />
+                                <QRCode value={getQRCodeLink()} size={200} backgroundColor={color.lightBackground} />
                             </View>
                             <TouchableOpacity
                                 onPress={handleCopyLink}
                                 style={styles.copyLinkButton}
                             >
-                                <Ionicons name="copy-outline" size={20} color="#fff" />
+                                <Ionicons name="copy-outline" size={20} color={color.lightText} />
                                 <Text style={styles.copyLinkText}>复制邀请链接</Text>
                             </TouchableOpacity>
 
@@ -238,8 +234,8 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 return (
                     <View style={styles.tabContent}>
                         <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-                            <TextInput
+                            <Ionicons name="search" size={20} color={color.text} style={styles.searchIcon} />
+                                <TextInput
                                 style={styles.searchInput}
                                 placeholder="搜索玩家（昵称或邮箱）"
                                 value={searchTerm}
@@ -247,19 +243,19 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             />
                             {searchTerm ? (
                                 <TouchableOpacity onPress={() => setSearchTerm('')} style={styles.clearSearch}>
-                                    <Ionicons name="close-circle" size={18} color="#999" />
+                                    <Ionicons name="close-circle" size={18} color={color.mutedText} />
                                 </TouchableOpacity>
                             ) : null}
                         </View>
 
                         {isLoadingUsers ? (
                             <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={color.info} />
+                                    <ActivityIndicator size="large" color={color.info} />
                                 <Text style={styles.loadingText}>正在加载玩家列表...</Text>
                             </View>
                         ) : filteredUsers.length === 0 ? (
                             <View style={styles.emptyContainer}>
-                                <Ionicons name="people" size={50} color="#ccc" />
+                                <Ionicons name="people" size={50} color={color.weakGray} />
                                 <Text style={styles.emptyText}>
                                     {searchTerm ? '没有找到匹配的玩家' : existingPlayerEmails.length > 0 ? '没有更多可添加的玩家' : '暂无已注册玩家'}
                                 </Text>
@@ -328,14 +324,14 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             <View style={styles.inputContainer}>
                                 <Text style={styles.label}>玩家昵称</Text>
                                 <TextInput
-                                    style={[styles.input, isFocused.nickname && styles.inputFocused]}
-                                    placeholder="输入玩家昵称"
-                                    placeholderTextColor="#A0A0A0"
-                                    value={nickname}
-                                    onChangeText={setNickname}
-                                    onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
-                                    onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
-                                />
+                                        style={[styles.input, isFocused.nickname && styles.inputFocused]}
+                                        placeholder="输入玩家昵称"
+                                        placeholderTextColor={color.mutedText}
+                                        value={nickname}
+                                        onChangeText={setNickname}
+                                        onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
+                                        onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
+                                    />
                             </View>
 
                             <View style={styles.inputContainer}>
@@ -343,7 +339,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                 <TextInput
                                     style={[styles.input, isFocused.email && styles.inputFocused]}
                                     placeholder="输入玩家邮箱"
-                                    placeholderTextColor="#A0A0A0"
+                                    placeholderTextColor={color.mutedText}
                                     value={email}
                                     keyboardType="email-address"
                                     onChangeText={setEmail}
@@ -372,7 +368,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         <View style={styles.container}>
             <View style={styles.card}>
                 <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#333" />
+                    <Ionicons name="close" size={24} color={color.text} />
                 </TouchableOpacity>
 
                 <Text style={styles.title}>添加玩家</Text>
@@ -383,11 +379,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         style={[styles.tabButton, activeTab === Tab.MANUAL && styles.activeTabButton]}
                         onPress={() => setActiveTab(Tab.MANUAL)}
                     >
-                        <Ionicons
-                            name="create-outline"
-                            size={22}
-                            color={activeTab === Tab.MANUAL ? color.info : '#666'}
-                        />
+                        <Ionicons name="create-outline" size={22} color={activeTab === Tab.MANUAL ? color.info : color.text} />
                         <Text style={[styles.tabText, activeTab === Tab.MANUAL && styles.activeTabText]}>
                             手动添加
                         </Text>
@@ -397,11 +389,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         style={[styles.tabButton, activeTab === Tab.SELECT && styles.activeTabButton]}
                         onPress={() => setActiveTab(Tab.SELECT)}
                     >
-                        <Ionicons
-                            name="people"
-                            size={22}
-                            color={activeTab === Tab.SELECT ? color.info : '#666'}
-                        />
+                        <Ionicons name="people" size={22} color={activeTab === Tab.SELECT ? color.info : color.text} />
                         <Text style={[styles.tabText, activeTab === Tab.SELECT && styles.activeTabText]}>
                             选择玩家
                         </Text>
@@ -411,11 +399,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         style={[styles.tabButton, activeTab === Tab.SCAN && styles.activeTabButton]}
                         onPress={() => setActiveTab(Tab.SCAN)}
                     >
-                        <Ionicons
-                            name="qr-code"
-                            size={22}
-                            color={activeTab === Tab.SCAN ? color.info : '#666'}
-                        />
+                        <Ionicons name="qr-code" size={22} color={activeTab === Tab.SCAN ? color.info : color.text} />
                         <Text style={[styles.tabText, activeTab === Tab.SCAN && styles.activeTabText]}>
                             扫码加入
                         </Text>
@@ -433,7 +417,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: color.lightBackground,
         borderRadius: 20,
         padding: 20,
         shadowColor: '#000',
@@ -446,7 +430,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#333333',
+        color: color.title,
         marginBottom: 20,
         textAlign: 'center',
     },
@@ -463,7 +447,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginBottom: 20,
         borderRadius: 12,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: color.lightGray,
         padding: 4,
     },
     tabButton: {
@@ -485,7 +469,7 @@ const styles = StyleSheet.create({
     tabText: {
         fontSize: 8,
         fontWeight: '500',
-        color: '#666666',
+        color: color.text,
         marginLeft: 6,
     },
     activeTabText: {
@@ -505,42 +489,42 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#333333',
+        color: color.title,
         marginBottom: 8,
     },
     optional: {
         fontSize: 14,
-        color: '#888888',
+        color: color.weakGray,
         fontWeight: 'normal',
     },
     input: {
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: color.borderColor || color.mediumGray,
         borderRadius: 12,
         padding: 14,
         fontSize: 16,
-        backgroundColor: '#F9F9F9',
-        color: '#333333',
+        backgroundColor: color.lightGray,
+        color: color.title,
     },
     inputFocused: {
-        borderColor: color.info || '#007AFF',
-        backgroundColor: '#FFFFFF',
-        shadowColor: color.info || '#007AFF',
+        borderColor: color.info,
+        backgroundColor: color.lightBackground,
+        shadowColor: color.info,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     addButton: {
         marginTop: 10,
-        backgroundColor: color.confirm || color.info,
+        backgroundColor: color.confirm,
         borderRadius: 12,
-        shadowColor: color.confirm || color.info,
+        shadowColor: color.confirm,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
     },
     addButtonText: {
-        color: '#FFFFFF',
+        color: color.lightText,
         fontWeight: '600',
     },
 
@@ -548,7 +532,7 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: color.lightGray,
         borderRadius: 12,
         paddingHorizontal: 12,
         marginBottom: 16,
@@ -571,10 +555,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderColor: '#F0F0F0',
+        borderColor: color.mediumGray,
     },
     selectedUserItem: {
-        backgroundColor: '#E6F7FF',
+        backgroundColor: color.info,
     },
     userItemContent: {
         flexDirection: 'row',
@@ -584,7 +568,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#E0E0E0',
+        backgroundColor: color.mediumGray,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -597,7 +581,7 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#666',
+        color: color.text,
     },
     userInfo: {
         flex: 1,
@@ -605,12 +589,12 @@ const styles = StyleSheet.create({
     userNickname: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#333',
+        color: color.title,
         marginBottom: 4,
     },
     userEmail: {
         fontSize: 14,
-        color: '#666',
+        color: color.text,
     },
     checkmark: {
         marginLeft: 8,
@@ -623,7 +607,7 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: 12,
-        color: '#666',
+        color: color.text,
         fontSize: 14,
     },
     emptyContainer: {
@@ -633,27 +617,27 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         marginTop: 12,
-        color: '#666',
+        color: color.text,
         fontSize: 15,
         textAlign: 'center',
     },
     emptySubText: {
         marginTop: 8,
-        color: '#999',
+        color: color.mutedText,
         fontSize: 13,
         textAlign: 'center',
     },
     addSelectedButton: {
         marginTop: 20,
-        backgroundColor: color.confirm || color.info,
+        backgroundColor: color.confirm,
         borderRadius: 12,
     },
     addSelectedButtonText: {
-        color: '#FFFFFF',
+        color: color.lightText,
         fontWeight: '600',
     },
     disabledButton: {
-        backgroundColor: '#CCCCCC',
+        backgroundColor: color.mediumGray,
         opacity: 0.7,
     },
 
@@ -665,15 +649,15 @@ const styles = StyleSheet.create({
     },
     qrTitle: {
         fontSize: 16,
-        color: '#333',
+        color: color.title,
         fontWeight: '500',
         marginBottom: 20,
     },
     qrWrapper: {
-        padding: 15,
-        backgroundColor: '#FFFFFF',
+    padding: 15,
+    backgroundColor: color.lightBackground,
         borderRadius: 12,
-        shadowColor: '#000',
+    shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -683,20 +667,20 @@ const styles = StyleSheet.create({
     copyLinkButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: color.info || '#007AFF',
+        backgroundColor: color.info,
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 20,
         marginTop: 10,
     },
     copyLinkText: {
-        color: '#FFFFFF',
+        color: color.lightText,
         fontWeight: '500',
         marginLeft: 6,
     },
     qrHelper: {
         fontSize: 14,
-        color: '#666',
+        color: color.text,
         textAlign: 'center',
         marginTop: 20,
         lineHeight: 20,

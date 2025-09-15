@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButtonProps } from '@/types';
+import { Palette as color } from '@/constants';
 
 export const PrimaryButton = ({
     title,
@@ -15,7 +16,7 @@ export const PrimaryButton = ({
     style,
     textStyle,
     icon,
-    iconColor = '#ffffff',
+    iconColor = color.lightText,
     iconSize = 18,
     iconPosition = 'left',
     disabled = false,
@@ -92,14 +93,13 @@ export const PrimaryButton = ({
     // 获取涟漪颜色
     const getRippleColor = () => {
         if (disabled) return 'rgba(0,0,0,0.05)';
-        
         switch (variant) {
             case 'outlined':
             case 'text':
-                return 'rgba(52, 152, 219, 0.2)'; // 主色调的半透明版本
+                return color.primary + '22'; // semi-transparent primary
             case 'filled':
             default:
-                return 'rgba(255, 255, 255, 0.2)'; // 白色的半透明版本
+                return 'rgba(255, 255, 255, 0.2)';
         }
     };
 
@@ -124,11 +124,7 @@ export const PrimaryButton = ({
             }}
         >
             {loading ? (
-                <ActivityIndicator
-                    size="small"
-                    color={loadingColor || (variant === 'filled' ? '#fff' : '#3498db')}
-                    style={styles.loader}
-                />
+                    <ActivityIndicator size="small" color={loadingColor || (variant === 'filled' ? color.lightText : color.primary)} style={styles.loader} />
             ) : (
                 <View style={styles.contentContainer}>
                     {iconPosition === 'left' && renderIcon()}
@@ -180,9 +176,9 @@ const styles = StyleSheet.create({
     },
     // 变体样式
     filledButton: {
-        backgroundColor: '#3498db',
-        borderWidth: 0,
-        shadowColor: '#3498db',
+    backgroundColor: color.primary,
+    borderWidth: 0,
+    shadowColor: color.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -191,7 +187,7 @@ const styles = StyleSheet.create({
     outlinedButton: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: '#3498db',
+        borderColor: color.primary,
     },
     textButton: {
         backgroundColor: 'transparent',
@@ -225,22 +221,18 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     // 文字颜色
-    lightText: {
-        color: '#ffffff',
-    },
-    darkText: {
-        color: '#3498db',
-    },
+    lightText: { color: color.lightText },
+    darkText: { color: color.primary },
     // 禁用状态
     disabledButton: {
-        backgroundColor: '#ecf0f1',
-        borderColor: '#bdc3c7',
+    backgroundColor: color.lightGray,
+    borderColor: color.mediumGray,
         opacity: 0.7,
         shadowOpacity: 0,
         elevation: 0,
     },
     disabledText: {
-        color: '#95a5a6',
+    color: color.mutedText,
     },
     // 圆角样式
     rounded: {

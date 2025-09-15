@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Palette } from '@/constants';
 import { LogItem } from '@/stores/useLogStore';
 import { useLogger } from '@/utils/useLogger';
 
@@ -29,7 +30,7 @@ export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
                 <View style={styles.headerActions}>
                     {isClosed && (
                         <TouchableOpacity onPress={isClosed}>
-                            <MaterialCommunityIcons name="close" size={24} color="#F44336" />
+                            <MaterialCommunityIcons name="close" size={24} color={Palette.error} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
         left: 10,
         right: 10,
         height: 500,
-        backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
         borderRadius: 12,
         padding: 10,
         zIndex: 9999,
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     title: {
-        color: '#fff',
+        color: Palette.lightText,
         fontWeight: 'bold',
         fontSize: 16,
     },
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     clear: {
-        color: '#ff7675',
+        color: Palette.error,
         fontWeight: '600',
         fontSize: 13,
     },
@@ -108,32 +109,32 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     filterLabel: {
-        color: '#ccc',
+        color: Palette.weakGray,
         fontSize: 12,
         marginRight: 4,
     },
     filterTag: {
         fontSize: 12,
-        color: '#b2bec3',
+        color: Palette.loadingText,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
-        backgroundColor: '#2d3436',
+        backgroundColor: Palette.darkGray,
     },
     filterActive: {
-        backgroundColor: '#0984e3',
-        color: '#fff',
+        backgroundColor: Palette.info,
+        color: Palette.lightText,
     },
     logList: {
         paddingBottom: 4,
     },
     logItem: {
-        color: '#dfe6e9',
+        color: Palette.text,
         fontSize: 12,
         marginBottom: 4,
     },
     tag: {
-        color: '#74b9ff',
+        color: Palette.info,
     },
     emoji: {
         marginRight: 4,

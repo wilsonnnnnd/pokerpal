@@ -20,13 +20,14 @@ import { useStoreReady } from '@/hooks/useStoreReady';
 import { Palette as color } from '@/constants';
 import { GameSetupCard } from '@/components/GameSetupCard';
 import { usePopup } from '@/components/PopupProvider';
-import { deleteGameFromFirebase } from '@/firebase/deleteGameFromFirebase';
+import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { auth } from '@/firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
+import RequireMember from '@/components/RequireMember';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -52,7 +53,7 @@ const HomeScreen = () => {
                         navigation.navigate('GamePlay', { gameId });
 
                     } else {
-                        await deleteGameFromFirebase(gameId);
+                        await deleteGame(gameId);
                         useGameStore.getState().resetGame();
                         usePlayerStore.getState().resetPlayers();
 
@@ -134,8 +135,47 @@ const HomeScreen = () => {
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.userName}>{user.displayName ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
                                         <Text style={styles.userEmail}>{user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
-                                        <Text style={[styles.userEmail, { marginTop: 6 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                            <Text style={[styles.userEmail, { marginRight: 8 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
+                                            {user.profile?.role === 'member' && (
+                                                <View style={{ 
+                                                    backgroundColor: color.highLighter, 
+                                                    paddingHorizontal: 6, 
+                                                    paddingVertical: 2, 
+                                                    borderRadius: 8,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <MaterialCommunityIcons name="crown" size={12} color={color.darkGray} />
+                                                    <Text style={{ fontSize: 10, color: color.darkGray, fontWeight: '600', marginLeft: 2 }}>VIP</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                     </View>
+                                </View>
+                                {/* Member-only section with better visual hierarchy */}
+                                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.mediumGray }}>
+                                    <RequireMember fallback={
+                                        <View style={{ 
+                                            backgroundColor: color.lightGray, 
+                                            padding: 8, 
+                                            borderRadius: 6,
+                                            borderLeftWidth: 3,
+                                            borderLeftColor: color.weakGray
+                                        }}>
+                                            <Text style={{ color: color.text, fontSize: 12, fontStyle: 'italic' }}>会员专属功能已锁定</Text>
+                                        </View>
+                                    }>
+                                        <View style={{ 
+                                            backgroundColor: color.info, 
+                                            padding: 8, 
+                                            borderRadius: 6,
+                                            borderLeftWidth: 3,
+                                            borderLeftColor: color.info
+                                        }}>
+                                            <Text style={{ color: color.darkGray, fontWeight: '600', fontSize: 12 }}>✨ 会员专享：高级数据分析已解锁</Text>
+                                        </View>
+                                    </RequireMember>
                                 </View>
                             </View>
                         )}
@@ -162,13 +202,23 @@ const HomeScreen = () => {
                                     style={styles.secondaryButton}
                                     iconColor={color.info}
                                 />
+                                <PrimaryButton
+                                    title="数据库"
+                                    icon="database"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('Database')}
+                                    style={styles.secondaryButton}
+                                    iconColor={color.info}
+                                />
+                            </View>
 
+                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
                                 <PrimaryButton
                                     title="玩家排行"
                                     icon="account-group"
                                     variant="outlined"
                                     onPress={() => navigation.navigate('GamePlayerRank')}
-                                    style={styles.secondaryButton}
+                                    style={[styles.secondaryButton, { width: '100%' }]}
                                     iconColor={color.info}
                                 />
                             </View>

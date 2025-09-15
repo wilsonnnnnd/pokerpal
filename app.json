@@ -3,6 +3,7 @@
     "name": "pokerpal",
     "slug": "pokerpal",
     "version": "1.0.0",
+    "scheme": "pokerpal",
     "orientation": "portrait",
     "icon": "./src/assets/PokerPal.png",
     "userInterfaceStyle": "light",
@@ -26,10 +27,12 @@
         "backgroundColor": "#ffffff"
       },
       "googleServicesFile": "./google-services.json",
-      "usesCleartextTraffic": true,
       "package": "com.wilsonnnnd.pokerpal"
     },
-    "plugins": ["@react-native-google-signin/google-signin"],
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      "expo-sqlite"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

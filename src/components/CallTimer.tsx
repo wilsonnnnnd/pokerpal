@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { logError } from '@/utils/useLogger';
+import { Palette as color } from '@/constants';
 
 /**
  * 德州扑克Call Timer组件的引用接口
@@ -76,28 +77,28 @@ const DEFAULT_TIMER_MODES: TimerMode[] = [
         name: '标准',
         duration: 30,
         icon: 'timer-outline',
-        color: '#4caf50'
+    color: color.success
     },
     {
         id: 'fast',
         name: '快速',
         duration: 15,
         icon: 'flash-outline',
-        color: '#ff9800'
+    color: color.warning
     },
     {
         id: 'long',
         name: '加长',
         duration: 60,
         icon: 'hourglass-outline',
-        color: '#2196f3'
+    color: color.info
     },
     {
         id: 'custom',
         name: '自定义',
         duration: 0,
         icon: 'create-outline',
-        color: '#9c27b0'
+    color: color.primary
     }
 ];
 
@@ -391,9 +392,9 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 获取时间颜色
         const getTimeColor = () => {
-            if (secondsLeft <= criticalThreshold) return '#FF3B30'; // 红色
-            if (secondsLeft <= warningThreshold) return '#FF9500'; // 橙色
-            return '#34C759'; // 绿色
+            if (secondsLeft <= criticalThreshold) return color.error; // 红色
+            if (secondsLeft <= warningThreshold) return color.warning; // 橙色
+            return color.success; // 绿色
         };
 
         // 格式化时间显示
@@ -480,7 +481,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             style={[styles.timerModeButton, { backgroundColor: mode.color }]}
                             onPress={() => startTimerMode(mode)}
                         >
-                            <Ionicons name={mode.icon as any} size={24} color="#fff" />
+                            <Ionicons name={mode.icon as any} size={24} color={color.lightText} />
                             <Text style={styles.timerModeText}>{mode.name}</Text>
                             {mode.id !== 'custom' && (
                                 <Text style={styles.timerModeDuration}>{mode.duration}秒</Text>
@@ -493,7 +494,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     style={styles.closeButton}
                     onPress={handleClose}
                 >
-                    <Ionicons name="close" size={24} color="#666" />
+                    <Ionicons name="close" size={24} color={color.text} />
                 </TouchableOpacity>
             </View>
         );
@@ -503,7 +504,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             <>
                 <Svg height={100} width={100}>
                     <Circle
-                        stroke="#ddd"
+                        stroke={color.mediumGray}
                         fill="none"
                         cx="50"
                         cy="50"
@@ -564,7 +565,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                         <Ionicons
                             name={running ? "pause" : "play"}
                             size={24}
-                            color="#fff"
+                            color={color.lightText}
                         />
                         <Text style={styles.controlButtonText}>
                             {running ? '暂停' : '继续'}
@@ -578,7 +579,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             setRunning(true);
                         }}
                     >
-                        <Ionicons name="refresh" size={24} color="#fff" />
+                        <Ionicons name="refresh" size={24} color={color.lightText} />
                         <Text style={styles.controlButtonText}>重置</Text>
                     </TouchableOpacity>
                 </View>
@@ -588,7 +589,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                         style={styles.settingButton}
                         onPress={() => addSeconds(5)}
                     >
-                        <Ionicons name="add-circle-outline" size={22} color="#555" />
+                        <Ionicons name="add-circle-outline" size={22} color={color.title} />
                         <Text style={styles.settingButtonText}>+5秒</Text>
                     </TouchableOpacity>
 
@@ -596,7 +597,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                         style={styles.settingButton}
                         onPress={() => addSeconds(15)}
                     >
-                        <Ionicons name="add-circle-outline" size={22} color="#555" />
+                        <Ionicons name="add-circle-outline" size={22} color={color.title} />
                         <Text style={styles.settingButtonText}>+15秒</Text>
                     </TouchableOpacity>
 
@@ -604,7 +605,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                         style={styles.settingButton}
                         onPress={backToLauncher}
                     >
-                        <Ionicons name="apps-outline" size={22} color="#555" />
+                        <Ionicons name="apps-outline" size={22} color={color.title} />
                         <Text style={styles.settingButtonText}>模式</Text>
                     </TouchableOpacity>
                 </View>
@@ -644,7 +645,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         // 渲染加载UI
         const renderLoading = () => (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4caf50" />
+                <ActivityIndicator size="large" color={color.success} />
                 <Text style={styles.loadingText}>加载音效中...</Text>
             </View>
         );
@@ -677,7 +678,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     <View style={[styles.modalContent, showLauncherUI && styles.launcherModalContent]}>
                         {!showLauncherUI && !editingTime && !isLoadingSound && (
                             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                                <Ionicons name="close" size={24} color="#666" />
+                                <Ionicons name="close" size={24} color={color.text} />
                             </TouchableOpacity>
                         )}
 
@@ -692,19 +693,19 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: color.overlayDark,
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: '#fff',
+    backgroundColor: color.lightBackground,
         padding: 24,
         borderRadius: 20,
         alignItems: 'center',
         elevation: 5,
         width: '80%',
         maxWidth: 320,
-        shadowColor: '#000',
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.2,
         shadowRadius: 6,
@@ -731,7 +732,7 @@ const styles = StyleSheet.create({
     launcherTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: color.title,
         marginBottom: 20,
     },
     timerModes: {
@@ -746,14 +747,14 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#000',
+        shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
     },
     timerModeText: {
-        color: '#fff',
+        color: color.lightText,
         fontWeight: 'bold',
         fontSize: 16,
         marginTop: 8,
@@ -770,6 +771,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginTop: 12,
         marginBottom: 8,
+        color: color.title,
     },
     presetContainer: {
         flexDirection: 'row',
@@ -783,20 +785,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         margin: 4,
         borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: color.lightGray,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: color.mediumGray,
     },
     activePresetButton: {
-        backgroundColor: '#e3f2fd',
-        borderColor: '#2196f3',
+        backgroundColor: color.lightBackground,
+        borderColor: color.info,
     },
     presetButtonText: {
-        color: '#555',
+        color: color.strongGray,
         fontWeight: '500',
     },
     activePresetButtonText: {
-        color: '#2196f3',
+        color: color.info,
         fontWeight: 'bold',
     },
     controlButtons: {
@@ -816,16 +818,16 @@ const styles = StyleSheet.create({
         marginHorizontal: 5,
     },
     pauseButton: {
-        backgroundColor: '#FF9500',
+        backgroundColor: color.warning,
     },
     resumeButton: {
-        backgroundColor: '#34C759',
+        backgroundColor: color.success,
     },
     resetButton: {
-        backgroundColor: '#666',
+        backgroundColor: color.strongGray,
     },
     controlButtonText: {
-        color: '#fff',
+        color: color.lightText,
         fontWeight: 'bold',
         marginLeft: 6,
     },
@@ -842,7 +844,7 @@ const styles = StyleSheet.create({
     },
     settingButtonText: {
         marginLeft: 4,
-        color: '#555',
+        color: color.strongGray,
     },
 
     // 时间编辑样式
@@ -858,7 +860,7 @@ const styles = StyleSheet.create({
     },
     timeInput: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: color.mediumGray,
         borderRadius: 8,
         padding: 12,
         fontSize: 20,
@@ -878,17 +880,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cancelButton: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: color.lightGray,
     },
     cancelButtonText: {
-        color: '#555',
+        color: color.strongGray,
         fontWeight: '500',
     },
     confirmButton: {
-        backgroundColor: '#4caf50',
+        backgroundColor: color.success,
     },
     confirmButtonText: {
-        color: '#fff',
+        color: color.lightText,
         fontWeight: 'bold',
     },
 
@@ -900,7 +902,7 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 12,
         fontSize: 16,
-        color: '#666',
+        color: color.text,
     },
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, Platform, KeyboardTypeOptions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Palette } from '@/constants';
 
 interface InputFieldProps {
     label: string;
@@ -33,7 +34,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         <View style={styles.inputContainer}>
             <Text style={styles.label}>{label}</Text>
             <View style={[styles.inputWrapper, error && styles.inputWrapperError]}>
-                <MaterialCommunityIcons name={icon} size={20} color="#7f8c8d" style={styles.inputIcon} />
+                <MaterialCommunityIcons name={icon} size={20} color={Palette.valueLabel} style={styles.inputIcon} />
                 <TextInput
                     ref={inputRef}
                     style={styles.input}
@@ -43,7 +44,7 @@ export const InputField: React.FC<InputFieldProps> = ({
                     onFocus={onFocus}
                     onBlur={onBlur}
                     placeholder={placeholder}
-                    placeholderTextColor="#95a5a6"
+                    placeholderTextColor={Palette.mutedText}
                     maxLength={10}
                 />
             </View>
@@ -60,19 +61,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginBottom: 8,
         fontWeight: '500',
-        color: '#34495e',
+        color: Palette.strongGray,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: Palette.borderColor || Palette.mediumGray,
         borderRadius: 12,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: Palette.lightGray,
         paddingHorizontal: 12,
     },
     inputWrapperError: {
-        borderColor: '#e74c3c',
+        borderColor: Palette.error,
         backgroundColor: '#ffebee',
     },
     inputIcon: {
@@ -82,10 +83,10 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#2c3e50',
+        color: Palette.valueText,
     },
     errorText: {
-        color: '#e74c3c',
+        color: Palette.error,
         fontSize: 12,
         marginTop: 4,
         marginLeft: 4,

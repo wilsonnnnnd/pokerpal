@@ -12,6 +12,7 @@ import { Palette as color } from '@/constants';
 GoogleSignin.configure({
     // NOTE: Ensure you set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in env for web client id
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
 });
 
 export default function LoginScreen() {
@@ -104,12 +105,12 @@ export default function LoginScreen() {
             <Image source={require('../../src/assets/PokerPal.png')} style={styles.logo} />
             <Text style={styles.title}>欢迎使用 PokerPal</Text>
 
-            <TouchableOpacity style={styles.googleBtn} onPress={onGoogleSignIn} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.googleText}>使用 Google 登录</Text>}
+            <TouchableOpacity style={[styles.googleBtn, { backgroundColor: color.info }]} onPress={onGoogleSignIn} disabled={loading}>
+                {loading ? <ActivityIndicator color={color.lightText} /> : <Text style={[styles.googleText, { color: color.lightText }]}>使用 Google 登录</Text>}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.guestBtn} onPress={onGuest} disabled={loading}>
-                <Text style={styles.guestText}>以访客身份继续</Text>
+            <TouchableOpacity style={[styles.guestBtn, { backgroundColor: color.lightGray }]} onPress={onGuest} disabled={loading}>
+                <Text style={[styles.guestText, { color: color.title }]}>以访客身份继续</Text>
             </TouchableOpacity>
 
             <Text style={styles.note}>无需输入密码，授权后将保存昵称与头像以便统计与邀请。</Text>
@@ -120,10 +121,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
     logo: { width: 140, height: 140, marginBottom: 20, resizeMode: 'contain' },
-    title: { fontSize: 20, marginBottom: 24, color: '#222' },
-    googleBtn: { backgroundColor: '#4285F4', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 12 },
-    googleText: { color: '#fff', fontWeight: '600' },
-    guestBtn: { backgroundColor: '#ddd', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
-    guestText: { color: '#222', fontWeight: '600' },
-    note: { marginTop: 16, color: '#666', fontSize: 12, textAlign: 'center' },
+    title: { fontSize: 20, marginBottom: 24, color: color.title },
+    googleBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 12 },
+    googleText: { fontWeight: '600' },
+    guestBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
+    guestText: { fontWeight: '600' },
+    note: { marginTop: 16, color: color.text, fontSize: 12, textAlign: 'center' },
 });

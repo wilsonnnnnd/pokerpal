@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MsgPopUpProps } from '@/types';
-import { Palette } from '@/constants';
+import { Palette as color } from '@/constants';
 
 const MsgPopUp: React.FC<MsgPopUpProps> = ({
     title,
@@ -131,15 +131,15 @@ const styles = StyleSheet.create({
         left: 0,
         width: '100%',
         height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: color.overlayDark,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
     },
     popup: {
-        backgroundColor: 'white',
-        borderRadius: 14, // 增加圆角
-        shadowColor: '#000',
+    backgroundColor: color.lightBackground,
+    borderRadius: 14, // 增加圆角
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
         shadowRadius: 16,
@@ -156,79 +156,34 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         textAlign: 'center',
-        color: '#333333',
+        color: color.title,
     },
-    warningTitle: {
-        color: '#e74c3c',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#EEEEEE',
-        width: '100%',
-    },
+    warningTitle: { color: color.error },
+    divider: { height: 1, backgroundColor: color.mediumGray, width: '100%' },
     messageContainer: {
         paddingVertical: 24,
         paddingHorizontal: 24,
     },
-    text: {
-        fontSize: 16,
-        lineHeight: 24, // 增加行高改善可读性
-        textAlign: 'center',
-        color: '#555555',
-    },
+    text: { fontSize: 16, lineHeight: 24, textAlign: 'center', color: color.strongGray },
     noteContainer: {
         paddingHorizontal: 24,
         paddingBottom: 20,
     },
-    note: {
-        fontSize: 14,
-        lineHeight: 20, // 增加行高
-        textAlign: 'center',
-        color: '#666666',
-    },
-    noteLabel: {
-        fontWeight: 'bold',
-        color: Palette.error,
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderTopColor: '#EEEEEE',
-    },
+    note: { fontSize: 14, lineHeight: 20, textAlign: 'center', color: color.text },
+    noteLabel: { fontWeight: 'bold', color: color.error },
+    buttonContainer: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: color.mediumGray },
     button: {
         flex: 1,
         paddingVertical: 16,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    cancelButton: {
-        backgroundColor: '#FFFFFF',
-        borderRightWidth: 0.5,
-        borderRightColor: '#EEEEEE',
-    },
-    confirmButton: {
-        backgroundColor: '#FFFFFF',
-        borderLeftWidth: 0.5,
-        borderLeftColor: '#EEEEEE',
-    },
-    warningButton: {
-        backgroundColor: '#FFFFFF',
-        borderLeftWidth: 0.5,
-        borderLeftColor: '#EEEEEE',
-    },
-    cancelButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#95a5a6',
-    },
-    confirmButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Palette.confirm,
-    },
-    warningButtonText: {
-        color: Palette.cancel, // 修复警告按钮文本颜色
-    },
+    cancelButton: { backgroundColor: color.lightBackground, borderRightWidth: 0.5, borderRightColor: color.mediumGray },
+    confirmButton: { backgroundColor: color.lightBackground, borderLeftWidth: 0.5, borderLeftColor: color.mediumGray },
+    warningButton: { backgroundColor: color.lightBackground, borderLeftWidth: 0.5, borderLeftColor: color.mediumGray },
+    cancelButtonText: { fontSize: 16, fontWeight: '600', color: color.mutedText },
+    confirmButtonText: { fontSize: 16, fontWeight: '600', color: color.confirm },
+    warningButtonText: { color: color.cancel },
 });
 
 export default MsgPopUp;

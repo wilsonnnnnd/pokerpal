@@ -69,9 +69,10 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
 
     // 生成玩家头像颜色
     const generateAvatarColor = (name: string) => {
-        const colors = ['#FFC107', '#FF9800', '#FF5722', '#4CAF50', '#2196F3', '#9C27B0', '#673AB7'];
-        const colorIndex = name.charCodeAt(0) % colors.length;
-        return colors[colorIndex];
+    // 使用主色、成功色、信息色等作为备选头像颜色
+    const colors = [color.primary, color.success, color.info, color.confirm, color.strongGray, color.weakGray, color.info];
+    const colorIndex = name.charCodeAt(0) % colors.length;
+    return colors[colorIndex];
     };
 
     const avatarColor = generateAvatarColor(player.nickname);
@@ -103,7 +104,7 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                         </View>
 
                         <TouchableOpacity onPress={onCancel} style={styles.closeButton}>
-                            <MaterialCommunityIcons name="close" size={22} color="#95a5a6" />
+                            <MaterialCommunityIcons name="close" size={22} color={color.mutedText} />
                         </TouchableOpacity>
                     </View>
 
@@ -114,7 +115,7 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                                 <MaterialCommunityIcons
                                     name="poker-chip"
                                     size={20}
-                                    color={color.highLighter || "#d46613"}
+                                    color={color.highLighter}
                                 />
                             </View>
                             <TextInput
@@ -126,7 +127,7 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                                 onChangeText={setAmount}
                                 keyboardType="number-pad"
                                 placeholder="输入筹码数"
-                                placeholderTextColor="#95a5a6"
+                                placeholderTextColor={color.mutedText}
                                 onFocus={() => setIsFocused(true)}
                                 onBlur={() => setIsFocused(false)}
                             />
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: color.lightBackground,
         borderRadius: 16,
         overflow: 'hidden',
         elevation: 4,
@@ -211,8 +212,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+    borderBottomWidth: 1,
+    borderBottomColor: color.mediumGray,
         paddingHorizontal: 16,
         paddingVertical: 12,
     },
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: 'white',
+        color: color.lightText,
     },
     headerTextContainer: {
         marginLeft: 12,
@@ -243,18 +244,18 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#2c3e50',
+        color: color.valueText,
     },
     subtitle: {
         fontSize: 14,
-        color: '#7f8c8d',
+        color: color.valueLabel,
         marginTop: 2,
     },
     closeButton: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#f5f6fa',
+        backgroundColor: color.lightGray,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#34495e',
+        color: color.strongGray,
         marginBottom: 8,
     },
     inputContainer: {
@@ -277,32 +278,32 @@ const styles = StyleSheet.create({
         height: 48,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f6fa',
+        backgroundColor: color.lightGray,
         borderTopLeftRadius: 8,
         borderBottomLeftRadius: 8,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: color.borderColor || color.mediumGray,
         borderRightWidth: 0,
     },
     input: {
         flex: 1,
         height: 48,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: color.borderColor || color.mediumGray,
         borderTopRightRadius: 8,
         borderBottomRightRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
-        color: '#2c3e50',
-        backgroundColor: '#f9f9f9',
+        color: color.valueText,
+        backgroundColor: color.lightGray,
     },
     inputFocused: {
-        borderColor: '#d46613',
-        backgroundColor: '#FFFFFF',
+        borderColor: color.primary,
+        backgroundColor: color.lightBackground,
     },
     presetLabel: {
         fontSize: 14,
-        color: '#7f8c8d',
+        color: color.valueLabel,
         marginBottom: 8,
     },
     quickButtons: {
@@ -311,14 +312,14 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     quickBtn: {
-        backgroundColor: '#f5f6fa',
+        backgroundColor: color.lightGray,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
         marginRight: 8,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: color.borderColor || color.mediumGray,
     },
     quickBtnDisabled: {
         opacity: 0.6,
@@ -326,28 +327,28 @@ const styles = StyleSheet.create({
     quickText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2c3e50',
+        color: color.valueText,
     },
     currentBuyIn: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+    borderTopWidth: 1,
+    borderTopColor: color.mediumGray,
     },
     currentBuyInLabel: {
         fontSize: 14,
-        color: '#7f8c8d',
+        color: color.valueLabel,
     },
     currentBuyInValue: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#2c3e50',
+        color: color.valueText,
     },
     summary: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: color.lightGray,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
@@ -355,17 +356,17 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 14,
-        color: '#34495e',
+        color: color.strongGray,
     },
     summaryValue: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#d46613',
+        color: color.primary,
     },
     footer: {
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: color.mediumGray,
         padding: 16,
     },
     cancelButton: {
@@ -373,14 +374,14 @@ const styles = StyleSheet.create({
         height: 48,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f6fa',
+        backgroundColor: color.lightGray,
         borderRadius: 8,
         marginRight: 8,
     },
     cancelButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#7f8c8d',
+        color: color.valueLabel,
     },
     confirmButton: {
         flex: 2,
@@ -388,18 +389,18 @@ const styles = StyleSheet.create({
         height: 48,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
+        backgroundColor: color.success,
         borderRadius: 8,
         marginLeft: 8,
     },
     confirmButtonDisabled: {
-        backgroundColor: '#A5D6A7',
+        backgroundColor: color.lightGray,
         opacity: 0.7,
     },
     confirmButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#FFFFFF',
+        color: color.lightText,
         marginLeft: 6,
     },
 });

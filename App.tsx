@@ -10,11 +10,13 @@ import GamePlayScreen from './src/screens/GamePlayScreen';
 import GameHistoryScreen from './src/screens/GameHistoryScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
 import GamePlayerRankScreen from './src/screens/PlayerRankingScreen';
+import DatabaseScreen from './src/screens/DatabaseScreen';
 import { Header } from '@/components/Header';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/firebase/config';
+import localDb from '@/services/localDb';
 
 
 export type RootStackParamList = {
@@ -26,6 +28,7 @@ export type RootStackParamList = {
   GameHistory: undefined;
   GameDetail: { game: any };
   GamePlayerRank: undefined;
+  Database: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +38,15 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    // initialize local DB (expo-sqlite)
+    (async () => {
+      try {
+        await localDb.initLocalDb();
+      } catch (e) {
+        console.warn('local DB init failed', e);
+      }
+    })();
+
     const unsub = onAuthStateChanged(auth as any, (user) => {
       // Wait for navigation to be ready to avoid navigation errors
       const tryNavigate = () => {
@@ -81,6 +93,7 @@ export default function App() {
               <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
               <Stack.Screen name="GameDetail" component={GameDetailScreen} />
               <Stack.Screen name="GamePlayerRank" component={GamePlayerRankScreen} />
+              <Stack.Screen name="Database" component={DatabaseScreen} />
             </>
 
           </Stack.Navigator>

@@ -29,6 +29,7 @@
     "expo-crypto": "~14.0.2",
     "expo-haptics": "^14.0.1",
     "expo-linear-gradient": "~14.0.2",
+    "expo-sqlite": "~15.1.4",
     "expo-status-bar": "~2.0.1",
     "expo-system-ui": "^4.0.9",
     "firebase": "^11.6.1",
@@ -45,8 +46,7 @@
     "react-native-toast-message": "^2.2.1",
     "uuid": "^11.1.0",
     "yup": "^1.6.1",
-    "zustand": "^5.0.3",
-    "expo-modules-core": "~2.2.3"
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

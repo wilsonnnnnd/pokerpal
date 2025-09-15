@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Palette } from '@/constants';
 
 type InfoRowProps = {
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -20,9 +21,9 @@ export const InfoRow: React.FC<InfoRowProps> = ({
     icon,
     text,
     label,
-    textColor = '#2c3e50',
-    labelColor = '#7f8c8d',
-    iconColor = '#2c3e50',
+    textColor = Palette.valueText,
+    labelColor = Palette.valueLabel,
+    iconColor = Palette.valueText,
     iconSize = 20,
     textStyle,
     labelStyle,
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#f0f3f5',
+        backgroundColor: Palette.lightBackground,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,

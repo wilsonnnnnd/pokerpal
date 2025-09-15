@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing, Vibration } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Palette as color } from '@/constants';
 import * as Haptics from 'expo-haptics';
 
 const OPTIONS = ['CALL', 'FOLD'];
@@ -89,13 +90,13 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
 
     return (
         <LinearGradient
-            colors={['#1a2a6c', '#b21f1f', '#fdbb2d']}
+            colors={[color.primary, color.error, color.warning]}
             style={styles.container}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
         >
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <MaterialCommunityIcons name="close" size={24} color="#fff" />
+                <MaterialCommunityIcons name="close" size={24} color={color.lightText} />
             </TouchableOpacity>
             
             <View style={styles.content}>
@@ -120,12 +121,12 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                             <Text style={styles.optionText}>FOLD</Text>
                         </View>
                         <View style={styles.wheelCenter}>
-                            <MaterialCommunityIcons name="cards-playing-outline" size={30} color="#fff" />
+                            <MaterialCommunityIcons name="cards-playing-outline" size={30} color={color.lightText} />
                         </View>
                     </Animated.View>
 
                     <View style={styles.arrowContainer}>
-                        <Ionicons name="caret-up" size={40} color="#fff" />
+                        <Ionicons name="caret-up" size={40} color={color.lightText} />
                     </View>
                 </View>
 
@@ -136,7 +137,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                         disabled={spinning}
                         activeOpacity={0.8}
                     >
-                        <MaterialCommunityIcons name="rotate-360" size={20} color="#fff" />
+                        <MaterialCommunityIcons name="rotate-360" size={20} color={color.lightText} />
                         <Text style={styles.buttonText}>{spinning ? '转动中...' : '开始旋转'}</Text>
                     </TouchableOpacity>
                 </View>
@@ -149,9 +150,9 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                         ]}
                     >
                         <LinearGradient
-                            colors={['#4c669f', '#3b5998', '#192f6a']}
-                            style={styles.resultGradient}
-                        >
+                                    colors={[color.primary, color.info, color.darkGray]}
+                                    style={styles.resultGradient}
+                                >
                             <Text style={styles.decisionResult}>决策结果</Text>
                             <Text style={styles.decisionText}>{decision}</Text>
                         </LinearGradient>
@@ -176,8 +177,8 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#fff',
-        textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    color: color.lightText,
+    textShadowColor: color.shadowDark,
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 4,
         marginBottom: 20,
@@ -192,11 +193,11 @@ const styles = StyleSheet.create({
         borderRadius: 125,
         overflow: 'hidden',
         borderWidth: 5,
-        borderColor: '#ddd',
-        backgroundColor: '#fff',
+    borderColor: color.borderColor,
+    backgroundColor: color.lightBackground,
         flexDirection: 'row',
         elevation: 10,
-        shadowColor: '#000',
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -209,22 +210,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     leftHalf: {
-        backgroundColor: '#4caf50',
+    backgroundColor: color.success,
     },
     rightHalf: {
-        backgroundColor: '#f44336',
+    backgroundColor: color.error,
     },
     segment: {
-        backgroundColor: '#4caf50',
+        backgroundColor: color.success,
         justifyContent: 'flex-end',
         alignItems: 'center',
         paddingBottom: 80,
     },
     optionText: {
         fontSize: 22,
-        color: '#fff',
+    color: color.lightText,
         fontWeight: 'bold',
-        textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowColor: color.shadowDark,
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 2,
     },
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
         marginLeft: -30,
         marginTop: -30,
         borderRadius: 30,
-        backgroundColor: '#333',
+    backgroundColor: color.darkGray,
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -25,
         elevation: 6,
-        shadowColor: '#000',
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
         top: 20,
         right: 20,
         zIndex: 10,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: color.shadowDark,
         borderRadius: 20,
         padding: 8,
     },
@@ -273,17 +274,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderRadius: 25,
         elevation: 5,
-        shadowColor: '#000',
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
     spinButton: {
-        backgroundColor: '#3a7bd5',
+    backgroundColor: color.info,
         minWidth: 180,
     },
     buttonText: {
-        color: '#fff',
+    color: color.lightText,
         fontWeight: 'bold',
         fontSize: 16,
         marginLeft: 8,
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
         borderRadius: 15,
         overflow: 'hidden',
         elevation: 8,
-        shadowColor: '#000',
+    shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -307,14 +308,14 @@ const styles = StyleSheet.create({
     decisionResult: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
+    color: color.lightText,
         marginBottom: 5,
     },
     decisionText: {
         fontSize: 36,
         fontWeight: 'bold',
-        color: '#fff',
-        textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    color: color.lightText,
+    textShadowColor: color.shadowDark,
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 4,
     }
