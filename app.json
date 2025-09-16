@@ -15,7 +15,7 @@
     }, 
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wilsonnnnd.pokerpal",
+      "bundleIdentifier": "com.wilsonnnnd.pokerpal.dev",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -26,7 +26,7 @@
         "foregroundImage": "./src/assets/PokerPal.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.wilsonnnnd.pokerpal"
+      "package": "com.wilsonnnnd.pokerpal.dev"
     },
     "plugins": [
       "@react-native-google-signin/google-signin",
