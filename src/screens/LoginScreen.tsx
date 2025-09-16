@@ -58,6 +58,14 @@ export default function LoginScreen() {
     const onGoogleSignIn = async () => {
         setLoading(true);
         try {
+            // Guard: ensure client IDs are provided in built app; missing IDs often crash the native Google SDK
+            const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+            const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+            if (!webClientId && !iosClientId) {
+                Toast.show({ type: 'error', text1: '登录未配置', text2: '未检测到 Google Client ID，构建时请设置 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID / EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID' });
+                setLoading(false);
+                return;
+            }
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
             const userInfo = await GoogleSignin.signIn();
             // getTokens returns idToken/accessToken with correct typing
@@ -75,8 +83,17 @@ export default function LoginScreen() {
             // @ts-ignore
             navigation.navigate('Home');
         } catch (error: any) {
+            // Native SDK may throw platform-specific errors that are not descriptive in JS
             console.error('Google sign in error', error);
-            Toast.show({ type: 'error', text1: '登录失败', text2: error?.message ?? String(error) });
+            const message = error?.message || (error?.toString ? error.toString() : '未知错误');
+            // Suggest common fixes when native crashes or invalid configuration
+            let hint = '';
+            if (message.includes('invalid_client') || message.includes('misconfigured')) {
+                hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
+            } else if (message.includes('DEVELOPER_ERROR') || message.includes('10')) {
+                hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
+            }
+            Toast.show({ type: 'error', text1: '登录失败', text2: message + hint });
         } finally {
             setLoading(false);
         }

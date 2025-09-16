@@ -12,7 +12,7 @@
       "image": "./src/assets/Loading_PokerPal.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
-    },
+    }, 
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wilsonnnnd.pokerpal",
@@ -26,7 +26,6 @@
         "foregroundImage": "./src/assets/PokerPal.png",
         "backgroundColor": "#ffffff"
       },
-      "googleServicesFile": "./google-services.json",
       "package": "com.wilsonnnnd.pokerpal"
     },
     "plugins": [
