@@ -12,7 +12,7 @@
       "image": "./src/assets/Loading_PokerPal.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
-    }, 
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wilsonnnnd.pokerpal.dev",
@@ -29,7 +29,10 @@
       "package": "com.wilsonnnnd.pokerpal.dev"
     },
     "plugins": [
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        { "iosUrlScheme": "com.googleusercontent.apps.366251048350-btru5udsrj4g35aqo8u39a9i97e62rmd" }
+      ],
       "expo-sqlite"
     ],
     "web": {

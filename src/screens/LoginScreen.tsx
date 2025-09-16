@@ -9,10 +9,10 @@ import { userDoc, userByEmailDoc } from '@/constants/namingDb';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
 
+// iOS-only configuration: use the iOS client id
 GoogleSignin.configure({
-    // NOTE: Ensure you set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in env for web client id
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
 });
 
 export default function LoginScreen() {
@@ -58,21 +58,29 @@ export default function LoginScreen() {
     const onGoogleSignIn = async () => {
         setLoading(true);
         try {
-            // Guard: ensure client IDs are provided in built app; missing IDs often crash the native Google SDK
-            const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+            // iOS-only: ensure ios client id is provided
             const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
-            if (!webClientId && !iosClientId) {
-                Toast.show({ type: 'error', text1: '登录未配置', text2: '未检测到 Google Client ID，构建时请设置 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID / EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID' });
+            if (!iosClientId) {
+                Toast.show({ type: 'error', text1: '登录未配置', text2: '未检测到 iOS Google Client ID，构建时请设置 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID' });
                 setLoading(false);
                 return;
             }
-            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-            const userInfo = await GoogleSignin.signIn();
-            // getTokens returns idToken/accessToken with correct typing
-            const tokens = await GoogleSignin.getTokens();
 
-            // Create a Firebase credential with the token
-            const googleCredential = GoogleAuthProvider.credential(tokens.idToken);
+            // On iOS we can directly call signIn() and use idToken
+            const userInfo = await GoogleSignin.signIn();
+            // Try to read idToken from signIn response (some versions include it). If not present, fallback to getTokens()
+            // Use `as any` to avoid TypeScript type mismatch for different lib versions
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let idToken: string | null = (userInfo as any)?.idToken ?? null;
+            if (!idToken) {
+                // fallback: request tokens (safe on iOS)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const tokens = await GoogleSignin.getTokens();
+                idToken = (tokens as any)?.idToken ?? null;
+            }
+            if (!idToken) throw new Error('未获得 idToken');
+
+            const googleCredential = GoogleAuthProvider.credential(idToken);
             const userCred = await signInWithCredential(auth as any, googleCredential);
 
             const u = userCred.user;
