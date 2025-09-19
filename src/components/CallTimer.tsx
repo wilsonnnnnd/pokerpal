@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, useAudioRecorder, setAudioModeAsync, RecordingPresets, AudioModule } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { logError } from '@/utils/useLogger';
 import { Palette as color } from '@/constants';
@@ -136,9 +136,9 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 引用
         const intervalRef = useRef<NodeJS.Timeout | null>(null);
-        const soundRef = useRef<Audio.Sound | null>(null);
-        const warningRef = useRef<Audio.Sound | null>(null);
-        const timeupRef = useRef<Audio.Sound | null>(null);
+    const soundRef = useRef<any | null>(null);
+    const warningRef = useRef<any | null>(null);
+    const timeupRef = useRef<any | null>(null);
 
         // 暴露方法给父组件
         useImperativeHandle(ref, () => ({
@@ -184,13 +184,34 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             try {
                 setIsLoadingSound(true);
 
+                // try expo-audio AudioModule first if available
+                let _timeupSound: any = null;
+                try {
+                    if (AudioModule && (AudioModule as any).loadAsync) {
+                        // Some builds may expose a loadAsync on AudioModule
+                        _timeupSound = await (AudioModule as any).loadAsync(require('../assets/sounds/clock-alarm.mp3'));
+                    } else if (AudioModule && (AudioModule as any).createSound) {
+                        _timeupSound = await (AudioModule as any).createSound(require('../assets/sounds/clock-alarm.mp3'));
+                    }
+                } catch (e) {
+                    _timeupSound = null;
+                }
 
-                const _timeupSound = new Audio.Sound();
-                await _timeupSound.loadAsync(require('../assets/sounds/clock-alarm.mp3'));
+                // fallback to expo-av dynamically
+                if (!_timeupSound) {
+                    try {
+                        // eslint-disable-next-line global-require
+                        const { Audio: AVAudio } = require('expo-av');
+                        _timeupSound = new AVAudio.Sound();
+                        await _timeupSound.loadAsync(require('../assets/sounds/clock-alarm.mp3'));
+                    } catch (err) {
+                        logError('加载音效失败 (expo-av fallback)', err instanceof Error ? err.message : String(err));
+                        _timeupSound = null;
+                    }
+                }
+
                 timeupRef.current = _timeupSound;
-
-
-                setSoundsLoaded(true);
+                setSoundsLoaded(Boolean(_timeupSound));
             } catch (error) {
                 logError('加载音效失败', error instanceof Error ? error.message : String(error));
             } finally {
@@ -202,7 +223,15 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         const unloadSounds = async () => {
             try {
                 if (timeupRef.current) {
-                    await timeupRef.current.unloadAsync();
+                    try {
+                        if (typeof timeupRef.current.unloadAsync === 'function') {
+                            await timeupRef.current.unloadAsync();
+                        } else if (typeof timeupRef.current.release === 'function') {
+                            await timeupRef.current.release();
+                        }
+                    } catch (e) {
+                        // ignore unload errors
+                    }
                     timeupRef.current = null;
                 }
                 setSoundsLoaded(false);
@@ -276,8 +305,14 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         const playWarningSound = async () => {
             if (soundEnabled && soundsLoaded && warningRef.current) {
                 try {
-                    await warningRef.current.setPositionAsync(0);
-                    await warningRef.current.playAsync();
+                    if (typeof warningRef.current.setPositionAsync === 'function') {
+                        await warningRef.current.setPositionAsync(0);
+                    }
+                    if (typeof warningRef.current.playAsync === 'function') {
+                        await warningRef.current.playAsync();
+                    } else if (typeof warningRef.current.play === 'function') {
+                        await warningRef.current.play();
+                    }
                 } catch (error) {
                     logError('播放警告音效失败', error instanceof Error ? error.message : String(error));
                 }
@@ -288,8 +323,14 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         const playTickSound = async () => {
             if (soundEnabled && soundsLoaded && soundRef.current) {
                 try {
-                    await soundRef.current.setPositionAsync(0);
-                    await soundRef.current.playAsync();
+                    if (typeof soundRef.current.setPositionAsync === 'function') {
+                        await soundRef.current.setPositionAsync(0);
+                    }
+                    if (typeof soundRef.current.playAsync === 'function') {
+                        await soundRef.current.playAsync();
+                    } else if (typeof soundRef.current.play === 'function') {
+                        await soundRef.current.play();
+                    }
                 } catch (error) {
                     logError('播放滴答音效失败', error instanceof Error ? error.message : String(error));
                 }
@@ -300,8 +341,14 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         const playTimeupSound = async () => {
             if (soundEnabled && soundsLoaded && timeupRef.current) {
                 try {
-                    await timeupRef.current.setPositionAsync(0);
-                    await timeupRef.current.playAsync();
+                    if (typeof timeupRef.current.setPositionAsync === 'function') {
+                        await timeupRef.current.setPositionAsync(0);
+                    }
+                    if (typeof timeupRef.current.playAsync === 'function') {
+                        await timeupRef.current.playAsync();
+                    } else if (typeof timeupRef.current.play === 'function') {
+                        await timeupRef.current.play();
+                    }
                 } catch (error) {
                     logError('播放结束音效失败', error instanceof Error ? error.message : String(error));
                 }
@@ -358,8 +405,8 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                         },
                         {
                             text: '确定',
-                            onPress: (value) => {
-                                const seconds = parseInt(value || '30');
+                            onPress: (value?: string) => {
+                                const seconds = parseInt(value ?? '30');
                                 if (isNaN(seconds) || seconds <= 0 || seconds > 600) {
                                     Alert.alert('提示', '请输入1-600之间的有效时间（秒）');
                                     return;

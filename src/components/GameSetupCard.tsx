@@ -16,15 +16,12 @@ import { Palette as color } from '@/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
 import { useLogStore } from '@/stores/useLogStore';
-// Remote create is optional; primary creation is local DB
-// import { createGameOnServer } from '@/firebase/saveGame'
 import localDb from '@/services/localDb';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
-import { getDeviceId } from '@/utils/deviceInfo';
 interface GameSetupCardProps {
     onConfirm: () => void;
     onCancel?: () => void;

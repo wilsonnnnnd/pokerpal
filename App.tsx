@@ -14,8 +14,8 @@ import DatabaseScreen from './src/screens/DatabaseScreen';
 import { Header } from '@/components/Header';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
+import storage from '@/services/storageService';
 import localDb from '@/services/localDb';
 
 
@@ -37,38 +37,80 @@ export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [initializing, setInitializing] = useState(true);
 
-  useEffect(() => {
+    useEffect(() => {
     // initialize local DB (expo-sqlite)
     (async () => {
       try {
-        await localDb.initLocalDb();
+        // localDb exports initSchema; older name initLocalDb was removed
+        if (typeof (localDb as any).initSchema === 'function') {
+          await (localDb as any).initSchema();
+        } else {
+          console.warn('localDb.initSchema not found, skipping local DB initialization');
+        }
       } catch (e) {
         console.warn('local DB init failed', e);
       }
     })();
 
-    const unsub = onAuthStateChanged(auth as any, (user) => {
-      // Wait for navigation to be ready to avoid navigation errors
+    // restore persisted user (if any) into auth shim before subscribing
+    (async () => {
+      try {
+        const user = await storage.getLocal('@pokerpal:currentUser');
+        if (user) {
+          // shape-checking minimal: ensure uid exists
+          if (user.uid) {
+            restoreUser(user as any);
+          }
+        }
+      } catch (e) {
+        console.warn('failed to restore persisted user', e);
+      }
+    })();
+
+    // guard: auth may be undefined in some non-firebase-enabled environments
+    let unsub: (() => void) | undefined;
+
+    if (typeof onAuthStateChanged === 'function') {
+  unsub = onAuthStateChanged((user: any) => {
+        // Wait for navigation to be ready to avoid navigation errors
+        const tryNavigate = () => {
+          if (!navigationRef.isReady()) {
+            setTimeout(tryNavigate, 50);
+            return;
+          }
+
+          if (user) {
+            // already logged in -> go to Home
+            navigationRef.navigate('Home');
+          } else {
+            // not logged in -> go to Login
+            navigationRef.navigate('Login');
+          }
+          setInitializing(false);
+        };
+
+        tryNavigate();
+      });
+    } else {
+      // no auth available: just navigate to Login once navigation is ready
       const tryNavigate = () => {
         if (!navigationRef.isReady()) {
           setTimeout(tryNavigate, 50);
           return;
         }
-
-        if (user) {
-          // already logged in -> go to Home
-          navigationRef.navigate('Home');
-        } else {
-          // not logged in -> go to Login
-          navigationRef.navigate('Login');
-        }
+        navigationRef.navigate('Login');
         setInitializing(false);
       };
-
       tryNavigate();
-    });
+    }
 
-    return () => unsub();
+    return () => {
+      try {
+        if (typeof unsub === 'function') unsub();
+      } catch (e) {
+        // ignore
+      }
+    };
   }, [navigationRef]);
 
   return (

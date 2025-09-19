@@ -24,8 +24,7 @@ import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { auth } from '@/firebase/config';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from '@/services/localAuth';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import RequireMember from '@/components/RequireMember';
 
@@ -82,7 +81,7 @@ const HomeScreen = () => {
 
     // Subscribe to auth state and fetch profile
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth as any, async (u) => {
+        const unsub = onAuthStateChanged(async (u: any) => {
             if (!u) {
                 setUser(null);
                 return;
@@ -92,7 +91,7 @@ const HomeScreen = () => {
             setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
         });
 
-        return () => unsub();
+        return () => unsub && unsub();
     }, []);
 
     if (!isReady) {
@@ -229,7 +228,7 @@ const HomeScreen = () => {
                                 variant="outlined"
                                 onPress={async () => {
                                     try {
-                                        await signOut(auth as any);
+                                        await signOut();
                                         useGameStore.getState().resetGame();
                                         usePlayerStore.getState().resetPlayers();
                                         Toast.show({ type: 'success', text1: '已退出登录' });

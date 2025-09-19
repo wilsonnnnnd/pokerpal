@@ -1,30 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Palette as color } from '@/constants';
-import * as SQLite from 'expo-sqlite';
+import localDb from '@/services/localDb';
 import { GameHistorystyles as styles } from '@/assets/styles';
 import { useNavigation } from '@react-navigation/native';
 
-const sqliteAny = SQLite as any;
-const isSQLiteAvailable = Boolean(sqliteAny && (sqliteAny.openDatabase || sqliteAny.openDatabaseSync));
-let db: any = null;
-if (isSQLiteAvailable) {
-	try {
-		const openFn = sqliteAny.openDatabase || sqliteAny.openDatabaseSync;
-		db = openFn('pokerpal.db');
-	} catch (e) {
-		console.warn('Failed to open DB', e);
-		db = null;
-	}
-}
+const hasLocalDb = Boolean((localDb as any) && typeof (localDb as any).execSql === 'function');
 
-function execSql(sql: string, args: any[] = []): Promise<any> {
-	if (!isSQLiteAvailable || !db) return Promise.reject(new Error('expo-sqlite not available'));
-	return new Promise((resolve, reject) => {
-		db.transaction((tx: any) => {
-			tx.executeSql(sql, args, (_tx: any, res: any) => resolve(res), (_tx: any, err: any) => { reject(err); return false; });
-		}, (txErr: any) => reject(txErr));
-	});
+async function execSql(sql: string, args: any[] = []) {
+	if (!hasLocalDb) throw new Error('localDb.execSql not available');
+	return (localDb as any).execSql(sql, args);
 }
 
 export default function DatabaseScreen() {
@@ -38,10 +23,10 @@ export default function DatabaseScreen() {
 		setError(null);
 		setLoading(true);
 		try {
-			if (!isSQLiteAvailable || !db) {
+			if (!hasLocalDb) {
 				setGames([]);
 				setHistory([]);
-				setError('SQLite not available in this environment.');
+				setError('local database not available in this environment.');
 				return;
 			}
 
@@ -110,7 +95,7 @@ export default function DatabaseScreen() {
 		Alert.alert('删除游戏', '确定删除该本地游戏吗？此操作不可恢复。', [
 			{ text: '取消', style: 'cancel' },
 			{ text: '删除', style: 'destructive', onPress: async () => {
-				try { if (isSQLiteAvailable && db) await execSql(`DELETE FROM games WHERE id = ?`, [id]); } catch (e) { console.warn('delete error', e); }
+				try { if (hasLocalDb) await execSql(`DELETE FROM games WHERE id = ?`, [id]); } catch (e) { console.warn('delete error', e); }
 				await load();
 			} }
 		]);
@@ -123,11 +108,11 @@ export default function DatabaseScreen() {
 		</View>
 	);
 
-	if (!isSQLiteAvailable || !db) {
+	if (!hasLocalDb) {
 		return (
 			<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-				<Text style={{ fontWeight: '700', marginBottom: 8 }}>本机 SQLite 未安装或不可用</Text>
-				<Text style={{ color: '#666', textAlign: 'center', marginBottom: 8 }}>expo-sqlite 在当前运行环境不可用。请确保在模拟器/设备上安装或使用原生运行。</Text>
+				<Text style={{ fontWeight: '700', marginBottom: 8 }}>本地数据库不可用</Text>
+				<Text style={{ color: '#666', textAlign: 'center', marginBottom: 8 }}>本地数据库在当前运行环境不可用。请确保在模拟器/设备上使用原生运行。</Text>
 				<TouchableOpacity onPress={() => load()} style={{ padding: 8 }}>
 					<Text style={{ color: color.info }}>重试</Text>
 				</TouchableOpacity>

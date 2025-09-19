@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/firebase/config';
+import { onAuthStateChanged } from '@/services/localAuth';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 
 export function usePermission() {
@@ -9,7 +8,7 @@ export function usePermission() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth as any, async (u) => {
+        const unsub = onAuthStateChanged(async (u: any) => {
             if (!u) {
                 setUid(null);
                 setProfile(null);

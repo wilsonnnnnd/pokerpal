@@ -31,9 +31,12 @@
     "plugins": [
       [
         "@react-native-google-signin/google-signin",
-        { "iosUrlScheme": "com.googleusercontent.apps.366251048350-btru5udsrj4g35aqo8u39a9i97e62rmd" }
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.366251048350-btru5udsrj4g35aqo8u39a9i97e62rmd"
+        }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-audio"
     ],
     "web": {
       "favicon": "./src/assets/favicon.png"

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Toast from 'react-native-toast-message';
-import { auth, db } from '@/firebase/config';
-import { signInWithCredential, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
+import { db } from '@/firebase/config';
+import { signInWithCredential, signInAnonymously } from '@/services/localAuth';
+import storage from '@/services/storageService';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { userDoc, userByEmailDoc } from '@/constants/namingDb';
 import { useNavigation } from '@react-navigation/native';
@@ -80,16 +81,31 @@ export default function LoginScreen() {
             }
             if (!idToken) throw new Error('未获得 idToken');
 
-            const googleCredential = GoogleAuthProvider.credential(idToken);
-            const userCred = await signInWithCredential(auth as any, googleCredential);
+            // GoogleSignin typings vary; use any to access token/email/displayName
+            const gi: any = userInfo as any;
+            const googleCredential = { idToken, displayName: gi?.user?.name ?? gi?.user?.givenName ?? gi?.user?.name ?? gi?.givenName ?? gi?.name, email: gi?.user?.email ?? gi?.email };
+            const userCred = await signInWithCredential(googleCredential);
 
             const u = userCred.user;
             await saveUserProfile({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous });
 
+            // Persist current user locally so the app can restore session
+            try {
+                await storage.setLocal('@pokerpal:currentUser', {
+                    uid: u.uid,
+                    email: u.email ?? null,
+                    displayName: u.displayName ?? null,
+                    photoURL: u.photoURL ?? null,
+                    isAnonymous: u.isAnonymous ?? false,
+                });
+            } catch (err) {
+                console.warn('Failed to persist user locally', err);
+            }
+
             Toast.show({ type: 'success', text1: '登录成功', text2: `欢迎 ${u.displayName ?? '玩家'}` });
-            // Navigate to Home
+            // Reset navigation stack to Home so user cannot go back to Login
             // @ts-ignore
-            navigation.navigate('Home');
+            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
         } catch (error: any) {
             // Native SDK may throw platform-specific errors that are not descriptive in JS
             console.error('Google sign in error', error);
@@ -110,12 +126,27 @@ export default function LoginScreen() {
     const onGuest = async () => {
         setLoading(true);
         try {
-            const cred = await signInAnonymously(auth as any);
+            const cred = await signInAnonymously();
             const u = cred.user;
             await saveUserProfile({ uid: u.uid, isAnonymous: u.isAnonymous });
+
+            // Persist current user locally
+            try {
+                await storage.setLocal('@pokerpal:currentUser', {
+                    uid: u.uid,
+                    email: u.email ?? null,
+                    displayName: u.displayName ?? null,
+                    photoURL: u.photoURL ?? null,
+                    isAnonymous: u.isAnonymous ?? true,
+                });
+            } catch (err) {
+                console.warn('Failed to persist guest user locally', err);
+            }
+
             Toast.show({ type: 'success', text1: '已以访客身份登录' });
+            // Reset navigation stack to Home
             // @ts-ignore
-            navigation.navigate('Home');
+            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
         } catch (error: any) {
             console.error('Anonymous sign-in error', error);
             Toast.show({ type: 'error', text1: '访客登录失败', text2: error?.message ?? String(error) });
