@@ -36,8 +36,6 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
-// Remote save functions are kept for optional cloud sync but primary store is local DB
-// import { finalizeGameOnServer, saveGameToFirebase } from '@/firebase/saveGame';
 import localDb from '@/services/localDb';
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
