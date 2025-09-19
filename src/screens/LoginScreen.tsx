@@ -103,9 +103,13 @@ export default function LoginScreen() {
             }
 
             Toast.show({ type: 'success', text1: '登录成功', text2: `欢迎 ${u.displayName ?? '玩家'}` });
-            // Reset navigation stack to Home so user cannot go back to Login
-            // @ts-ignore
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+            // Let App's auth subscription switch the navigator. As a fallback try navigate.
+            try {
+                // @ts-ignore
+                navigation.navigate('Home');
+            } catch (e) {
+                // ignore
+            }
         } catch (error: any) {
             // Native SDK may throw platform-specific errors that are not descriptive in JS
             console.error('Google sign in error', error);
@@ -144,9 +148,13 @@ export default function LoginScreen() {
             }
 
             Toast.show({ type: 'success', text1: '已以访客身份登录' });
-            // Reset navigation stack to Home
-            // @ts-ignore
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+            // Let App's auth subscription switch the navigator. As a fallback try navigate.
+            try {
+                // @ts-ignore
+                navigation.navigate('Home');
+            } catch (e) {
+                // ignore
+            }
         } catch (error: any) {
             console.error('Anonymous sign-in error', error);
             Toast.show({ type: 'error', text1: '访客登录失败', text2: error?.message ?? String(error) });

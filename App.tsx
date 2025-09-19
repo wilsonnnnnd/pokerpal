@@ -3,15 +3,8 @@ import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import HomeScreen from './src/screens/HomeScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import GamePlayScreen from './src/screens/GamePlayScreen';
-import GameHistoryScreen from './src/screens/GameHistoryScreen';
-import GameDetailScreen from './src/screens/GameDetailScreen';
-import GamePlayerRankScreen from './src/screens/PlayerRankingScreen';
-import DatabaseScreen from './src/screens/DatabaseScreen';
-import { Header } from '@/components/Header';
+import AuthNavigator from '@/navigation/AuthNavigator';
+import MainNavigator from '@/navigation/MainNavigator';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
@@ -36,6 +29,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [initializing, setInitializing] = useState(true);
+  const [authUser, setAuthUser] = useState<any | null>(null);
 
     useEffect(() => {
     // initialize local DB (expo-sqlite)
@@ -71,25 +65,13 @@ export default function App() {
     let unsub: (() => void) | undefined;
 
     if (typeof onAuthStateChanged === 'function') {
-  unsub = onAuthStateChanged((user: any) => {
-        // Wait for navigation to be ready to avoid navigation errors
-        const tryNavigate = () => {
-          if (!navigationRef.isReady()) {
-            setTimeout(tryNavigate, 50);
-            return;
-          }
+      unsub = onAuthStateChanged((user: any) => {
+        // update local auth state
+        setAuthUser(user ?? null);
 
-          if (user) {
-            // already logged in -> go to Home
-            navigationRef.navigate('Home');
-          } else {
-            // not logged in -> go to Login
-            navigationRef.navigate('Login');
-          }
-          setInitializing(false);
-        };
-
-        tryNavigate();
+        // Simply update auth state and mark initialization done.
+        // The navigator rendered in JSX will switch based on `authUser`.
+        setInitializing(false);
       });
     } else {
       // no auth available: just navigate to Login once navigation is ready
@@ -122,23 +104,7 @@ export default function App() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          <Stack.Navigator
-            initialRouteName="Login"
-            screenOptions={{
-              header: () => <Header />,
-            }}>
-
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="GamePlay" component={GamePlayScreen} />
-              <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
-              <Stack.Screen name="GameDetail" component={GameDetailScreen} />
-              <Stack.Screen name="GamePlayerRank" component={GamePlayerRankScreen} />
-              <Stack.Screen name="Database" component={DatabaseScreen} />
-            </>
-
-          </Stack.Navigator>
+          {authUser ? <MainNavigator /> : <AuthNavigator />}
         </NavigationContainer>
       </PopupProvider>
       <Toast />
