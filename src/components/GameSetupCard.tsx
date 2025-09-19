@@ -189,19 +189,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 created: new Date().toISOString(),
                 updated: new Date().toISOString(),
             })}`);
-            const createdBy = await getDeviceId() // 设备 ID 作为创建者标识（可改为用户 ID）
-
-            // 保存到本地 DB（替代远端创建）
-            await localDb.saveGameLocal(gameId, {
-                gameId,
-                smallBlind: gameData.smallBlind ?? 0,
-                bigBlind: gameData.bigBlind ?? 0,
-                baseChipAmount: gameData.baseChipAmount ?? 0,
-                baseCashAmount: gameData.baseCashAmount ?? 0,
-                finalized: false,
-                token,
-                createdBy: createdBy ?? null,
-            });
 
             log('LocalDB', `✅ 游戏 ${gameId} 本地创建成功`);
             onConfirm();

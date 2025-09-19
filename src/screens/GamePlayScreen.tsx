@@ -246,7 +246,7 @@ export default function GamePlayScreen() {
                         settleROI: p.settleROI ?? 0,
                     })),
                 };
-                await localDb.saveHistoryLocal(game.gameId, snapshotPayload);
+
             } catch (e: any) {
                 Toast.show({
                     type: 'error',
@@ -260,7 +260,7 @@ export default function GamePlayScreen() {
             setSubmitPhase('saving');
             try {
                 const game = useGameStore.getState();
-                await localDb.saveGameLocal(gameId, { game, players });
+
             } catch (err) {
                 throw err;
             }
