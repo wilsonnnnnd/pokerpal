@@ -23,8 +23,8 @@ export type GameDocFS = {
   finalized?: boolean;
   createdBy?: string | null;
   token?: string | null;
-  created: any;              // Firestore Timestamp | number(ms) | Date
-  updated: any;              // Firestore Timestamp | number(ms) | Date
+  created?: string;          // ISO string
+  updated?: string;          // ISO string
 };
 
 // ===== 归一化给 UI 使用 =====
@@ -33,8 +33,8 @@ export type GameSnapshotUI = {
   smallBlind?: number;
   bigBlind?: number;
   rate?: number;
-  createdMs: number;          // 毫秒
-  updatedMs: number;          // 毫秒
+  createdMs: string;          // ISO string
+  updatedMs: string;          // ISO string
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
@@ -57,8 +57,8 @@ export type GameHistoryItem = {
   id: string;                 // = gameId
   smallBlind?: number;
   bigBlind?: number;
-  createdMs: number;
-  updatedMs: number;
+  createdMs: string;
+  updatedMs: string;
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
@@ -73,8 +73,8 @@ export type GameState = {
   baseChipAmount: number;
   baseCashAmount: number;
 
-  createdMs: number | null;   // ✅ 统一 null | number
-  updatedMs: number | null;   // ✅ 统一 null | number
+  createdMs: string | null;   // ISO string or null
+  updatedMs: string | null;   // ISO string or null
 
   finalized: boolean;
   token: string | null;
@@ -99,8 +99,8 @@ export type GameState = {
     baseCashAmount: number;
   };
 
-  getCreatedTs: () => import('firebase/firestore').Timestamp | null;
-  getUpdatedTs: () => import('firebase/firestore').Timestamp | null;
+  getCreatedTs: () => string | null;
+  getUpdatedTs: () => string | null;
 
   finalizeGame: () => void;
   resetGame: () => void;

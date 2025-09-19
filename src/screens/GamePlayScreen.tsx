@@ -323,7 +323,7 @@ export default function GamePlayScreen() {
     useEffect(() => {
         BackHandler.addEventListener('hardwareBackPress', handleBackPress);
         return () => {
-            BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+            BackHandler.exitApp();
         };
     }, [handleBackPress]);
 
