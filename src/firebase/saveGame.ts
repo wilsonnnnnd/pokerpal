@@ -124,7 +124,7 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 		})
 
 	if (isCreate) {
-		bb.set(gameRef, gamePayload, { merge: false }) // 首次创建；写入 created: serverTimestamp()
+		bb.set(gameRef, gamePayload, { merge: false }) // 首次创建
 	} else {
 		bb.update(gameRef, gamePayload) // 仅更新 updated 等；不触碰 created
 	}

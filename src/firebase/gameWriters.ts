@@ -6,7 +6,6 @@
 import {
     doc,
     getDoc,
-    serverTimestamp,
     increment,
     Timestamp,
 } from 'firebase/firestore'
@@ -52,10 +51,10 @@ export function makeCreateGamePayload(game: {
         createdBy: game.createdBy ?? null,
 
         // ✅ 只有创建时写 created
-        created: serverTimestamp(),
+        created: new Date().toISOString(),
 
         // 更新字段可以在创建时也写一次，问题不大
-        updated: serverTimestamp(),
+        updated: new Date().toISOString(),
         finalized: !!game.finalized,
         status: game.finalized ? 'finalized' : 'open',
         token: game.token ?? null,
@@ -80,7 +79,7 @@ export function makeUpdateGamePayload(patch: Partial<{
     }
 
     // ✅ 只在更新时写 updated，不要带上 created
-    base.updated = serverTimestamp();
+    base.updated = new Date().toISOString();
     return base;
 }
 
@@ -132,7 +131,7 @@ export async function upsertUserAndCounters(
         photoURL: player.photoURL || '',
         isActive: true,
         role: 'player',
-        [userSnap.exists() ? 'updated' : 'created']: serverTimestamp(),
+        [userSnap.exists() ? 'updated' : 'created']: new Date().toISOString(),
     }, { merge: true })
 
     const playerBuyInCash = totalBuyInCash
@@ -149,7 +148,7 @@ export async function upsertUserAndCounters(
         totalProfit: increment(playerProfitCash),
         averageROI: newAverageROI,
         gamesPlayed: increment(1),
-        lastPlayedAt: serverTimestamp(),
+        lastPlayedAt: new Date().toISOString(),
         // wins / losses（可选）
         ...(playerProfitCash > 0 ? { wins: increment(1) } : playerProfitCash < 0 ? { losses: increment(1) } : {}),
     })
@@ -166,7 +165,7 @@ export function upsertEmailIndex(bb: BatchBuilder, db: any, player: Player) {
         uid: player.id,
         photoURL: player.photoURL ?? '',
         registered: true,
-        lastLinkedAt: serverTimestamp(),
+        lastLinkedAt: new Date().toISOString(),
     }, { merge: true })
 }
 
@@ -182,14 +181,14 @@ export async function ensureUserGameHistory(
     if (!snap.exists()) {
         bb.set(gameHistoryRef, {
             gameId,
-            created: serverTimestamp(),
+            created: new Date().toISOString(),
             settleCashAmount: player.settleCashAmount ?? null,
             settleCashDiff: player.settleCashDiff ?? null,
             settleROI: player.settleROI ?? null,
             totalBuyInChips: player.totalBuyInChips,
             totalBuyInCash,
             result: (player.settleCashDiff ?? 0) > 0 ? 'win' : (player.settleCashDiff ?? 0) < 0 ? 'lose' : 'even',
-            finalizedAt: serverTimestamp(),
+            finalizedAt: new Date().toISOString(),
         })
     }
 }

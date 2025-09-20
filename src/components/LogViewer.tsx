@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette } from '@/constants';
 import { LogItem } from '@/stores/useLogStore';
 import { useLogger } from '@/utils/useLogger';
+import localDb from '@/services/localDb';
 
 type Props = {
     logs: LogItem[];
@@ -13,6 +14,9 @@ type Props = {
 export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
     const { clearLogs } = useLogger();
     const [filterTag, setFilterTag] = useState<string | null>(null);
+    const [showDb, setShowDb] = useState(false);
+    const [dbLogs, setDbLogs] = useState<any[]>([]);
+    const [loadingDb, setLoadingDb] = useState(false);
 
     const tags = useMemo(() => {
         const allTags = logs.map((log) => log.tag);
@@ -28,11 +32,30 @@ export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
             <View style={styles.header}>
                 <Text style={styles.title}>🪵 德州日志</Text>
                 <View style={styles.headerActions}>
-                    {isClosed && (
-                        <TouchableOpacity onPress={isClosed}>
-                            <MaterialCommunityIcons name="close" size={24} color={Palette.error} />
+                        <TouchableOpacity onPress={async () => {
+                            // 切换 DB 模式；若切换为 true 则加载数据
+                            if (!showDb) {
+                                setLoadingDb(true);
+                                try {
+                                    const res = await localDb.execSql('SELECT * FROM actions ORDER BY createdAt DESC;');
+                                    const rows = (res && res.rows && res.rows._array) ? res.rows._array : [];
+                                    setDbLogs(rows);
+                                } catch (e) {
+                                    console.warn('加载本地 actions 失败', e);
+                                    setDbLogs([]);
+                                } finally {
+                                    setLoadingDb(false);
+                                }
+                            }
+                            setShowDb(!showDb);
+                        }} style={{ marginRight: 12 }}>
+                            <MaterialCommunityIcons name={showDb ? 'database-eye' : 'database'} size={24} color={Palette.info} />
                         </TouchableOpacity>
-                    )}
+                        {isClosed && (
+                            <TouchableOpacity onPress={isClosed}>
+                                <MaterialCommunityIcons name="close" size={24} color={Palette.error} />
+                            </TouchableOpacity>
+                        )}
                 </View>
             </View>
 
@@ -50,20 +73,47 @@ export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
                 ))}
             </View>
 
-            <FlatList
-                data={filteredLogs}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => (
-                    <Text style={styles.logItem}>
-                        <Text style={styles.emoji}>{item.emoji}</Text>{' '}
-                        <Text style={styles.tag}>[{item.timestamp.toLocaleTimeString()}] [{item.tag}]</Text>{' '}
-                        <Text>{item.message}</Text>
-                    </Text>
-                )}
-                contentContainerStyle={styles.logList}
-                showsVerticalScrollIndicator={false}
-                inverted // 最新日志在底部，从下往上滑
-            />
+            {showDb ? (
+                <FlatList
+                    data={dbLogs}
+                    keyExtractor={(item, idx) => String(item.id ?? idx)}
+                    renderItem={({ item }) => {
+                        let payload = item.payload;
+                        try {
+                            if (typeof payload === 'string') payload = JSON.parse(payload);
+                        } catch (e) {
+                            // ignore parse error
+                        }
+                        return (
+                            <View style={{ marginBottom: 8 }}>
+                                <Text style={styles.logItem}>
+                                    <Text style={styles.tag}>[{item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}]</Text>{' '}
+                                    <Text style={{ fontWeight: '700' }}>{item.type}</Text>{' '}
+                                    <Text>{typeof payload === 'object' ? JSON.stringify(payload) : String(payload)}</Text>
+                                </Text>
+                            </View>
+                        );
+                    }}
+                    contentContainerStyle={styles.logList}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={<Text style={{ color: Palette.loadingText }}> {loadingDb ? '加载中...' : '无本地记录'} </Text>}
+                />
+            ) : (
+                <FlatList
+                    data={filteredLogs}
+                    keyExtractor={(item) => String(item.id)}
+                    renderItem={({ item }) => (
+                        <Text style={styles.logItem}>
+                            <Text style={styles.emoji}>{item.emoji}</Text>{' '}
+                            <Text style={styles.tag}>[{item.timestamp.toLocaleTimeString()}] [{item.tag}]</Text>{' '}
+                            <Text>{item.message}</Text>
+                        </Text>
+                    )}
+                    contentContainerStyle={styles.logList}
+                    showsVerticalScrollIndicator={false}
+                    inverted // 最新日志在底部，从下往上滑
+                />
+            )}
         </View>
     );
 };

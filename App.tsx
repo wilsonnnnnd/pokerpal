@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AuthNavigator from '@/navigation/AuthNavigator';
-import MainNavigator from '@/navigation/MainNavigator';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
 import storage from '@/services/storageService';
 import localDb from '@/services/localDb';
+import { Header } from '@/components/Header';
+import HomeScreen from '@/screens/HomeScreen';
+import GamePlayScreen from '@/screens/GamePlayScreen';
+import GameHistoryScreen from '@/screens/GameHistoryScreen';
+import GameDetailScreen from '@/screens/GameDetailScreen';
+import DatabaseScreen from '@/screens/DatabaseScreen';
+import LoginScreen from '@/screens/LoginScreen';
+import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 
 
 export type RootStackParamList = {
@@ -24,14 +30,41 @@ export type RootStackParamList = {
   Database: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createStackNavigator();
+
+function MainNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: true, 
+        header: () => <Header />,
+      }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="GamePlay" component={GamePlayScreen} />
+      <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
+      <Stack.Screen name="GameDetail" component={GameDetailScreen} />
+      <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
+      <Stack.Screen name="Database" component={DatabaseScreen} />
+    </Stack.Navigator>
+  );
+}
+
+
+
+function AuthNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [initializing, setInitializing] = useState(true);
   const [authUser, setAuthUser] = useState<any | null>(null);
 
-    useEffect(() => {
+  useEffect(() => {
     // initialize local DB (expo-sqlite)
     (async () => {
       try {

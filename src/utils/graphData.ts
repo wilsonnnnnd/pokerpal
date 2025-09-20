@@ -1,10 +1,7 @@
 import {
     doc,
     getDoc,
-    serverTimestamp,
     writeBatch,
-    Timestamp,
-    FieldValue,
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
 import { userDoc } from '@/constants/namingDb'
@@ -14,7 +11,7 @@ export type GraphPoint = {
     gameId: string
     diff: number
     roi: number
-    ts: Timestamp | String | FieldValue
+    ts: string
 }
 
 /**
@@ -34,7 +31,7 @@ export async function addPlayerGraphEntry(
         gameId,
         diff,
         roi,
-        ts: serverTimestamp(), // Firestore 会自动替换为服务器时间
+        ts: new Date().toISOString(), // Firestore 会自动替换为服务器时间
     }
 
     let history: GraphPoint[] = []
@@ -48,7 +45,7 @@ export async function addPlayerGraphEntry(
 
     batch.set(graphRef, {
         history: merged,
-        updated: serverTimestamp(),
+        updated: new Date().toISOString(),
     }, { merge: true })
 }
 
@@ -60,7 +57,7 @@ export function mergeGraphHistory(history: GraphPoint[], newEntry: GraphPoint): 
 
     // 过滤合法历史（ts 是 Timestamp 类型）
     for (const item of history) {
-        if (item.gameId && item.ts instanceof Timestamp) {
+        if (item.gameId) {
             map.set(item.gameId, item)
         }
     }
@@ -69,22 +66,9 @@ export function mergeGraphHistory(history: GraphPoint[], newEntry: GraphPoint): 
 
     // 排序 + 截断
     const sorted = Array.from(map.values())
-        .sort((a, b) => getTimestampValue(b.ts) - getTimestampValue(a.ts))
+        .sort((a, b) => b.ts.localeCompare(a.ts))
         .slice(0, 10)
 
     return sorted
 }
 
-/**
- * ✅ 提取时间戳（毫秒数）
- */
-function getTimestampValue(ts: Timestamp | String | FieldValue): number {
-    if (ts instanceof Timestamp) {
-        return ts.toMillis();
-    }
-    if (typeof ts === 'string') {
-        return 0; // Handle string case if needed
-    }
-    // Handle FieldValue case (e.g., serverTimestamp)
-    return 0;
-}

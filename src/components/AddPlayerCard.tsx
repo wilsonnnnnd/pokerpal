@@ -20,7 +20,7 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-import { collection, getDocs, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs,Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { userByEmailDoc } from '@/constants/namingDb';
 import { Ionicons } from '@expo/vector-icons';
@@ -122,7 +122,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             playerId: generateSecureId('player'),
             nickname,
             email: email.trim().toLowerCase(),
-            joinAt: Timestamp.now(),
+            joinAt: new Date().toISOString(),
             photoURL: undefined,
             buyInChipsList: [],
             buyInCount: 1,
@@ -180,7 +180,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 playerId: user.uid,
                 nickname: user.nickname,
                 email,
-                joinAt: Timestamp.now(),
+                joinAt: new Date().toISOString(),
                 photoURL: user.photoURL,
                 buyInChipsList: [],
                 buyInCount: 1,

@@ -1,4 +1,4 @@
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
 import { userByEmailDoc, userDoc } from '@/constants/namingDb';
@@ -23,7 +23,7 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
             email,
             photoURL: player.photoURL || '',
             isActive: true,
-            created: serverTimestamp(),
+            created: new Date().toISOString(),
         }, { merge: true });
 
         // 2️⃣ 写入 email → uid 映射（用于登录白名单校验）

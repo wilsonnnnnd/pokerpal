@@ -36,7 +36,7 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
-import localDb from '@/services/localDb';
+import localDb, { appendAction } from '@/services/localDb';
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
@@ -244,7 +244,17 @@ export default function GamePlayScreen() {
                         settleROI: p.settleROI ?? 0,
                     })),
                 };
-
+                // 将快照持久化到本地 SQL（使用 actions 表作为最终快照存储）
+                try {
+                    const actionId = await appendAction(null, 'finalize_game', snapshotPayload);
+                    if (actionId === undefined) {
+                        throw new Error('appendAction 未返回 id');
+                    }
+                    log('DB', `已将游戏快照写入 actions 表，id=${actionId}`);
+                } catch (e: any) {
+                    Toast.show({ type: 'error', text1: '本地保存失败', text2: e?.message ?? String(e) });
+                    return;
+                }
             } catch (e: any) {
                 Toast.show({
                     type: 'error',

@@ -23,37 +23,73 @@ export const Header = () => {
     const insets = useSafeAreaInsets();
 
     const shouldShowBack = route.name !== 'Home' && !left;
-
-    const defaultBackButton = (
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={color.title} />
-        </TouchableOpacity>
-    );
+    const fallbackTitle =
+        title || (titles as any)[(route as any).name] || (route as any).name || '页面';
 
     return (
-        <View style={[styles.header, { backgroundColor: color.card, paddingTop: insets.top, height: 56 + (Platform.OS === 'ios' ? insets.top : 0) }]}>
-            <StatusBar barStyle="dark-content" backgroundColor={color.card} animated />
-            <View style={styles.left}>{shouldShowBack ? defaultBackButton : left}</View>
-            <Text style={styles.title}>{titles[route.name] || '页面'}</Text>
-            <View style={styles.right}>{right}</View>
+        <View
+            style={[
+                styles.header,
+                {
+                    paddingTop: insets.top,               // 顶部安全区
+                    height: insets.top + 56,              // 总高度 = 安全区 + 标准栏高
+                    backgroundColor: color.card,
+                },
+            ]}
+        >
+            <StatusBar
+                barStyle="dark-content"
+                backgroundColor={color.card}           // Android 与 header 同色
+                translucent={false}
+                animated
+            />
+
+            {/* 左侧固定宽度区域 */}
+            <View style={styles.sideBox}>
+                {shouldShowBack ? (
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color={color.title} />
+                    </TouchableOpacity>
+                ) : (
+                    left
+                )}
+            </View>
+
+            {/* 中间标题区域，flex:1 居中，不受两侧影响 */}
+            <View style={styles.centerBox}>
+                <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+                    {fallbackTitle}
+                </Text>
+            </View>
+
+            {/* 右侧固定宽度区域 */}
+            <View style={[styles.sideBox, { alignItems: 'flex-end' }]}>{right}</View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     header: {
-        height: 60,
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        alignItems: 'flex-end', // 让内容靠在安全区下沿
         paddingHorizontal: 16,
     },
-    left: { flex: 1 },
+    sideBox: {
+        width: 56,              // 固定宽度，确保中间“视觉居中”
+        height: 56,
+        justifyContent: 'center',
+    },
+    centerBox: {
+        flex: 1,
+        height: 56,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+    },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-    color: color.title,
+        color: color.title,
         textAlign: 'center',
     },
-    right: { flex: 1, alignItems: 'flex-end' },
 });

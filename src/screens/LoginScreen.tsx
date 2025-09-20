@@ -5,7 +5,7 @@ import Toast from 'react-native-toast-message';
 import { db } from '@/firebase/config';
 import { signInWithCredential, signInAnonymously } from '@/services/localAuth';
 import storage from '@/services/storageService';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc,  } from 'firebase/firestore';
 import { userDoc, userByEmailDoc } from '@/constants/namingDb';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
@@ -33,12 +33,12 @@ export default function LoginScreen() {
                 photoURL: user.photoURL ?? '',
                 isActive: true,
                 role: user.isAnonymous ? 'guest' : 'player',
-                updated: serverTimestamp(),
+                updated: new Date().toISOString(),
             };
 
             await setDoc(doc(db, userDoc, uid), {
                 ...data,
-                created: serverTimestamp(),
+                created: new Date().toISOString(),
             }, { merge: true });
 
             if (user.email) {
@@ -48,7 +48,7 @@ export default function LoginScreen() {
                     nickname: data.nickname,
                     photoURL: data.photoURL,
                     registered: true,
-                    lastLinkedAt: serverTimestamp(),
+                    lastLinkedAt: new Date().toISOString(),
                 }, { merge: true });
             }
         } catch (error) {
