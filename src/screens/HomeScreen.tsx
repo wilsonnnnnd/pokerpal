@@ -40,7 +40,7 @@ const HomeScreen = () => {
     const { confirmPopup } = usePopup();
 
     useEffect(() => {
-        if (!finalized  && gameId) {
+        if (!finalized && gameId) {
             const confirmation = async () => {
                 try {
                     const result = await confirmPopup({
@@ -105,7 +105,7 @@ const HomeScreen = () => {
 
     return (
         <>
-            <ScrollView style={styles.container}>
+            <ScrollView style={[styles.container,{paddingTop: 20}]}>
                 <View style={styles.contentContainer}>
                     <View style={styles.headerSection}>
                         <MaterialCommunityIcons
@@ -114,8 +114,7 @@ const HomeScreen = () => {
                             color={color.highLighter}
                             style={styles.icon}
                         />
-                        <Text style={styles.title}>德州扑克筹码记录器</Text>
-                        <Text style={styles.subtitle}>为荷官设计，专注每一局记录 ✍️</Text>
+                        <Text style={styles.title}>德州扑克筹码记录器✍️</Text>
 
                         {/* user card */}
                         {user && (
@@ -137,10 +136,10 @@ const HomeScreen = () => {
                                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                                             <Text style={[styles.userEmail, { marginRight: 8 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
                                             {user.profile?.role === 'member' && (
-                                                <View style={{ 
-                                                    backgroundColor: color.highLighter, 
-                                                    paddingHorizontal: 6, 
-                                                    paddingVertical: 2, 
+                                                <View style={{
+                                                    backgroundColor: color.highLighter,
+                                                    paddingHorizontal: 6,
+                                                    paddingVertical: 2,
                                                     borderRadius: 8,
                                                     flexDirection: 'row',
                                                     alignItems: 'center'
@@ -153,7 +152,7 @@ const HomeScreen = () => {
                                     </View>
                                 </View>
                                 {/* Member-only section with better visual hierarchy */}
-                                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.mediumGray }}>
+                                {/* <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.mediumGray }}>
                                     <RequireMember fallback={
                                         <View style={{ 
                                             backgroundColor: color.lightGray, 
@@ -175,7 +174,7 @@ const HomeScreen = () => {
                                             <Text style={{ color: color.darkGray, fontWeight: '600', fontSize: 12 }}>✨ 会员专享：高级数据分析已解锁</Text>
                                         </View>
                                     </RequireMember>
-                                </View>
+                                </View> */}
                             </View>
                         )}
                     </View>
@@ -192,7 +191,7 @@ const HomeScreen = () => {
                                 fullWidth={true}
                             />
 
-                            <View style={[styles.buttonRow, { marginTop: 12 }]}>
+                            {/* <View style={[styles.buttonRow, { marginTop: 12 }]}>
                                 <PrimaryButton
                                     title="游戏历史"
                                     icon="history"
@@ -202,11 +201,33 @@ const HomeScreen = () => {
                                     iconColor={color.info}
                                 />
                                 <PrimaryButton
-                                    title="数据库"
-                                    icon="database"
+                                    title="本地游戏历史"
+                                    icon="history"
                                     variant="outlined"
                                     onPress={() => navigation.navigate('Database')}
                                     style={styles.secondaryButton}
+                                    iconColor={color.info}
+                                />
+                            </View> */}
+                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
+                                <PrimaryButton
+                                    title="游戏历史"
+                                    icon="history"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('GameHistory')}
+                                    style={[styles.secondaryButton, { width: '100%' }]}
+                                    iconColor={color.info}
+                                />
+                            </View>
+
+
+                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
+                                <PrimaryButton
+                                    title="本地历史(测试)"
+                                    icon="history"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('Database')}
+                                    style={[styles.secondaryButton, { width: '100%' }]}
                                     iconColor={color.info}
                                 />
                             </View>
@@ -217,6 +238,17 @@ const HomeScreen = () => {
                                     icon="account-group"
                                     variant="outlined"
                                     onPress={() => navigation.navigate('GamePlayerRank')}
+                                    style={[styles.secondaryButton, { width: '100%' }]}
+                                    iconColor={color.info}
+                                />
+                            </View>
+
+                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
+                                <PrimaryButton
+                                    title="全局设置(测试)"
+                                    icon="cog-outline"
+                                    variant="outlined"
+                                    onPress={() => navigation.navigate('Settings')}
                                     style={[styles.secondaryButton, { width: '100%' }]}
                                     iconColor={color.info}
                                 />

@@ -42,6 +42,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         baseChipAmount: '',
         baseCashAmount: '',
     });
+    const [currencyInfo, setCurrencyInfo] = useState<{ code: string; symbol: string; rate: number }>({ code: 'CNY', symbol: '¥', rate: 1 });
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     const log = useLogStore((state) => state.log);
@@ -274,6 +275,20 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         };
 
         logGameStorage();
+        // load saved app settings (currency info)
+        (async () => {
+            try {
+                const s = await storage.getLocal('@pokerpal:appSettings');
+                if (s) {
+                    const code = (s.defaultCurrency || 'CNY').toString().toUpperCase();
+                    const rate = Number(s.currencyRate ?? 1) || 1;
+                    const symbol = code === 'AUD' ? 'A$' : code === 'CNY' ? '¥' : '';
+                    setCurrencyInfo({ code, symbol, rate });
+                }
+            } catch (err) {
+                // ignore
+            }
+        })();
     }, []);
 
     return (
@@ -329,10 +344,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                         />
 
                         <InputField
-                            label="兑换金额（澳币）"
+                            label={`兑换金额 ${currencyInfo.symbol ? `(${currencyInfo.symbol})` : ''}`}
                             fieldName="baseCashAmount"
                             value={formValues.baseCashAmount}
-                            placeholder="例如：100"
+                            placeholder={currencyInfo.symbol ? `例如 (${currencyInfo.symbol})` : '例如'}
                             icon="cash"
                             keyboardType="number-pad"
                             error={errors.baseCashAmount}
@@ -342,12 +357,12 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                         />
 
                         <View style={styles.buttonGroup}>
-                {onCancel && (
+                            {onCancel && (
                                 <PrimaryButton
                                     title="取消"
                                     icon="close"
                                     iconPosition="left"
-                    iconColor={color.error}
+                                    iconColor={color.error}
                                     onPress={onCancel}
                                     variant="outlined"
                                     style={styles.cancelButton}

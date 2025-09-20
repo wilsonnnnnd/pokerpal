@@ -16,6 +16,7 @@ import GameDetailScreen from '@/screens/GameDetailScreen';
 import DatabaseScreen from '@/screens/DatabaseScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
+import SettingsScreen from '@/screens/SettingsScreen';
 
 
 export type RootStackParamList = {
@@ -28,6 +29,7 @@ export type RootStackParamList = {
   GameDetail: { game: any };
   GamePlayerRank: undefined;
   Database: undefined;
+  Settings: undefined;
 };
 
 const Stack = createStackNavigator();
@@ -39,12 +41,13 @@ function MainNavigator() {
         headerShown: true, 
         header: () => <Header />,
       }}>
-      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GamePlay" component={GamePlayScreen} />
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
       <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
       <Stack.Screen name="Database" component={DatabaseScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

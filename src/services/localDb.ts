@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { getLocal, setLocal } from '@/services/storageService';
 
 const DB_NAME = 'pokerpal.db';
 
@@ -12,6 +13,21 @@ if (openFn) {
     // 无本地原生 DB 可用；execSql 将使用内存回退实现
     db = {};
 }
+
+// hydrate in-memory fallback store if persisted previously
+(async () => {
+    try {
+        if (!(global as any).__pokerpal_store) {
+            const saved = await getLocal<any>('__pokerpal_store');
+            if (saved) {
+                (global as any).__pokerpal_store = saved;
+                console.log('[localDb] hydrated in-memory store from storage');
+            }
+        }
+    } catch (err) {
+        console.warn('[localDb] failed to hydrate store', err);
+    }
+})();
 
 export function execSql(sql: string, params: any[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -104,7 +120,15 @@ export function execSql(sql: string, params: any[] = []): Promise<any> {
                         const rec = { id, game_id: params[0], type: params[1], payload: params[2], createdAt: params[3] || new Date().toISOString(), syncStatus: params[4] || 0 };
                         store.actions.unshift(rec);
                 }
-                return resolve({ rows: { _array: [{ id }] } });
+                // persist the in-memory store so fallback data survives reloads
+                (async () => {
+                    try {
+                        await setLocal('__pokerpal_store', store);
+                    } catch (err) {
+                        console.warn('[localDb] failed to persist store after INSERT', err);
+                    }
+                    resolve({ rows: { _array: [{ id }] } });
+                })();
             }
 
             // SELECT handling
@@ -136,28 +160,63 @@ export function execSql(sql: string, params: any[] = []): Promise<any> {
                 if (normalized.includes('FROM GAME_PLAYERS WHERE GAME_ID')) {
                     const gid = params[0];
                     store.game_players = store.game_players.filter((r: any) => r.game_id !== gid);
-                    return resolve({ rows: { _array: [] } });
+                    (async () => {
+                        try {
+                            await setLocal('__pokerpal_store', store);
+                        } catch (err) {
+                            console.warn('[localDb] failed to persist store after DELETE (game_players by game)', err);
+                        }
+                        resolve({ rows: { _array: [] } });
+                    })();
                 }
                 if (normalized.includes('FROM GAME_PLAYERS WHERE PLAYER_ID')) {
                     const pid = params[0];
                     store.game_players = store.game_players.filter((r: any) => r.player_id !== pid);
-                    return resolve({ rows: { _array: [] } });
+                    (async () => {
+                        try {
+                            await setLocal('__pokerpal_store', store);
+                        } catch (err) {
+                            console.warn('[localDb] failed to persist store after DELETE (game_players by player)', err);
+                        }
+                        resolve({ rows: { _array: [] } });
+                    })();
                 }
                 if (normalized.includes('FROM GAMES WHERE ID')) {
                     const id = params[0];
                     store.games = store.games.filter((r: any) => r.id !== id);
-                    return resolve({ rows: { _array: [] } });
+                    (async () => {
+                        try {
+                            await setLocal('__pokerpal_store', store);
+                        } catch (err) {
+                            console.warn('[localDb] failed to persist store after DELETE (games)', err);
+                        }
+                        resolve({ rows: { _array: [] } });
+                    })();
                 }
                 if (normalized.includes('FROM PLAYERS WHERE ID')) {
                     const id = params[0];
                     store.players = store.players.filter((r: any) => r.id !== id);
-                    return resolve({ rows: { _array: [] } });
+                    (async () => {
+                        try {
+                            await setLocal('__pokerpal_store', store);
+                        } catch (err) {
+                            console.warn('[localDb] failed to persist store after DELETE (players)', err);
+                        }
+                        resolve({ rows: { _array: [] } });
+                    })();
                 }
                 if (normalized.includes('DELETE FROM GAME_PLAYERS WHERE GAME_ID = ? AND PLAYER_ID = ?')) {
                     const gid = params[0];
                     const pid = params[1];
                     store.game_players = store.game_players.filter((r: any) => !(r.game_id === gid && r.player_id === pid));
-                    return resolve({ rows: { _array: [] } });
+                    (async () => {
+                        try {
+                            await setLocal('__pokerpal_store', store);
+                        } catch (err) {
+                            console.warn('[localDb] failed to persist store after DELETE (game_player pair)', err);
+                        }
+                        resolve({ rows: { _array: [] } });
+                    })();
                 }
                 return resolve({ rows: { _array: [] } });
             }
@@ -236,6 +295,14 @@ export async function appendAction(gameId: number | null, type: string, payload:
             const fallbackId = (global as any).__pokerpal_store._id++;
             if (!(global as any).__pokerpal_store.actions) (global as any).__pokerpal_store.actions = [];
             (global as any).__pokerpal_store.actions.unshift({ id: fallbackId, game_id: gameId, type, payload, createdAt: now, syncStatus: 0 });
+            // persist fallback
+            (async () => {
+                try {
+                    await setLocal('__pokerpal_store', (global as any).__pokerpal_store);
+                } catch (err) {
+                    console.warn('[localDb] failed to persist store after appendAction fallback (select last id)', err);
+                }
+            })();
             return fallbackId;
         }
     } catch (e) {
@@ -245,6 +312,14 @@ export async function appendAction(gameId: number | null, type: string, payload:
         const fallbackId = (global as any).__pokerpal_store._id++;
         if (!(global as any).__pokerpal_store.actions) (global as any).__pokerpal_store.actions = [];
         (global as any).__pokerpal_store.actions.unshift({ id: fallbackId, game_id: gameId, type, payload, createdAt: now, syncStatus: 0 });
+        // persist fallback
+        (async () => {
+            try {
+                await setLocal('__pokerpal_store', (global as any).__pokerpal_store);
+            } catch (err) {
+                console.warn('[localDb] failed to persist store after appendAction fallback (insert error)', err);
+            }
+        })();
         return fallbackId;
     }
 }
