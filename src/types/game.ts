@@ -33,8 +33,8 @@ export type GameSnapshotUI = {
   smallBlind?: number;
   bigBlind?: number;
   rate?: number;
-  createdMs: string;          // ISO string
-  updatedMs: string;          // ISO string
+  created: string;          // ISO string
+  updated: string;          // ISO string
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
@@ -57,12 +57,21 @@ export type GameHistoryItem = {
   id: string;                 // = gameId
   smallBlind?: number;
   bigBlind?: number;
-  createdMs: string;
-  updatedMs: string;
+  created: string;
+  updated: string;
+  
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
   players: PlayerItem[];
+};
+
+// Zustand store shape for game history persistence
+export type GameHistoryState = {
+  history: GameHistoryItem[];
+  setHistory: (data: GameHistoryItem[]) => void;
+  addGameSnapshot: (snapshot: GameHistoryItem) => void;
+  clearHistory: () => void;
 };
 
 // ====== GameState（给 useGameStore 用）======
@@ -73,8 +82,8 @@ export type GameState = {
   baseChipAmount: number;
   baseCashAmount: number;
 
-  createdMs: string | null;   // ISO string or null
-  updatedMs: string | null;   // ISO string or null
+  created: string | null;   // ISO string or null
+  updated: string | null;   // ISO string or null
 
   finalized: boolean;
   token: string | null;
@@ -98,9 +107,6 @@ export type GameState = {
     baseChipAmount: number;
     baseCashAmount: number;
   };
-
-  getCreatedTs: () => string | null;
-  getUpdatedTs: () => string | null;
 
   finalizeGame: () => void;
   resetGame: () => void;

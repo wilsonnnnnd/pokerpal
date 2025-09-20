@@ -8,6 +8,7 @@ import {
     ScrollView,
     Keyboard,
     TouchableWithoutFeedback,
+    TextInput,
 } from 'react-native';
 import { useGameStore } from '@/stores/useGameStore';
 import { PrimaryButton } from './PrimaryButton';
@@ -22,6 +23,10 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
+import { createGameOnServer } from '@/firebase/saveGame';
+import storage from '@/services/storageService';
+
+
 interface GameSetupCardProps {
     onConfirm: () => void;
     onCancel?: () => void;
@@ -42,10 +47,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const log = useLogStore((state) => state.log);
 
     // 创建refs用于存储输入框引用
-    const smallBlindRef = useRef(null);
-    const bigBlindRef = useRef(null);
-    const defaultBuyInRef = useRef(null);
-    const baseCashAmountRef = useRef(null);
+    const smallBlindRef = useRef<TextInput | null>(null);
+    const bigBlindRef = useRef<TextInput | null>(null);
+    const defaultBuyInRef = useRef<TextInput | null>(null);
+    const baseCashAmountRef = useRef<TextInput | null>(null);
 
     // 游戏设置验证模式
     const gameSchema = yup.object().shape({
@@ -187,7 +192,21 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 updated: new Date().toISOString(),
             })}`);
 
-            log('LocalDB', `✅ 游戏 ${gameId} 本地创建成功`);
+            const user = await storage.getLocal('@pokerpal:currentUser');
+            console.log('当前用户', user);
+
+            //同步到Firebase
+            await createGameOnServer({
+                gameId,
+                smallBlind: gameData.smallBlind ?? 0,
+                bigBlind: gameData.bigBlind ?? 0,
+                baseChipAmount: gameData.baseChipAmount ?? 0,
+                baseCashAmount: gameData.baseCashAmount ?? 0,
+                finalized: false,
+                token,
+                createdBy: user?.displayName,
+
+            });
             onConfirm();
         } catch (error) {
             if (error instanceof yup.ValidationError) {

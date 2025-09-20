@@ -4,6 +4,7 @@ import { Palette as color } from '@/constants';
 import localDb from '@/services/localDb';
 import { GameHistorystyles as styles } from '@/assets/styles';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const hasLocalDb = Boolean((localDb as any) && typeof (localDb as any).execSql === 'function');
 
@@ -12,10 +13,40 @@ async function execSql(sql: string, args: any[] = []) {
 	return (localDb as any).execSql(sql, args);
 }
 
+// small helper to build a history-style card object from action payload
+function toHistoryItem(action: any) {
+	// prefer payload if it contains a game snapshot shape
+	const payload = action.payload || null;
+	if (payload && payload.players && Array.isArray(payload.players)) {
+		return {
+			id: String(action.id),
+			smallBlind: Number(payload.smallBlind ?? 0),
+			bigBlind: Number(payload.bigBlind ?? 0),
+			created: payload.created ?? action.createdAt ?? new Date().toISOString(),
+			updated: payload.updated ?? payload.created ?? action.createdAt ?? new Date().toISOString(),
+			totalBuyInCash: Number(payload.totalBuyInCash ?? 0),
+			totalEndingCash: Number(payload.totalEndingCash ?? 0),
+			totalDiffCash: Number(payload.totalDiffCash ?? 0),
+			players: payload.players.map((p: any) => ({
+				playerId: String(p.playerId ?? p.id ?? ''),
+				nickname: String(p.nickname ?? p.displayName ?? 'Unknown'),
+				totalBuyInCash: Number(p.totalBuyInCash) || 0,
+				settleCashAmount: Number(p.settleCashAmount) || 0,
+				settleCashDiff: Number(p.settleCashDiff) || 0,
+				buyInCount: Number(p.buyInCount) || 0,
+				photoUrl: p.photoUrl ?? null,
+				settleROI: Number(p.settleROI) || 0,
+			})),
+			__rawAction: action,
+		};
+	}
+	return null;
+}
+
 export default function DatabaseScreen() {
 	const [loading, setLoading] = useState(true);
-	const [games, setGames] = useState<any[]>([]);
-	const [history, setHistory] = useState<any[]>([]);
+	const [items, setItems] = useState<any[]>([]);
+	const [rawActions, setRawActions] = useState<any[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const nav = useNavigation();
 
@@ -24,66 +55,71 @@ export default function DatabaseScreen() {
 		setLoading(true);
 		try {
 			if (!hasLocalDb) {
-				setGames([]);
-				setHistory([]);
+				setItems([]);
 				setError('local database not available in this environment.');
 				return;
 			}
 
-			await execSql(`CREATE TABLE IF NOT EXISTS games (
-				id TEXT PRIMARY KEY,
-				createdMs INTEGER,
-				updatedMs INTEGER,
-				data TEXT
+			// Ensure actions table exists
+			await execSql(`CREATE TABLE IF NOT EXISTS actions (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				game_id INTEGER,
+				type TEXT,
+				payload TEXT,
+				createdAt TEXT,
+				syncStatus INTEGER DEFAULT 0
 			)`);
 
-			await execSql(`CREATE TABLE IF NOT EXISTS history (
-				id TEXT PRIMARY KEY,
-				createdMs INTEGER,
-				data TEXT
-			)`);
-
-			const gRes = await execSql(`SELECT id, createdMs, updatedMs, data FROM games ORDER BY updatedMs DESC`);
-			const gOut: any[] = [];
-			if (gRes && gRes.rows && Array.isArray(gRes.rows._array)) {
-				for (const r of gRes.rows._array) {
+			const aRes = await execSql(`SELECT id, game_id, type, payload, createdAt, syncStatus FROM actions ORDER BY createdAt DESC`);
+			const aOut: any[] = [];
+			if (aRes && aRes.rows && Array.isArray((aRes.rows as any)._array)) {
+				for (const r of (aRes.rows as any)._array) {
 					let parsed = null;
-					try { parsed = r.data ? JSON.parse(r.data) : null; } catch (e) { console.warn('parse game', e); parsed = null; }
-					gOut.push({ id: r.id, createdMs: r.createdMs, updatedMs: r.updatedMs, data: parsed });
+					try {
+						if (r.payload && typeof r.payload === 'string') parsed = JSON.parse(r.payload);
+						else parsed = r.payload ?? null;
+					} catch (e) { parsed = null; }
+					aOut.push({ id: r.id, game_id: r.game_id, type: r.type, createdAt: r.createdAt, syncStatus: r.syncStatus, payload: parsed, _source: 'sql' });
 				}
 			} else {
-				for (let i = 0; i < (gRes.rows.length ?? 0); i++) {
-					const r = gRes.rows.item(i);
+				for (let i = 0; i < (aRes.rows.length ?? 0); i++) {
+					const r = aRes.rows.item(i);
 					let parsed = null;
-					try { parsed = r.data ? JSON.parse(r.data) : null; } catch (e) { console.warn('parse game', e); parsed = null; }
-					gOut.push({ id: r.id, createdMs: r.createdMs, updatedMs: r.updatedMs, data: parsed });
+					try {
+						if (r.payload && typeof r.payload === 'string') parsed = JSON.parse(r.payload);
+						else parsed = r.payload ?? null;
+					} catch (e) { parsed = null; }
+					aOut.push({ id: r.id, game_id: r.game_id, type: r.type, createdAt: r.createdAt, syncStatus: r.syncStatus, payload: parsed, _source: 'sql' });
 				}
 			}
 
-			const hRes = await execSql(`SELECT id, createdMs, data FROM history ORDER BY createdMs DESC`);
-			const hOut: any[] = [];
-			if (hRes && hRes.rows && Array.isArray(hRes.rows._array)) {
-				for (const r of hRes.rows._array) {
-					let parsed = null;
-					try { parsed = r.data ? JSON.parse(r.data) : null; } catch (e) { console.warn('parse history', e); parsed = null; }
-					hOut.push({ id: r.id, createdMs: r.createdMs, data: parsed });
-				}
-			} else {
-				for (let i = 0; i < (hRes.rows.length ?? 0); i++) {
-					const r = hRes.rows.item(i);
-					let parsed = null;
-					try { parsed = r.data ? JSON.parse(r.data) : null; } catch (e) { console.warn('parse history', e); parsed = null; }
-					hOut.push({ id: r.id, createdMs: r.createdMs, data: parsed });
-				}
-			}
+			const memStore = (global as any).__pokerpal_store;
+			const memActions: any[] = (memStore && Array.isArray(memStore.actions)) ? memStore.actions.map((r: any) => ({
+				id: r.id,
+				game_id: r.game_id,
+				type: r.type,
+				createdAt: r.createdAt,
+				syncStatus: r.syncStatus ?? 0,
+				payload: r.payload,
+				_source: 'memory',
+			})) : [];
 
-			setGames(gOut);
-			setHistory(hOut);
+			const merged = [...aOut, ...memActions].sort((x, y) => {
+				const tx = new Date(x.createdAt || 0).getTime();
+				const ty = new Date(y.createdAt || 0).getTime();
+				return ty - tx;
+			});
+
+			// Convert to history-like items when possible and keep raw actions for everything else
+			const converted = merged.map(m => ({ ...m, __history: toHistoryItem(m) }));
+			const hist = converted.filter((x: any) => x.__history !== null);
+			const raw = converted.filter((x: any) => x.__history === null);
+			setItems(hist);
+			setRawActions(raw);
 		} catch (e: any) {
 			console.warn('load db error', e);
 			setError(e?.message ?? String(e));
-			setGames([]);
-			setHistory([]);
+			setItems([]);
 		} finally {
 			setLoading(false);
 		}
@@ -91,14 +127,106 @@ export default function DatabaseScreen() {
 
 	useEffect(() => { load(); }, []);
 
-	const confirmDelete = (id: string) => {
-		Alert.alert('删除游戏', '确定删除该本地游戏吗？此操作不可恢复。', [
-			{ text: '取消', style: 'cancel' },
-			{ text: '删除', style: 'destructive', onPress: async () => {
-				try { if (hasLocalDb) await execSql(`DELETE FROM games WHERE id = ?`, [id]); } catch (e) { console.warn('delete error', e); }
-				await load();
-			} }
-		]);
+	const renderItem = ({ item }: { item: any }) => {
+		const h = item.__history;
+		if (!h) return null;
+
+		const players = h.players || [];
+		const pickTop = (players: any[]) => {
+			if (!players.length) return { winner: null, loser: null };
+			const desc = [...players].sort((a, b) => Number(b.settleCashDiff) - Number(a.settleCashDiff));
+			const asc = [...players].sort((a, b) => Number(a.settleCashDiff) - Number(b.settleCashDiff));
+			return { winner: desc[0], loser: asc[0] };
+		};
+
+		const { winner, loser } = pickTop(players);
+
+			const onPress = () => {
+				// navigate to GameDetail and pass the snapshot as `game` (GameDetail prefers firestore but also accepts snapshot)
+				// include `isLocal` marker so GameDetail won't attempt Firestore reads
+				(nav as any).navigate('GameDetail', { game: h, isLocal: true });
+			};
+
+		return (
+			<TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+				<View style={styles.dateContainer}>
+					<View style={styles.dateBox}>
+						<Text style={styles.dateText}>{String(new Date(h.created).getDate()).padStart(2, '0')}</Text>
+						<Text style={styles.monthText}>{String(new Date(h.created).getMonth() + 1).padStart(2, '0')}</Text>
+						<Text style={styles.yearText}>{String(new Date(h.created).getFullYear())}</Text>
+					</View>
+					<Text style={styles.timeText}>{String(new Date(h.created).getHours()).padStart(2, '0')}:{String(new Date(h.created).getMinutes()).padStart(2, '0')}</Text>
+				</View>
+
+				<View style={styles.cardContent}>
+					<View style={styles.cardHeader}>
+						<View style={styles.blindsContainer}>
+							<MaterialCommunityIcons name="poker-chip" size={20} color={color.highLighter || '#d46613'} />
+							<Text style={styles.blindsText}>{h.smallBlind}/{h.bigBlind}</Text>
+						</View>
+						<View style={styles.playerCountContainer}>
+							<Text style={styles.playerCountText}>{h.players.length}人参与</Text>
+						</View>
+					</View>
+
+					<View style={styles.statsContainer}>
+						<View style={styles.statItem}>
+							<MaterialCommunityIcons name="bank" size={18} color={color.highLighter || '#d46613'} />
+							<View style={styles.statTexts}>
+								<Text style={styles.statValue}>{Number(h.totalBuyInCash).toFixed(0)}</Text>
+								<Text style={styles.statLabel}>总买入筹码</Text>
+							</View>
+						</View>
+
+						<View style={styles.statItem}>
+							<MaterialCommunityIcons name="calculator-variant" size={18} color={color.highLighter || '#d46613'} />
+							<View style={styles.statTexts}>
+								<Text style={styles.statValue}>{Number(h.totalEndingCash).toFixed(0)}</Text>
+								<Text style={styles.statLabel}>结算筹码</Text>
+							</View>
+						</View>
+
+						<View style={styles.statItem}>
+							<MaterialCommunityIcons
+								name={h.totalDiffCash >= 0 ? 'arrow-up-bold-circle' : 'arrow-down-bold-circle'}
+								size={18}
+								color={h.totalDiffCash >= 0 ? color.success : color.error}
+							/>
+							<View style={styles.statTexts}>
+								<Text style={[styles.statValue, { color: h.totalDiffCash >= 0 ? color.success : color.error }]}>
+									{h.totalDiffCash >= 0 ? '+' : '-'}{Math.abs(Number(h.totalDiffCash)).toFixed(0)}
+								</Text>
+								<Text style={styles.statLabel}>总差额</Text>
+							</View>
+						</View>
+					</View>
+
+					{winner && loser && (
+						<View style={styles.playersContainer}>
+							<View style={styles.playerRow}>
+								<View style={styles.playerInfo}>
+									<MaterialCommunityIcons name="trophy" size={16} color="#FFD700" />
+									<Text style={styles.playerName}>{winner.nickname}</Text>
+								</View>
+								<Text style={[styles.playerProfit, { color: color.success }]}>+${Number(winner.settleCashDiff).toFixed(0)}</Text>
+							</View>
+
+							<View style={styles.playerRow}>
+								<View style={styles.playerInfo}>
+									<MaterialCommunityIcons name="emoticon-sad" size={16} color="#9E9E9E" />
+									<Text style={styles.playerName}>{loser.nickname}</Text>
+								</View>
+								<Text style={[styles.playerProfit, { color: color.error }]}>-${Math.abs(Number(loser.settleCashDiff)).toFixed(0)}</Text>
+							</View>
+						</View>
+					)}
+
+					<View style={styles.cardFooter}>
+						<MaterialCommunityIcons name="chevron-right" size={20} color="#9E9E9E" />
+					</View>
+				</View>
+			</TouchableOpacity>
+		);
 	};
 
 	if (loading) return (
@@ -121,45 +249,22 @@ export default function DatabaseScreen() {
 	}
 
 	return (
-		<View style={{ flex: 1, padding: 12 }}>
-			<TouchableOpacity onPress={() => load()} style={{ marginBottom: 12 }}>
-				<Text style={{ color: color.info }}>刷新</Text>
-			</TouchableOpacity>
-
-			{error && (
-				<View style={{ padding: 8, backgroundColor: '#fee', borderRadius: 8, marginBottom: 12 }}>
-					<Text style={{ color: color.error, fontWeight: '600' }}>错误: {error}</Text>
-					<TouchableOpacity onPress={() => load()} style={{ marginTop: 8 }}>
-						<Text style={{ color: color.info }}>重试</Text>
-					</TouchableOpacity>
-				</View>
-			)}
-
-			<Text style={{ fontWeight: '700', marginBottom: 8 }}>本地 Games ({games.length})</Text>
+		<View style={styles.container}>
 			<FlatList
-				data={games}
-				keyExtractor={(item) => item.id}
-				renderItem={({ item }) => (
-					<TouchableOpacity onPress={() => confirmDelete(item.id)} style={{ padding: 8, borderBottomWidth: 1, borderColor: '#eee' }}>
-						<Text style={{ fontWeight: '600' }}>{item.id}</Text>
-						<Text>{new Date(item.updatedMs || item.createdMs || Date.now()).toLocaleString()}</Text>
-					</TouchableOpacity>
-				)}
-				style={{ maxHeight: 240, marginBottom: 12 }}
-			/>
-
-			<Text style={{ fontWeight: '700', marginBottom: 8 }}>历史快照 ({history.length})</Text>
-			<FlatList
-				data={history}
-				keyExtractor={(item) => item.id}
-				renderItem={({ item }) => (
-					<View style={{ padding: 8, borderBottomWidth: 1, borderColor: '#eee' }}>
-						<Text style={{ fontWeight: '600' }}>{item.id}</Text>
-						<Text>{new Date(item.createdMs || Date.now()).toLocaleString()}</Text>
-						<Text numberOfLines={2} ellipsizeMode="tail">{JSON.stringify(item.data?.players?.slice(0,3) || [])}</Text>
+				data={items}
+				keyExtractor={(item) => String(item.id)}
+				contentContainerStyle={styles.list}
+				renderItem={renderItem}
+				ListEmptyComponent={
+					<View style={styles.emptyContainer}>
+						<MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />
+						<Text style={styles.emptyText}>暂无本地记录</Text>
+						<Text style={styles.emptySubText}>完成一局游戏后，可在此查看本地快照。</Text>
 					</View>
-				)}
+				}
 			/>
+
+			
 		</View>
 	);
 }

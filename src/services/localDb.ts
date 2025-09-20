@@ -17,30 +17,43 @@ export function execSql(sql: string, params: any[] = []): Promise<any> {
     return new Promise((resolve, reject) => {
         // 首选路径：使用 transaction/executeSql
         if (typeof db.transaction === 'function') {
-            db.transaction(
-                (tx: any) => {
-                    tx.executeSql(
-                        sql,
-                        params,
-                        (_tx: any, result: any) => resolve(result),
-                        (_tx: any, error: any) => {
-                            reject(error);
-                            return false;
-                        }
+                try {
+                    db.transaction(
+                        (tx: any) => {
+                            try {
+                                tx.executeSql(
+                                    sql,
+                                    params,
+                                    (_tx: any, result: any) => resolve(result),
+                                    (_tx: any, error: any) => {
+                                        reject(error);
+                                        return false;
+                                    }
+                                );
+                            } catch (innerErr) {
+                                reject(innerErr);
+                            }
+                        },
+                        (txError: any) => reject(txError)
                     );
-                },
-                (txError: any) => reject(txError)
-            );
+                } catch (err) {
+                    // Synchronous error when starting a transaction - reject promise instead of crashing
+                    reject(err);
+                }
             return;
         }
 
         // 回退路径：有些环境提供 db.exec(sql, args, success, error)
         if (typeof db.exec === 'function') {
             try {
-                (db as any).exec(sql, params, (res: any) => {
-                    if (Array.isArray(res) && res.length > 0) return resolve(res[0]);
-                    return resolve(res);
-                }, (err: any) => reject(err));
+                try {
+                    (db as any).exec(sql, params, (res: any) => {
+                        if (Array.isArray(res) && res.length > 0) return resolve(res[0]);
+                        return resolve(res);
+                    }, (err: any) => reject(err));
+                } catch (innerExecErr) {
+                    reject(innerExecErr);
+                }
             } catch (err) {
                 reject(err);
             }
@@ -106,6 +119,7 @@ export function execSql(sql: string, params: any[] = []): Promise<any> {
                 if (normalized.includes('FROM PLAYERS')) return resolve({ rows: { _array: store.players.slice() } });
                 if (normalized.includes('FROM GAMES')) return resolve({ rows: { _array: store.games.slice() } });
                 if (normalized.includes('FROM GAME_PLAYERS')) return resolve({ rows: { _array: store.game_players.slice() } });
+                if (normalized.includes('FROM ACTIONS')) return resolve({ rows: { _array: store.actions ? store.actions.slice() : [] } });
                 const m = /FROM\s+GAME_PLAYERS\s+WHERE\s+GAME_ID\s*=\s*\?/i.exec(normalized);
                 if (m) {
                     const gid = params[0];
@@ -210,13 +224,28 @@ export async function appendAction(gameId: number | null, type: string, payload:
     const now = new Date().toISOString();
     const sql = `INSERT INTO actions (game_id, type, payload, createdAt, syncStatus) VALUES (?, ?, ?, ?, ?);`;
     const params = [gameId, type, JSON.stringify(payload ?? {}), now, 0];
-    await execSql(sql, params);
     try {
-        const last = await execSql('SELECT last_insert_rowid() as id;');
-        const id = last && last.rows && last.rows._array && last.rows._array[0] ? last.rows._array[0].id : undefined;
-        return id;
+        await execSql(sql, params);
+        try {
+            const last = await execSql('SELECT last_insert_rowid() as id;');
+            const id = last && last.rows && last.rows._array && last.rows._array[0] ? last.rows._array[0].id : undefined;
+            return id;
+        } catch (e) {
+            // If selecting last id fails, fall back to in-memory store id
+            if (!(global as any).__pokerpal_store) (global as any).__pokerpal_store = { players: [], games: [], game_players: [], _id: 1 };
+            const fallbackId = (global as any).__pokerpal_store._id++;
+            if (!(global as any).__pokerpal_store.actions) (global as any).__pokerpal_store.actions = [];
+            (global as any).__pokerpal_store.actions.unshift({ id: fallbackId, game_id: gameId, type, payload, createdAt: now, syncStatus: 0 });
+            return fallbackId;
+        }
     } catch (e) {
-        return undefined;
+        // If insert fails (native DB issues), persist to in-memory store to avoid data loss and app crash
+        console.error('appendAction failed, writing to in-memory store', e);
+        if (!(global as any).__pokerpal_store) (global as any).__pokerpal_store = { players: [], games: [], game_players: [], _id: 1 };
+        const fallbackId = (global as any).__pokerpal_store._id++;
+        if (!(global as any).__pokerpal_store.actions) (global as any).__pokerpal_store.actions = [];
+        (global as any).__pokerpal_store.actions.unshift({ id: fallbackId, game_id: gameId, type, payload, createdAt: now, syncStatus: 0 });
+        return fallbackId;
     }
 }
 

@@ -5,7 +5,7 @@
  * ======================== */
 // cleaned GameDetailScreen.tsx using Palette tokens
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet,  ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -17,10 +17,11 @@ import { handleCopyToClipboard, handleSendEmail } from '@/utils/exportHandlers';
 import { doc, collection, onSnapshot, query, orderBy, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { GameDocFS, GameSnapshotUI, PlayerSnapshotCash } from '@/types';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const pad = (n: number) => `${n}`.padStart(2, '0');
-const dateStr = (ms?: number) => (ms ? `${new Date(ms).getFullYear()}-${pad(new Date(ms).getMonth() + 1)}-${pad(new Date(ms).getDate())}` : '--');
-const timeStr = (ms?: number) => (ms ? `${pad(new Date(ms).getHours())}:${pad(new Date(ms).getMinutes())}` : '--');
+const dateStr = (d?: string) => (d ? `${new Date(d).getFullYear()}-${pad(new Date(d).getMonth() + 1)}-${pad(new Date(d).getDate())}` : '--');
+const timeStr = (t?: string) => (t ? `${pad(new Date(t).getHours())}:${pad(new Date(t).getMinutes())}` : '--');
 const fmtMoney = (n: any) => { const x = Number(n); return Number.isFinite(x) ? x.toFixed(0) : '0.00'; };
 
 const AVATAR_COLORS = [color.card, color.warning, color.cancel, color.success, color.info, color.primary, color.strongGray];
@@ -39,7 +40,18 @@ export default function GameDetailScreen() {
     const [error, setError] = useState<string | null>(null);
     const [game, setGame] = useState<GameSnapshotUI | undefined>(paramGame);
 
+    // If navigated from a local DB snapshot, skip Firestore reads entirely
+    const isLocal = Boolean(route.params?.isLocal === true && paramGame);
     useEffect(() => {
+        if (isLocal && paramGame) {
+            setGame(paramGame);
+            setLoading(false);
+            setError(null);
+        }
+    }, [isLocal, paramGame]);
+
+    useEffect(() => {
+        if (isLocal) return; // skip Firestore listeners when showing local snapshot
         if (!paramGameId) return;
         const gameRef = doc(collection(db, 'games'), paramGameId);
         const playersRef = collection(gameRef, 'test-players');
@@ -72,8 +84,8 @@ export default function GameDetailScreen() {
                 id: String((latestGameDoc as any).gameId ?? paramGameId),
                 smallBlind: (latestGameDoc as any).smallBlind,
                 bigBlind: (latestGameDoc as any).bigBlind,
-                createdMs: (latestGameDoc as any).created ? new Date((latestGameDoc as any).created).getTime() : Date.now(),
-                updatedMs: (latestGameDoc as any).updated ? new Date((latestGameDoc as any).updated).getTime() : Date.now(),
+                created: latestGameDoc.created ?? new Date().toISOString(),
+                updated: latestGameDoc.updated ?? new Date().toISOString(),
                 totalBuyInCash: totals.totalBuyInCash,
                 totalEndingCash: totals.totalEndingCash,
                 totalDiffCash: totals.totalDiffCash,
@@ -152,8 +164,8 @@ export default function GameDetailScreen() {
                 <View style={styles.header}>
                     <View style={styles.gameInfoHeader}>
                         <View style={styles.dateTimeContainer}>
-                            <Text style={styles.dateText}>{dateStr(game.createdMs)}</Text>
-                            <Text style={styles.timeText}>{timeStr(game.createdMs)}{game.updatedMs !== game.createdMs ? `（更新：${timeStr(game.updatedMs)}）` : ''}</Text>
+                            <Text style={styles.dateText}>{dateStr(game.created)}</Text>
+                            <Text style={styles.timeText}>{timeStr(game.created)}{game.updated !== game.created ? `（更新：${timeStr(game.updated)}）` : ''}</Text>
                         </View>
                         <View style={styles.blindContainer}>
                             <MaterialCommunityIcons name="poker-chip" size={18} color={color.lightText} />

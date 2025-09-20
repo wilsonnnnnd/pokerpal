@@ -19,33 +19,35 @@ export const saveGameToHistory = () => {
             settleCashDiff = 0,
             settleROI = 0,
         } = player
+        // compute cash rate (guard against zero or missing chip base)
+        const rate = game.baseChipAmount && Number(game.baseChipAmount) !== 0
+            ? (Number(game.baseCashAmount ?? 0) / Number(game.baseChipAmount))
+            : 1;
 
         return {
             id,
             nickname,
-            totalBuyInChips,
-            buyInCount: buyInChipsList.length,
-            endingChipCount: settleChipCount,
-            cashDifference: settleCashDiff,
-            roiSum: settleROI,
-        }
+            photoUrl: (player as any).photoUrl ?? null,
+            buyInCount: (buyInChipsList || []).length,
+            totalBuyInCash: (Number(totalBuyInChips) || 0) * rate,
+            settleCashAmount: (Number(settleChipCount) || 0) * rate,
+            settleCashDiff: Number(settleCashDiff) || 0,
+            settleROI: Number(settleROI) || 0,
+        } as any
     })
-
-    const totalBuyIn = playerSnapshots.reduce((sum, p) => sum + p.totalBuyInChips, 0)
-    const totalEnding = playerSnapshots.reduce((sum, p) => sum + p.endingChipCount, 0)
+    const totalBuyInCash = playerSnapshots.reduce((sum, p) => sum + (p.totalBuyInCash || 0), 0)
+    const totalEndingCash = playerSnapshots.reduce((sum, p) => sum + (p.settleCashAmount || 0), 0)
+    const totalDiffCash = playerSnapshots.reduce((sum, p) => sum + (p.settleCashDiff || 0), 0)
 
     addGameSnapshot({
-        id: game.gameId,
-        // ✅ 本地毫秒数（可序列化）
-        createdMs: game.createdMs ?? Date.now(),
-        updatedMs: game.updatedMs ?? Date.now(),
+        id: String(game.gameId),
+        created: game.created ?? new Date().toISOString(),
+        updated: game.updated ?? new Date().toISOString(),
         smallBlind: game.smallBlind,
         bigBlind: game.bigBlind,
-        baseCashAmount: game.baseCashAmount,
-        baseChipAmount: game.baseChipAmount,
-        totalBuyIn,
-        totalEnding,
-        totalDiff: totalEnding - totalBuyIn,
-        players: playerSnapshots,
+        totalBuyInCash,
+        totalEndingCash,
+        totalDiffCash,
+        players: playerSnapshots as any,
     })
 }

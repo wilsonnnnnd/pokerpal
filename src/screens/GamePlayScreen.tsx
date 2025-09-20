@@ -36,7 +36,7 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
-import localDb, { appendAction } from '@/services/localDb';
+import { finalizeGameOnServer, saveGameToFirebase, saveGameToLocalSql } from '@/firebase/saveGame';         // 统一远端保存入口
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
@@ -161,8 +161,10 @@ export default function GamePlayScreen() {
 
         try {
             const gameId = useGameStore.getState().gameId;
-            // Perform local finalize (remote finalize removed when using local DB)
+
             setSubmitPhase('finalizing');
+            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+
             useGameStore.getState().finalizeGame();
             setPendingFinalize(false);
             setSubmitPhase('done');
@@ -222,39 +224,7 @@ export default function GamePlayScreen() {
 
             // 1) 本地离线缓存（失败不继续）
             try {
-                // save snapshot to in-memory store
                 saveGameToHistory();
-                // also persist history snapshot to local DB for durability
-                const game = useGameStore.getState();
-                const snapshotPayload = {
-                    id: game.gameId,
-                    createdMs: game.createdMs ?? Date.now(),
-                    updatedMs: game.updatedMs ?? Date.now(),
-                    smallBlind: game.smallBlind,
-                    bigBlind: game.bigBlind,
-                    baseCashAmount: game.baseCashAmount,
-                    baseChipAmount: game.baseChipAmount,
-                    players: players.map(p => ({
-                        id: p.id,
-                        nickname: p.nickname,
-                        buyInCount: p.buyInChipsList?.length ?? 0,
-                        totalBuyInCash: p.totalBuyInChips ?? 0,
-                        settleCashAmount: p.settleCashDiff ?? 0,
-                        settleCashDiff: p.settleCashDiff ?? 0,
-                        settleROI: p.settleROI ?? 0,
-                    })),
-                };
-                // 将快照持久化到本地 SQL（使用 actions 表作为最终快照存储）
-                try {
-                    const actionId = await appendAction(null, 'finalize_game', snapshotPayload);
-                    if (actionId === undefined) {
-                        throw new Error('appendAction 未返回 id');
-                    }
-                    log('DB', `已将游戏快照写入 actions 表，id=${actionId}`);
-                } catch (e: any) {
-                    Toast.show({ type: 'error', text1: '本地保存失败', text2: e?.message ?? String(e) });
-                    return;
-                }
             } catch (e: any) {
                 Toast.show({
                     type: 'error',
@@ -264,18 +234,13 @@ export default function GamePlayScreen() {
                 return;
             }
 
-            // 2) 本地保存（替代远端）——保存游戏明细到本地 SQLite
+            // 2) 远端保存（明细）——带自动重试
             setSubmitPhase('saving');
-            try {
-                const game = useGameStore.getState();
-
-            } catch (err) {
-                throw err;
-            }
-
-            // 3) finalize 本地状态
+            await retry(() => saveGameToFirebase(gameId, players), 3, 700);
+            await saveGameToLocalSql(gameId, players);
+            // 3) finalize 落库（只写 updated/status，不触碰 created）——带自动重试
             setSubmitPhase('finalizing');
-            useGameStore.getState().finalizeGame();
+            await retry(() => finalizeGameOnServer(gameId), 3, 700);
 
             // 4) 本地 finalize（最后一步，保证远端成功后再改本地）
             useGameStore.getState().finalizeGame();
@@ -329,10 +294,12 @@ export default function GamePlayScreen() {
     }, [finalized]);
 
     useEffect(() => {
-        BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-        return () => {
-            BackHandler.exitApp();
-        };
+        const subscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            handleBackPress
+        );
+
+        return () => subscription.remove(); // ✅ 新写法
     }, [handleBackPress]);
 
     // ===== 禁止侧滑返回：仅在已结束时允许 =====
@@ -414,7 +381,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => timerRef.current?.show()}
                     >
-                        <MaterialCommunityIcons name="timer-outline" size={22} color={color.lightText} />
+                        <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
                         <Text style={styles.toolButtonText}>计时器</Text>
                     </TouchableOpacity>
 
@@ -422,7 +389,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => setModalState({ type: 'Insurance' })}
                     >
-                        <MaterialCommunityIcons name="calculator" size={22} color={color.lightText} />
+                        <MaterialCommunityIcons name="calculator" size={22} color="#fff" />
                         <Text style={styles.toolButtonText}>保险计算</Text>
                     </TouchableOpacity>
 
@@ -430,7 +397,7 @@ export default function GamePlayScreen() {
                         style={styles.toolButton}
                         onPress={() => setModalState({ type: 'wheel' })}
                     >
-                        <MaterialCommunityIcons name="rotate-3d-variant" size={22} color={color.lightText} />
+                        <MaterialCommunityIcons name="rotate-3d-variant" size={22} color="#fff" />
                         <Text style={styles.toolButtonText}>决策转盘</Text>
                     </TouchableOpacity>
                 </View>
@@ -470,7 +437,7 @@ export default function GamePlayScreen() {
                                 {/* ===== 分析卡片（展示筹码 + 现金）===== */}
                                 <View style={styles.analysisCard}>
                                     <LinearGradient
-                                        colors={[color.lightGray, color.mediumGray]}
+                                        colors={['#f5f7fa', '#e4e7eb']}
                                         style={styles.analysisHeader}
                                     >
                                         <MaterialCommunityIcons
@@ -517,7 +484,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="赢家"
-                                                iconColor={color.card}
+                                                iconColor="#FFD700"
                                             />
                                             <InfoRow
                                                 icon="emoticon-cry-outline"
@@ -527,7 +494,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="输家"
-                                                iconColor={color.error}
+                                                iconColor="#FF6B6B"
                                             />
                                         </View>
 
@@ -582,7 +549,7 @@ export default function GamePlayScreen() {
                                     style={styles.endGameButton}
                                     textStyle={styles.endGameButtonText}
                                     icon={pendingFinalize ? 'refresh' : 'stop-circle-outline'}
-                                    iconColor={color.lightText}
+                                    iconColor="#fff"
                                     iconSize={24}
                                     iconPosition="left"
                                     size="large"

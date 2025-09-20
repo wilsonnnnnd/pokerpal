@@ -14,7 +14,7 @@ interface InputFieldProps {
     onChangeText: (field: string, value: string) => void;
     onFocus?: () => void;
     onBlur?: () => void;
-    inputRef?: React.RefObject<TextInput>;
+    inputRef?: React.RefObject<TextInput | null>;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({

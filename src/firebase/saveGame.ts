@@ -1,3 +1,4 @@
+
 /**
  * saveGameToFirebase（唯一入口）
  * ------------------------------
@@ -23,7 +24,7 @@ import {
 import { BatchBuilder } from './batchBuilder'
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { gameDoc } from '@/constants/namingDb'
-import { getDeviceId } from '@/utils/deviceInfo'
+import { appendAction } from '@/services/localDb';
 
 
 function validateSettlement(players: Player[]) {
@@ -31,6 +32,41 @@ function validateSettlement(players: Player[]) {
 	const sum = players.reduce((acc, p) => acc + (p.settleCashDiff ?? 0), 0)
 	if (Math.abs(sum) > 0.01) {
 		throw new Error(`结算不平衡：所有玩家盈亏合计 = ${sum}`)
+	}
+}
+
+/**
+ * 将与同步到 Firebase 相同的数据以快照形式写入本地 SQL（actions 表），
+ * 用于离线或服务器写入失败时的本地持久化备份。
+ */
+export async function saveGameToLocalSql(gameId: string, players: Player[]) {
+	const game = useGameStore.getState();
+
+	const snapshotPayload = {
+		id: gameId,
+		created: game.created ?? Date.now(),
+		updated: game.updated ?? Date.now(),
+		smallBlind: game.smallBlind,
+		bigBlind: game.bigBlind,
+		baseCashAmount: game.baseCashAmount,
+		baseChipAmount: game.baseChipAmount,
+		players: players.map((p: Player) => ({
+			id: p.id,
+			nickname: p.nickname,
+			buyInCount: p.buyInChipsList?.length ?? 0,
+			totalBuyInCash: p.totalBuyInChips ?? 0,
+			settleCashAmount: p.settleCashDiff ?? 0,
+			settleCashDiff: p.settleCashDiff ?? 0,
+			settleROI: p.settleROI ?? 0,
+		})),
+	};
+
+	try {
+		const id = await appendAction(null, 'finalize_game', snapshotPayload);
+		return id;
+	} catch (e) {
+		// bubble up so callers can handle; appendAction already has fallback behavior
+		throw e;
 	}
 }
 
@@ -98,8 +134,9 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 	const gameRef = doc(db, gameDoc, gameId)
 	const snap = await getDoc(gameRef)
 	const isCreate = !snap.exists()
-	const createdBy = await (async () => await getDeviceId())() // 设备 ID 作为创建者标识（可改为用户 ID）
-	
+
+
+
 	const gamePayload = isCreate
 		? makeCreateGamePayload({
 			gameId,
@@ -109,7 +146,6 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 			baseChipAmount: game.baseChipAmount,
 			finalized: !!game.finalized,
 			token: game.token ?? null,
-			createdBy,
 			playerCount: players.length,
 		})
 		: makeUpdateGamePayload({

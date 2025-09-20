@@ -3,16 +3,7 @@ import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState, GameDocFS } from '@/types';
-import { Timestamp } from 'firebase/firestore';
 
-// 工具：宽松时间转毫秒
-const tsToMs = (v: any): number | null => {
-  if (!v) return null;
-  if (typeof v?.toDate === 'function') return v.toDate().getTime();
-  if (typeof v === 'number') return v;
-  const t = new Date(v).getTime();
-  return Number.isFinite(t) ? t : null;
-};
 
 export const useGameStore = create<GameState>()(
   devtools(
@@ -24,8 +15,8 @@ export const useGameStore = create<GameState>()(
         baseChipAmount: 0,
         baseCashAmount: 0,
 
-        createdMs: null,     // ✅ 统一 null
-        updatedMs: null,     // ✅ 统一 null
+        created: null,     // ✅ 统一 null
+        updated: null,     // ✅ 统一 null
 
         finalized: false,
         token: null,
@@ -38,8 +29,8 @@ export const useGameStore = create<GameState>()(
             baseCashAmount,
             smallBlind,
             bigBlind,
-            createdMs: Date.now(),
-            updatedMs: null,
+            created: new Date().toISOString(),
+            updated: null,
             finalized: false,
           }),
 
@@ -52,8 +43,8 @@ export const useGameStore = create<GameState>()(
             bigBlind: Number(doc.bigBlind ?? prev.bigBlind ?? 0),
             baseChipAmount: Number(doc.baseChipAmount ?? prev.baseChipAmount ?? 0),
             baseCashAmount: Number(doc.baseCashAmount ?? prev.baseCashAmount ?? 0),
-            createdMs: tsToMs(doc.created) ?? prev.createdMs ?? Date.now(),
-            updatedMs: tsToMs(doc.updated) ?? prev.updatedMs ?? null,
+            created: doc.created,
+            updated: doc.updated,
             finalized: Boolean(doc.finalized ?? prev.finalized ?? false),
             token: (doc.token ?? prev.token ?? null) as string | null,
           })),
@@ -66,21 +57,12 @@ export const useGameStore = create<GameState>()(
           baseCashAmount: get().baseCashAmount,
         }),
 
-        getCreatedTs: () => {
-          const ms = get().createdMs;
-          return typeof ms === 'number' ? Timestamp.fromMillis(ms) : null;
-        },
-
-        getUpdatedTs: () => {
-          const ms = get().updatedMs;
-          return typeof ms === 'number' ? Timestamp.fromMillis(ms) : null;
-        },
 
         // 结束/结算：只更新本地状态；真正写 Firestore 在你的业务层完成
         finalizeGame: () =>
           set({
             finalized: true,
-            updatedMs: Date.now(),
+            updated: new Date().toISOString(),
           }),
 
         resetGame: () =>
@@ -90,8 +72,8 @@ export const useGameStore = create<GameState>()(
             bigBlind: 0,
             baseChipAmount: 0,
             baseCashAmount: 0,
-            createdMs: null,
-            updatedMs: null,
+            created: null,
+            updated: null,
             finalized: false,
             token: null,
           }),
@@ -117,17 +99,17 @@ export const useGameStore = create<GameState>()(
           bigBlind: state.bigBlind,
           baseChipAmount: state.baseChipAmount,
           baseCashAmount: state.baseCashAmount,
-          createdMs: state.createdMs,
-          updatedMs: state.updatedMs,
+          created: state.created,
+          updated: state.updated,
           finalized: state.finalized,
           token: state.token,
         }),
         version: 2,
         migrate: async (persistedState: any, version) => {
-          // 简单迁移：把 undefined 的 updatedMs 迁移为 null
+          // 简单迁移：把 undefined 的 updated 迁移为 null
           if (version < 2 && persistedState?.state) {
-            if (persistedState.state.updatedMs === undefined) {
-              persistedState.state.updatedMs = null;
+            if (persistedState.state.updated === undefined) {
+              persistedState.state.updated = null;
             }
           }
           return persistedState;
