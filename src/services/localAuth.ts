@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import storage from './storageService';
+import { getAuth, signInWithCredential as firebaseSignInWithCredential, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
 
 type User = {
     uid: string;
@@ -53,24 +54,73 @@ export async function signInAnonymously() {
     const uid = uuidv4();
     currentUser = { uid, displayName: 'Guest', isAnonymous: true };
     notify();
+    try {
+        await storage.setLocal('@pokerpal:currentUser', currentUser);
+    } catch (e) {
+        console.warn('localAuth: failed to persist anonymous user', e);
+    }
     return { user: currentUser };
 }
 
 export async function signInWithCredential(credential: any) {
     // credential may include idToken, email, displayName
-    const uid = credential?.uid ?? credential?.idToken ?? uuidv4();
-    currentUser = {
-        uid: String(uid),
-        email: credential?.email ?? null,
-        displayName: credential?.displayName ?? credential?.name ?? 'Player',
-        photoURL: credential?.photoURL ?? null,
-        isAnonymous: false,
-    };
-    notify();
-    return { user: currentUser };
+    try {
+        const auth = getAuth();
+
+        // If an idToken is provided, build a Google credential and sign in via Firebase
+        if (credential?.idToken) {
+            const firebaseCred = GoogleAuthProvider.credential(credential.idToken);
+            const userCred = await firebaseSignInWithCredential(auth, firebaseCred as any);
+            const u = userCred.user;
+            currentUser = {
+                uid: String(u.uid),
+                email: u.email ?? null,
+                displayName: u.displayName ?? null,
+                photoURL: u.photoURL ?? null,
+                isAnonymous: u.isAnonymous ?? false,
+            };
+            notify();
+            try {
+                await storage.setLocal('@pokerpal:currentUser', currentUser);
+            } catch (e) {
+                console.warn('localAuth: failed to persist signed-in user', e);
+            }
+            return { user: currentUser };
+        }
+
+        // Fallback: if no idToken, fall back to creating a local user record
+        const uid = credential?.uid ?? uuidv4();
+        currentUser = {
+            uid: String(uid),
+            email: credential?.email ?? null,
+            displayName: credential?.displayName ?? credential?.name ?? 'Player',
+            photoURL: credential?.photoURL ?? null,
+            isAnonymous: false,
+        };
+        notify();
+        try {
+            await storage.setLocal('@pokerpal:currentUser', currentUser);
+        } catch (e) {
+            console.warn('localAuth: failed to persist signed-in user', e);
+        }
+        return { user: currentUser };
+    } catch (err) {
+        console.error('localAuth.signInWithCredential error', err);
+        throw err;
+    }
 }
 
 export async function signOut() {
+    try {
+        const auth = getAuth();
+        try {
+            await firebaseSignOut(auth);
+        } catch (e) {
+            // ignore native signOut errors, still clear local state
+        }
+    } catch (e) {
+        // ignore
+    }
     currentUser = null;
     notify();
     try {

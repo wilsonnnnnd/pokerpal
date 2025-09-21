@@ -69,38 +69,41 @@ export default function LoginScreen() {
 
             // On iOS we can directly call signIn() and use idToken
             const userInfo = await GoogleSignin.signIn();
-            // Try to read idToken from signIn response (some versions include it). If not present, fallback to getTokens()
-            // Use `as any` to avoid TypeScript type mismatch for different lib versions
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let idToken: string | null = (userInfo as any)?.idToken ?? null;
             if (!idToken) {
-                // fallback: request tokens (safe on iOS)
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const tokens = await GoogleSignin.getTokens();
                 idToken = (tokens as any)?.idToken ?? null;
             }
             if (!idToken) throw new Error('未获得 idToken');
 
             // GoogleSignin typings vary; use any to access token/email/displayName
+            // Build a small credential object consumed by our localAuth shim
             const gi: any = userInfo as any;
-            const googleCredential = { idToken, displayName: gi?.user?.name ?? gi?.user?.givenName ?? gi?.user?.name ?? gi?.givenName ?? gi?.name, email: gi?.user?.email ?? gi?.email };
+            // Extract common profile fields returned by GoogleSignin
+            const profileId = gi?.user?.id ?? gi?.id ?? null;
+            const profileName = gi?.user?.name ?? gi?.user?.givenName ?? gi?.name ?? null;
+            const profilePhoto = gi?.user?.photo ?? gi?.user?.photoUrl ?? gi?.photo ?? null;
+            const profileEmail = gi?.user?.email ?? gi?.email ?? null;
+
+            const googleCredential: any = {
+                idToken,
+                displayName: profileName,
+                email: profileEmail,
+                photoURL: profilePhoto,
+                googleId: profileId,
+            };
+
             const userCred = await signInWithCredential(googleCredential);
-
             const u = userCred.user;
-            await saveUserProfile({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous });
+            // Pass profile data to Firestore profile updater
+            await saveUserProfile({ uid: u.uid, email: googleCredential.email ?? u.email, displayName: googleCredential.displayName ?? u.displayName, photoURL: googleCredential.photoURL ?? u.photoURL, isAnonymous: u.isAnonymous });
 
-            // Persist current user locally so the app can restore session
-            try {
-                await storage.setLocal('@pokerpal:currentUser', {
-                    uid: u.uid,
-                    email: u.email ?? null,
-                    displayName: u.displayName ?? null,
-                    photoURL: u.photoURL ?? null,
-                    isAnonymous: u.isAnonymous ?? false,
-                });
-            } catch (err) {
-                console.warn('Failed to persist user locally', err);
-            }
+                // localAuth now persists the current user; verify persistence for debugging
+                try {
+                    const persisted = await storage.getLocal('@pokerpal:currentUser');
+                } catch (e) {
+                    console.warn('Login: failed to read persisted user', e);
+                }
 
             Toast.show({ type: 'success', text1: '登录成功', text2: `欢迎 ${u.displayName ?? '玩家'}` });
             // Let App's auth subscription switch the navigator. As a fallback try navigate.
@@ -135,17 +138,12 @@ export default function LoginScreen() {
             await saveUserProfile({ uid: u.uid, isAnonymous: u.isAnonymous });
 
             // Persist current user locally
-            try {
-                await storage.setLocal('@pokerpal:currentUser', {
-                    uid: u.uid,
-                    email: u.email ?? null,
-                    displayName: u.displayName ?? null,
-                    photoURL: u.photoURL ?? null,
-                    isAnonymous: u.isAnonymous ?? true,
-                });
-            } catch (err) {
-                console.warn('Failed to persist guest user locally', err);
-            }
+                // localAuth persists the anonymous user; verify persistence
+                try {
+                    const persisted = await storage.getLocal('@pokerpal:currentUser');
+                } catch (e) {
+                    console.warn('Login: failed to read persisted guest user', e);
+                }
 
             Toast.show({ type: 'success', text1: '已以访客身份登录' });
             // Let App's auth subscription switch the navigator. As a fallback try navigate.

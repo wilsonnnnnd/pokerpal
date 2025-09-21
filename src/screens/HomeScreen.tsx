@@ -25,6 +25,7 @@ import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/localAuth';
+import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import RequireMember from '@/components/RequireMember';
 
@@ -34,6 +35,7 @@ type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 const HomeScreen = () => {
     const navigation = useNavigation<HomeScreenNav>();
     const [user, setUser] = useState<{ uid: string; email?: string | null; displayName?: string | null; photoURL?: string | null; isAnonymous?: boolean; profile?: UserProfile } | null>(null);
+    const [persistedUser, setPersistedUser] = useState<any | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const { finalized, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
@@ -89,6 +91,15 @@ const HomeScreen = () => {
 
             const profile = await fetchUserProfile(u.uid);
             setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
+            console.log('Fetched user profile:', profile);
+
+            // load persisted user for avatar/name preference
+            try {
+                const pu = await storage.getLocal('@pokerpal:currentUser');
+                setPersistedUser(pu);
+            } catch (e) {
+                // ignore
+            }
         });
 
         return () => unsub && unsub();
@@ -121,18 +132,21 @@ const HomeScreen = () => {
                             <View style={styles.userCard}>
                                 <View style={styles.userInfoContainer}>
                                     <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
-                                        {user.photoURL ? (
-                                            <Image source={{ uri: user.photoURL }} style={styles.userAvatar} />
+                                        {(
+                                            // Prefer persistedUser.photoURL if available, otherwise fallback to user.photoURL
+                                            (persistedUser?.photoURL ?? user.photoURL)
+                                        ) ? (
+                                            <Image source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }} style={styles.userAvatar} />
                                         ) : (
                                             <View style={styles.userAvatar}>
-                                                <Text style={{ color: color.text, fontWeight: '700' }}>{(user.displayName || '访客').slice(0, 1)}</Text>
+                                                <Text style={{ color: color.text, fontWeight: '700' }}>{((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}</Text>
                                             </View>
                                         )}
                                     </TouchableOpacity>
 
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.userName}>{user.displayName ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
-                                        <Text style={styles.userEmail}>{user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
+                                        <Text style={styles.userName}>{(persistedUser?.displayName ?? user.displayName) ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
+                                        <Text style={styles.userEmail}>{persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                                             <Text style={[styles.userEmail, { marginRight: 8 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
                                             {user.profile?.role === 'member' && (

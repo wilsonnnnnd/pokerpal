@@ -28,6 +28,7 @@ export default function SettingsScreen() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
     const [settings, setSettings] = useState<AppSettings>({
         defaultCurrency: 'AUD',
@@ -56,6 +57,13 @@ export default function SettingsScreen() {
                 const parsed = await getLocal<AppSettings>(SETTINGS_KEY);
                 if (parsed) {
                     setSettings((s) => ({ ...s, ...parsed }));
+                }
+                // also load persisted current user (for debug/verification)
+                try {
+                    const pu = await getLocal('@pokerpal:currentUser');
+                    setPersistedUser(pu);
+                } catch (e) {
+                    // ignore
                 }
             } catch (e) {
                 console.warn('load settings', e);
@@ -151,6 +159,52 @@ export default function SettingsScreen() {
                         <Text style={{ color: color.mutedText }}>未登录</Text>
                     </View>
                 )}
+                <View style={{ marginTop: 12 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>持久化用户（storage）</Text>
+                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                        {persistedUser ? (
+                            <>
+                                <Text style={{ color: color.text, marginBottom: 6 }}>UID: {persistedUser.uid}</Text>
+                                <Text style={{ color: color.text, marginBottom: 6 }}>昵称: {persistedUser.displayName ?? persistedUser.nickname ?? '—'}</Text>
+                                <Text style={{ color: color.text, marginBottom: 6 }}>邮箱: {persistedUser.email ?? '—'}</Text>
+                                <Text style={{ color: color.text, marginBottom: 6 }}>照片: {persistedUser.photoURL ?? persistedUser.photo ?? '—'}</Text>
+                                <Text style={{ color: color.mutedText, marginTop: 8 }}>原始: {JSON.stringify(persistedUser)}</Text>
+                                <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
+                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={async () => {
+                                        try {
+                                            const pu = await getLocal('@pokerpal:currentUser');
+                                            setPersistedUser(pu);
+                                        } catch (e) {
+                                            console.warn('refresh persisted user', e);
+                                        }
+                                    }} style={{ marginRight: 8 }} />
+                                    <PrimaryButton title="清除" icon="delete" variant="outlined" onPress={async () => {
+                                        try {
+                                            await removeLocal('@pokerpal:currentUser');
+                                            setPersistedUser(null);
+                                        } catch (e) {
+                                            console.warn('remove persisted user', e);
+                                        }
+                                    }} iconColor={color.error} />
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={{ color: color.mutedText }}>未检测到持久化用户</Text>
+                                <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
+                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={async () => {
+                                        try {
+                                            const pu = await getLocal('@pokerpal:currentUser');
+                                            setPersistedUser(pu);
+                                        } catch (e) {
+                                            console.warn('refresh persisted user', e);
+                                        }
+                                    }} />
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
             </View>
 
             <View style={{ marginBottom: 18 }}>
