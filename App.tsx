@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
@@ -32,7 +33,10 @@ export type RootStackParamList = {
   Settings: undefined;
 };
 
-const Stack = createStackNavigator();
+// Opt-in to native screens for improved memory and performance
+enableScreens();
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainNavigator() {
   return (
