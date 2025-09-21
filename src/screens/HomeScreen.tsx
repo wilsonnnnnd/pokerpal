@@ -91,8 +91,6 @@ const HomeScreen = () => {
 
             const profile = await fetchUserProfile(u.uid);
             setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
-            console.log('Fetched user profile:', profile);
-
             // load persisted user for avatar/name preference
             try {
                 const pu = await storage.getLocal('@pokerpal:currentUser');

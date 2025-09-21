@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PopupProvider } from '@/components/PopupProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
-import storage from '@/services/storageService';
+import storage, { getLocal, setLocal } from '@/services/storageService';
 import localDb from '@/services/localDb';
 import { Header } from '@/components/Header';
 import HomeScreen from '@/screens/HomeScreen';
@@ -83,6 +83,30 @@ export default function App() {
         }
       } catch (e) {
         console.warn('local DB init failed', e);
+      }
+    })();
+
+    // load app settings (currency, language) and attach to global for sync access
+    (async () => {
+      try {
+        const SETTINGS_KEY = '@pokerpal:appSettings';
+        const maybe = await getLocal(SETTINGS_KEY);
+        if (maybe) {
+          // attach for synchronous reads elsewhere: global.__pokerpal_settings
+          (global as any).__pokerpal_settings = maybe;
+        } else {
+          // write defaults and attach
+          const defaults = { defaultCurrency: 'AUD', currencyRate: 5, language: 'au' };
+          try {
+            await setLocal(SETTINGS_KEY, defaults);
+          } catch (e) {
+            // ignore write errors but still attach defaults
+          }
+          (global as any).__pokerpal_settings = defaults;
+        }
+      } catch (e) {
+        console.warn('failed to load app settings', e);
+        (global as any).__pokerpal_settings = { defaultCurrency: 'AUD', currencyRate: 5, language: 'au' };
       }
     })();
 

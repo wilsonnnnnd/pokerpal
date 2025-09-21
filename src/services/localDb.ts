@@ -21,7 +21,7 @@ if (openFn) {
             const saved = await getLocal<any>('__pokerpal_store');
             if (saved) {
                 (global as any).__pokerpal_store = saved;
-                console.log('[localDb] hydrated in-memory store from storage');
+
             }
         }
     } catch (err) {
@@ -279,6 +279,35 @@ export async function initSchema() {
     await execSql(actionsIndex);
 }
 
+export async function deleteGameLocal(gameId: string | number): Promise<void> {
+    if (!gameId) return;
+    try {
+        // delete dependent rows first
+        await execSql('DELETE FROM game_players WHERE game_id = ?;', [gameId]);
+        await execSql('DELETE FROM actions WHERE game_id = ?;', [gameId]);
+        await execSql('DELETE FROM games WHERE id = ?;', [gameId]);
+    } catch (err) {
+        console.error('deleteGameLocal error', err);
+        // swallow - execSql fallback already persisted changes where applicable
+    }
+}
+
+export async function getGameLocal(gameId: string | number): Promise<any | null> {
+    try {
+        const res = await execSql('SELECT * FROM games WHERE id = ?;', [gameId]);
+        const rows = res && res.rows && res.rows._array ? res.rows._array : [];
+        if (!rows || rows.length === 0) return null;
+        const game = rows[0];
+        // fetch joined players for convenience
+        const pRes = await execSql('SELECT p.* FROM players p INNER JOIN game_players gp ON gp.player_id = p.id WHERE gp.game_id = ? ORDER BY gp.seat ASC;', [gameId]);
+        const players = pRes && pRes.rows && pRes.rows._array ? pRes.rows._array : [];
+        return { ...game, players };
+    } catch (err) {
+        console.error('getGameLocal error', err);
+        return null;
+    }
+}
+
 export async function appendAction(gameId: number | null, type: string, payload: any = {}): Promise<number | undefined> {
     const now = new Date().toISOString();
     const sql = `INSERT INTO actions (game_id, type, payload, createdAt, syncStatus) VALUES (?, ?, ?, ?, ?);`;
@@ -364,4 +393,4 @@ export async function getActionsForGame(gameId: number): Promise<any[]> {
     }
 }
 
-export default { execSql, initSchema } as const;
+export default { execSql, initSchema, deleteGameLocal, getGameLocal } as const;

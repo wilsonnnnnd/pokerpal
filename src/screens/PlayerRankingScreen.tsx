@@ -87,7 +87,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                 </View>
 
                 <View style={[styles.profitBadge, { backgroundColor: isCashPositive ? color.confirm : color.cancel }]}>
-                    <Text style={[styles.profitText, { color: isCashPositive ? color.success : color.error }]}>
+                    <Text style={[styles.profitText, { color: color.lightBackground }]}>
                         {isCashPositive ? '+' : ''}{(Number(item.totalProfit) || 0).toFixed(2)}
                     </Text>
                 </View>

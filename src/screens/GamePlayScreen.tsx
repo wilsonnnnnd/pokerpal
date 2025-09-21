@@ -200,8 +200,6 @@ export default function GamePlayScreen() {
         if (submittingRef.current || isLoading) return;
         submittingRef.current = true;
         setIsLoading(true);
-
-        console.log('Game', '🏁 确认结束并保存');
         try {
             // 现金口径校验
             const game = useGameStore.getState();

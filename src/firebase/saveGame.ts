@@ -22,9 +22,12 @@ import {
 	collectGraphWrites,
 } from './gameWriters'
 import { BatchBuilder } from './batchBuilder'
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
-import { gameDoc } from '@/constants/namingDb'
+import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { gameDoc, hostGameDoc, userDoc } from '@/constants/namingDb'
 import { appendAction } from '@/services/localDb';
+import storage from '@/services/storageService';
+
+
 
 
 function validateSettlement(players: Player[]) {
@@ -84,6 +87,7 @@ export async function createGameOnServer(game: {
 	createdBy?: string;
 	playerCount?: number;
 }) {
+
 	const ref = doc(db, gameDoc, game.gameId);
 	const exists = await getDoc(ref);
 	if (exists.exists()) {
@@ -93,6 +97,38 @@ export async function createGameOnServer(game: {
 	const payload = makeCreateGamePayload(game);
 	// ✅ 创建用 setDoc（不要 merge created）
 	await setDoc(ref, payload);
+}
+
+export async function registerHostGameRecord(gameId: string) {
+	if (!gameId) return;
+
+	// 从本地存储获取当前用户
+	const pu = await storage.getLocal("@pokerpal:currentUser");
+	const hoster = pu?.displayName;
+
+	if (!hoster) {
+		console.warn("registerHostGameRecord: no current user displayName found");
+		return;
+	}
+
+	try {
+		// 路径: /hostGameRecord/{hoster}/games/{gameId}
+		const hostDocRef = doc(db, hostGameDoc, hoster);
+		const gameDocRef = doc(collection(hostDocRef, gameDoc), gameId);
+
+		await setDoc(
+			gameDocRef,
+			{
+				gameId,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+			},
+			{ merge: true }
+		);
+	} catch (err) {
+		console.error("registerHostGameRecord error", err);
+		throw err;
+	}
 }
 
 /** 更新游戏（任何后续变更，包括 finalize） */
@@ -107,6 +143,8 @@ export async function updateGameOnServer(gameId: string, patch: Parameters<typeo
 export async function finalizeGameOnServer(gameId: string) {
 	// 只写 finalized/status/updated，不触碰 created
 	await updateGameOnServer(gameId, { finalized: true, status: 'finalized' });
+	await registerHostGameRecord(gameId);
+
 }
 
 

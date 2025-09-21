@@ -1,11 +1,21 @@
 // src/screens/GameHistoryScreen.tsx
-import React, { useEffect, useState } from 'react';
-import { FlatList, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    orderBy,
+    query,
+    limit,
+    startAfter,
+    QueryDocumentSnapshot,
+} from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,97 +23,184 @@ import { Palette as color, Palette } from '@/constants';
 import Toast from 'react-native-toast-message';
 
 import { GameHistorystyles as styles } from '@/assets/styles';
-import { gameDoc, playerDoc } from '@/constants/namingDb';
+import { gameDoc, hostGameDoc, playerDoc } from '@/constants/namingDb';
 import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
 import { GameHistoryItem, PlayerItem } from '@/types';
-
-
+import storage from '@/services/storageService';
 
 // ---- 导航类型 ----
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-
-
-// 货币格式（不带本地化符号，统一两位小数）
+// ---- 工具：简易金额格式化 ----
 const money = (n: number) => Number(n).toFixed(0);
+
+// ---- 每页条数 ----
+const PAGE_SIZE = 20;
+
+// 说明：当前真实路径示例：/test-host-games/Guest/test-games/game-xxxx
+//       - hostGameDoc === 'test-host-games'
+//       - gameDoc     === 'test-games'（既用作主集合名，也作为 host 子集合名）
 
 export default function GameHistoryScreen() {
     const navigation = useNavigation<HomeScreenNav>();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [items, setItems] = useState<GameHistoryItem[]>([]);
 
+    // 分页
+    const nextCursorRef = useRef<QueryDocumentSnapshot | null>(null);
+    const reachedEndRef = useRef<boolean>(false);
+
+    // 防重复拉取同一 gameId
+    const fetchedSetRef = useRef<Set<string>>(new Set());
+
+    // 获取当前 hoster（沿用 displayName）
+    const getHosterId = useCallback(async (): Promise<string | null> => {
+        const pu = await storage.getLocal('@pokerpal:currentUser');
+        const hoster = pu?.displayName;
+        return hoster || null;
+    }, []);
+
+    // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——
+    const buildGameHistoryItem = useCallback(async (gameId: string): Promise<GameHistoryItem | null> => {
+        try {
+            // 主文档：/test-games/{gameId}
+            const gameRef = doc(db, gameDoc, gameId);
+            const gameSnap = await getDoc(gameRef);
+            if (!gameSnap.exists()) {
+                // 主集合被清理或不存在，跳过
+                return null;
+            }
+            const data = gameSnap.data() ?? {};
+
+            // 玩家子集合：/test-games/{gameId}/players
+            const playersColRef = collection(db, gameDoc, gameId, playerDoc);
+            const playersSnap = await getDocs(playersColRef);
+
+            // 批量查用户档案
+            const playerIds = playersSnap.docs.map((d) => String(d.id)).filter(Boolean);
+            const profilesMap = await fetchUserProfilesMap(playerIds);
+
+            // 组装玩家
+            const players: PlayerItem[] = playersSnap.docs.map((pdoc) => {
+                const pdata = pdoc.data() ?? {};
+                const uid = String(pdoc.id);
+
+                const profileData = profilesMap.get(uid);
+                const { displayName, photoUrl } = resolveNameAndPhoto({
+                    id: uid,
+                    playerData: pdata,
+                    profileData,
+                });
+
+                return {
+                    id: uid,
+                    nickname: displayName,
+                    photoUrl,
+                    buyInCount: Number(pdata.buyInCount) || 0,
+                    totalBuyInCash: Number(pdata.totalBuyInCash) || 0,
+                    settleCashAmount: Number(pdata.settleCashAmount) || 0,
+                    settleCashDiff: Number(pdata.settleCashDiff) || 0,
+                    settleROI: Number(pdata.settleROI) || 0,
+                };
+            });
+
+            // 汇总
+            let totalBuyInCash = 0, totalEndingCash = 0, totalDiffCash = 0;
+            for (const p of players) {
+                totalBuyInCash += p.totalBuyInCash;
+                totalEndingCash += p.settleCashAmount;
+                totalDiffCash += p.settleCashDiff;
+            }
+
+            // 时间字段兜底：优先 created/updatedAt（Timestamp），退化到 created/updated（字符串）
+            const created = data.created?.toDate
+                ? data.created.toDate().toISOString()
+                : (data.created || new Date().toISOString());
+            const updated = data.updatedAt?.toDate
+                ? data.updatedAt.toDate().toISOString()
+                : (data.updated || created);
+
+            return {
+                id: gameId,
+                smallBlind: Number(data.smallBlind ?? 0),
+                bigBlind: Number(data.bigBlind ?? 0),
+                created,
+                updated,
+                totalBuyInCash,
+                totalEndingCash,
+                totalDiffCash,
+                players,
+            };
+        } catch {
+            return null;
+        }
+    }, []);
+
+    // —— 分页读取 host 的游戏列表 —— 
+    // 路径：/test-host-games/{hoster}/test-games  按 created desc
+    const fetchPage = useCallback(
+        async (mode: 'refresh' | 'append' | 'initial') => {
+            const hoster = await getHosterId();
+            if (!hoster) {
+                setItems([]);
+                reachedEndRef.current = true;
+                nextCursorRef.current = null;
+                return;
+            }
+
+            // 子集合：/hostGameDoc/{hoster}/{gameDoc}
+            const baseCol = collection(doc(db, hostGameDoc, hoster), gameDoc);
+
+            const q = nextCursorRef.current
+                ? query(baseCol, orderBy('created', 'desc'), startAfter(nextCursorRef.current), limit(PAGE_SIZE))
+                : query(baseCol, orderBy('created', 'desc'), limit(PAGE_SIZE));
+
+            const snap = await getDocs(q);
+            const docs = snap.docs;
+
+            if (docs.length === 0) {
+                if (mode !== 'refresh') reachedEndRef.current = true;
+                return;
+            }
+
+            // 取出 gameId（子文档 id），去重后再拉详情
+            const ids = docs.map(d => d.id).filter(id => {
+                if (fetchedSetRef.current.has(id)) return false;
+                fetchedSetRef.current.add(id);
+                return true;
+            });
+
+            const detailList = await Promise.all(ids.map((gid) => buildGameHistoryItem(gid)));
+            const built = (detailList.filter(Boolean) as GameHistoryItem[])
+                // 二次兜底排序，避免 serverTimestamp 初期为空导致抖动
+                .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+
+            if (mode === 'refresh' || mode === 'initial') {
+                setItems(built);
+            } else {
+                setItems((prev) => [...prev, ...built]);
+            }
+
+            // 更新游标
+            nextCursorRef.current = docs.length === PAGE_SIZE ? docs[docs.length - 1] : null;
+            if (!nextCursorRef.current) {
+                reachedEndRef.current = true;
+            }
+        },
+        [buildGameHistoryItem, getHosterId]
+    );
+
+    // —— 首屏加载 ——
     useEffect(() => {
         (async () => {
-            setLoading(true);
             try {
-                // 1) 取游戏列表（按 created 倒序）
-                const qGames = query(collection(db, gameDoc), orderBy('created', 'desc'));
-                const snapshot = await getDocs(qGames);
-                const gameDocs = snapshot.docs;
-
-                // 2) 并发构建每个游戏的口径列表项
-                const list: GameHistoryItem[] = await Promise.all(
-                    gameDocs.map(async (docSnap) => {
-                        const data = docSnap.data() ?? {};
-                        const gameId = String(data.gameId ?? docSnap.id);
-
-                        // 2.1 拉 players 子集合（以 Firestore 为主）
-                        const playersSnap = await getDocs(collection(db, gameDoc, gameId, playerDoc));
-
-                        // 2.2 批量查用户档案，减少读次数
-                        const playerIds = playersSnap.docs.map(d => String(d.id)).filter(Boolean);
-                        const profilesMap = await fetchUserProfilesMap(playerIds);
-
-                        // 2.3 组装玩家（只保留字段）
-                        const players: PlayerItem[] = playersSnap.docs.map(pdoc => {
-                            const pdata = pdoc.data() ?? {};
-                            const uid = String(pdoc.id);
-
-                            const profileData = profilesMap.get(uid);
-                            const { displayName, photoUrl } = resolveNameAndPhoto({
-                                id: uid,
-                                playerData: pdata,
-                                profileData,
-                            });
-
-                            return {
-                                id: uid,
-                                nickname: displayName,
-                                photoUrl,
-                                buyInCount: Number(pdata.buyInCount) || 0,
-                                totalBuyInCash: Number(pdata.totalBuyInCash) || 0,
-                                settleCashAmount: Number(pdata.settleCashAmount) || 0,
-                                settleCashDiff: Number(pdata.settleCashDiff) || 0,
-                                settleROI: Number(pdata.settleROI) || 0,
-                            };
-                        });
-
-                        // 2.4 汇总
-                        let totalBuyInCash = 0, totalEndingCash = 0, totalDiffCash = 0;
-                        for (const p of players) {
-                            totalBuyInCash += p.totalBuyInCash;
-                            totalEndingCash += p.settleCashAmount;
-                            totalDiffCash += p.settleCashDiff;
-                        }
-
-
-                        return {
-                            id: gameId,
-                            smallBlind: Number(data.smallBlind ?? 0),
-                            bigBlind: Number(data.bigBlind ?? 0),
-                            created: data.created ?? new Date().toISOString(),
-                            updated: data.updated ?? new Date().toISOString(),
-                            totalBuyInCash,
-                            totalEndingCash,
-                            totalDiffCash,
-                            players,
-                        };
-                    })
-                );
-
-                // 3) 以 updatedMs 倒序（最新在前）
-                list.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-                setItems(list);
+                setLoading(true);
+                // 重置分页状态
+                reachedEndRef.current = false;
+                nextCursorRef.current = null;
+                fetchedSetRef.current.clear();
+                await fetchPage('initial');
             } catch (e) {
                 Toast.show({
                     type: 'error',
@@ -116,9 +213,33 @@ export default function GameHistoryScreen() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [fetchPage]);
 
-    // —— 大赢家/大输家（按 settleCashDiff）——
+    // —— 下拉刷新 ——
+    const onRefresh = useCallback(async () => {
+        try {
+            setRefreshing(true);
+            reachedEndRef.current = false;
+            nextCursorRef.current = null;
+            fetchedSetRef.current.clear();
+            await fetchPage('refresh');
+        } finally {
+            setRefreshing(false);
+        }
+    }, [fetchPage]);
+
+    // —— 触底加载更多 ——
+    const onEndReached = useCallback(async () => {
+        if (loading || refreshing) return;
+        if (reachedEndRef.current) return;
+        try {
+            await fetchPage('append');
+        } catch {
+            // 忽略
+        }
+    }, [fetchPage, loading, refreshing]);
+
+    // —— 赢家/输家 ——  
     const pickTop = (game: GameHistoryItem) => {
         if (!game.players.length) return { winner: null, loser: null };
         const sorted = [...game.players].sort((a, b) => b.settleCashDiff - a.settleCashDiff);
@@ -142,7 +263,6 @@ export default function GameHistoryScreen() {
         return (
             <TouchableOpacity
                 style={styles.card}
-                // 只传 gameId；详情页完全以 Firestore 为主
                 onPress={() => navigation.navigate('GameDetail', { game: item })}
                 activeOpacity={0.7}
             >
@@ -253,6 +373,16 @@ export default function GameHistoryScreen() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.list}
                 renderItem={renderGameCard}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                onEndReachedThreshold={0.3}
+                onEndReached={onEndReached}
+                ListFooterComponent={
+                    !reachedEndRef.current ? (
+                        <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color={'#d46613'} />
+                        </View>
+                    ) : null
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />

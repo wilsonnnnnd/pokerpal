@@ -64,7 +64,7 @@ export function PlayerCard({
                                 size={16}
                                 color={profit >= 0 ? color.success : color.error}
                             />
-                            <Text style={[styles.profitText, { color: profit >= 0 ? color.success : color.error }]}>\n+                                {profit >= 0 ? '+' : ''}{profit}
+                            <Text style={[styles.profitText, { color: profit >= 0 ? color.success : color.error }]}>{profit >= 0 ? '+' : ''}{profit}
                             </Text>
                         </View>
                     )}

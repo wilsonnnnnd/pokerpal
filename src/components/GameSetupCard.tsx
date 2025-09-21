@@ -194,8 +194,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             })}`);
 
             const user = await storage.getLocal('@pokerpal:currentUser');
-            console.log('当前用户', user);
-
             //同步到Firebase
             await createGameOnServer({
                 gameId,
@@ -280,9 +278,9 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             try {
                 const s = await storage.getLocal('@pokerpal:appSettings');
                 if (s) {
-                    const code = (s.defaultCurrency || 'CNY').toString().toUpperCase();
+                    const code = (s.defaultCurrency || 'AUD').toString().toUpperCase();
                     const rate = Number(s.currencyRate ?? 1) || 1;
-                    const symbol = code === 'AUD' ? 'A$' : code === 'CNY' ? '¥' : '';
+                    const symbol = code === 'AUD' ? '$' : code === 'CNY' ? '¥' : '';
                     setCurrencyInfo({ code, symbol, rate });
                 }
             } catch (err) {
