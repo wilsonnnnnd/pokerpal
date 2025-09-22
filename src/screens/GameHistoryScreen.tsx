@@ -27,6 +27,9 @@ import { CURRENT_USER_KEY, gameDoc, hostGameDoc, playerDoc } from '@/constants/n
 import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
 import { GameHistoryItem, PlayerItem } from '@/types';
 import storage from '@/services/storageService';
+import usePermission from '@/hooks/usePermission';
+import RequireHost from '@/components/RequireHost';
+import { PrimaryButton } from '@/components/PrimaryButton';
 
 // ---- 导航类型 ----
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -43,6 +46,7 @@ const PAGE_SIZE = 20;
 
 export default function GameHistoryScreen() {
     const navigation = useNavigation<HomeScreenNav>();
+    const { isHost, loading: permLoading } = usePermission();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [items, setItems] = useState<GameHistoryItem[]>([]);
@@ -193,6 +197,12 @@ export default function GameHistoryScreen() {
 
     // —— 首屏加载 ——
     useEffect(() => {
+        // 权限检查：非 host 用户直接返回首页
+        if (!permLoading && isHost === false) {
+            navigation.navigate('Home');
+            return;
+        }
+
         (async () => {
             try {
                 setLoading(true);
@@ -366,31 +376,51 @@ export default function GameHistoryScreen() {
         );
     }
 
+    // 整页受限于 Host 权限
     return (
-        <View style={styles.container}>
-            <FlatList
-                data={items}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
-                renderItem={renderGameCard}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                onEndReachedThreshold={0.3}
-                onEndReached={onEndReached}
-                ListFooterComponent={
-                    !reachedEndRef.current ? (
-                        <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                            <ActivityIndicator size="small" color={'#d46613'} />
-                        </View>
-                    ) : null
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />
-                        <Text style={styles.emptyText}>暂无游戏记录</Text>
-                        <Text style={styles.emptySubText}>开始一局新游戏吧！</Text>
+        <RequireHost
+            loadingFallback={(
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={'#d46613'} />
+                    <Text style={styles.loadingText}>正在检查权限...</Text>
+                </View>
+            )}
+            denyFallback={(
+                <View style={styles.emptyContainer}>
+                    <MaterialCommunityIcons name="lock" size={60} color="#BDBDBD" />
+                    <Text style={styles.emptyText}>无权限查看此页面</Text>
+                    <Text style={styles.emptySubText}>此功能仅对房主开放</Text>
+                    <View style={{ marginTop: 12 }}>
+                        <PrimaryButton title="返回首页" onPress={() => navigation.navigate('Home')} />
                     </View>
-                }
-            />
-        </View>
+                </View>
+            )}
+        >
+            <View style={styles.container}>
+                <FlatList
+                    data={items}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.list}
+                    renderItem={renderGameCard}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    onEndReachedThreshold={0.3}
+                    onEndReached={onEndReached}
+                    ListFooterComponent={
+                        !reachedEndRef.current ? (
+                            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color={'#d46613'} />
+                            </View>
+                        ) : null
+                    }
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />
+                            <Text style={styles.emptyText}>暂无游戏记录</Text>
+                            <Text style={styles.emptySubText}>开始一局新游戏吧！</Text>
+                        </View>
+                    }
+                />
+            </View>
+        </RequireHost>
     );
 }

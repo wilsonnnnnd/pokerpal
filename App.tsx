@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PopupProvider } from '@/components/PopupProvider';
+import { SettingsProvider } from '@/providers/SettingsProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
 import storage, { getLocal, setLocal } from '@/services/storageService';
@@ -43,7 +44,7 @@ function MainNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: true, 
+        headerShown: true,
         header: () => <Header />,
       }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
@@ -73,8 +74,8 @@ export default function App() {
   const [authUser, setAuthUser] = useState<any | null>(null);
 
   useEffect(() => {
-    // initialize local DB (expo-sqlite)
-    (async () => {
+  // initialize local DB (expo-sqlite)
+  (async () => {
       try {
         // localDb exports initSchema; older name initLocalDb was removed
         if (typeof (localDb as any).initSchema === 'function') {
@@ -87,24 +88,37 @@ export default function App() {
       }
     })();
 
-    // load app language setting (attach for synchronous reads elsewhere)
+    // load app setting object (language/timezone/currency) and attach for sync reads
     (async () => {
       try {
-        const maybe = await getLocal(SETTINGS_KEY);
-        if (maybe && maybe.language) {
-          (global as any).__pokerpal_settings = { language: maybe.language };
+        const raw = await getLocal<any>(SETTINGS_KEY);
+        const defaults = { language: 'en', timezone: 'UTC', currency: 'USD' };
+
+        let settings: any;
+        if (!raw) {
+          settings = defaults;
+          try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
+        } else if (typeof raw === 'string') {
+          settings = { ...defaults, language: raw };
+          try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
         } else {
-          const defaults = { language: 'au' };
-          try {
-            await setLocal(SETTINGS_KEY, defaults);
-          } catch (e) {
-            // ignore
+          settings = {
+            language: raw.language ?? defaults.language,
+            timezone: raw.timezone ?? defaults.timezone,
+            currency: raw.currency ?? defaults.currency,
+            // keep extra fields if present
+            ...raw,
+          };
+          // persist if missing keys
+          if (!raw.language || !raw.timezone || !raw.currency) {
+            try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
           }
-          (global as any).__pokerpal_settings = defaults;
         }
+
+        try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
       } catch (e) {
         console.warn('failed to load app settings', e);
-        (global as any).__pokerpal_settings = { language: 'au' };
+        try { (global as any).__pokerpal_settings = { language: 'en', timezone: 'UTC', currency: 'USD' }; } catch (e) { /* ignore */ }
       }
     })();
 
@@ -159,17 +173,19 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <PopupProvider>
-        <NavigationContainer ref={navigationRef}>
-          {initializing && (
-            <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-              <ActivityIndicator size="large" />
-            </View>
-          )}
-          {authUser ? <MainNavigator /> : <AuthNavigator />}
-        </NavigationContainer>
-      </PopupProvider>
-      <Toast />
+      <SettingsProvider>
+        <PopupProvider>
+          <NavigationContainer ref={navigationRef}>
+            {initializing && (
+              <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" />
+              </View>
+            )}
+            {authUser ? <MainNavigator /> : <AuthNavigator />}
+          </NavigationContainer>
+        </PopupProvider>
+        <Toast />
+  </SettingsProvider>
     </SafeAreaProvider>
   );
 }

@@ -159,7 +159,7 @@ export default function GameDetailScreen() {
     }, [game.players]);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <View style={styles.gameInfoHeader}>
@@ -327,6 +327,6 @@ export default function GameDetailScreen() {
                     <PrimaryButton title="发送邮件" icon="email" onPress={() => handleSendEmail(() => { }, showPopup)} style={styles.emailButton} textStyle={styles.actionButtonText} />
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }

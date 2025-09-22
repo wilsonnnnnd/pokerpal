@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getLocal, setLocal, removeLocal } from '@/services/storageService';
+import { getLocal, removeLocal, setLocal } from '@/services/storageService';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/localAuth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
-import { useGameStore } from '@/stores/useGameStore';
 import SelectField from '@/components/SelectField';
 import { InfoRow } from '@/components/InfoRow';
-import { InputField } from '@/components/InputField';
 import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
+import { useSettings } from '@/providers/SettingsProvider';
+import { simpleT } from '@/i18n/simpleT';
 
 type AppSettings = {
     language?: string;
@@ -27,9 +28,11 @@ export default function SettingsScreen() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
-    const [settings, setSettings] = useState<AppSettings>({
-        language: 'au',
-    });
+    // Use global settings provider
+    const { language, setLanguage } = useSettings();
+    // snapshot of saved language to detect changes
+    const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
+    const initialSetRef = React.useRef(false);
 
     // MessagePopUp state
     const [popup, setPopup] = useState<{
@@ -49,12 +52,7 @@ export default function SettingsScreen() {
     useEffect(() => {
         (async () => {
             try {
-                const parsed = await getLocal<AppSettings>(SETTINGS_KEY);
-                if (parsed) {
-                    setSettings((s) => ({ ...s, ...parsed }));
-                }
-                // also load persisted current user (for debug/verification)
-                // use a single helper to load persisted user
+                // language is loaded by LanguageProvider; just load persisted user for debug
                 const pu = await getLocal(CURRENT_USER_KEY);
                 setPersistedUser(pu);
             } catch (e) {
@@ -65,15 +63,14 @@ export default function SettingsScreen() {
         })();
     }, []);
 
-    // helper to refresh persisted user from storage (used by UI buttons)
-    const refreshPersistedUser = async () => {
-        try {
-            const pu = await getLocal(CURRENT_USER_KEY);
-            setPersistedUser(pu);
-        } catch (e) {
-            console.warn('refresh persisted user', e);
+    // set initialLanguage once when provider has loaded persisted language
+    useEffect(() => {
+        if (!initialSetRef.current && language) {
+            setInitialLanguage(language);
+            initialSetRef.current = true;
         }
-    };
+    }, [language]);
+
 
     // subscribe user
     useEffect(() => {
@@ -95,21 +92,22 @@ export default function SettingsScreen() {
     }, []);
 
     const save = async () => {
-            try {
-                // basic validation (only language now)
-                if (!settings.language) throw new Error('请选择语言');
-                await setLocal(SETTINGS_KEY, settings);
+        try {
+            if (!language) throw new Error(simpleT('choose_language', language));
+            // ensure provider persists
+            await setLanguage(language);
+            setInitialLanguage(language);
             setPopup({
                 visible: true,
-                title: '保存成功',
-                message: '设置已保存到本地',
+                title: simpleT('save_success_title', language),
+                message: simpleT('save_success_msg', language),
                 onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
                 onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
             });
         } catch (e: any) {
             setPopup({
                 visible: true,
-                title: '保存失败',
+                title: simpleT('save_fail_title', language),
                 message: e?.message || String(e),
                 isWarning: true,
                 onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -121,13 +119,14 @@ export default function SettingsScreen() {
     const reset = async () => {
         setPopup({
             visible: true,
-            title: '重置设置',
-            message: '确定要重置为默认设置吗？',
+            title: simpleT('reset_title', language),
+            message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                const def: AppSettings = { language: 'zh' };
-                setSettings(def);
-                await removeLocal(SETTINGS_KEY);
+                const defaults = { language: 'en', timezone: 'UTC', currency: 'USD' };
+                try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
+                try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
+                setInitialLanguage(defaults.language);
                 setPopup(prev => ({ ...prev, visible: false }));
             },
             onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -137,79 +136,110 @@ export default function SettingsScreen() {
     if (loading) return (
         <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={color.confirm} />
-            <Text style={styles.loadingText}>加载设置…</Text>
+            <Text style={styles.loadingText}>{simpleT('loading_settings', language)}</Text>
         </View>
     );
 
     return (
         <View style={{ flex: 1 }}>
             <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-            <View style={{ marginBottom: 18 }}>
-                <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>用户信息</Text>
-                {user ? (
-                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-                        <Text style={{ fontWeight: '600', color: color.title }}>{profile?.nickname ?? user.displayName ?? '未命名'}</Text>
-                        <Text style={{ color: color.text, marginTop: 4 }}>{user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
-                        <Text style={{ color: color.text, marginTop: 4 }}>身份: {profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
-                        <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
-                            <PrimaryButton title="退出登录" icon="logout" variant="outlined" onPress={async () => { await signOut(); (navigation as any).navigate('Login'); }} style={{ marginRight: 8 }} iconColor={color.highLighter} />
-                        </View>
-                    </View>
-                ) : (
-                    <View style={{ padding: 12, backgroundColor: color.card, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-                        <Text style={{ color: color.mutedText }}>未登录</Text>
-                    </View>
-                )}
-                <View style={{ marginTop: 12 }}>
-                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>持久化用户（storage）</Text>
-                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-                        {persistedUser ? (
-                            <>
-                                <Text style={{ color: color.text, marginBottom: 6 }}>UID: {persistedUser.uid}</Text>
-                                <Text style={{ color: color.text, marginBottom: 6 }}>昵称: {persistedUser.displayName ?? persistedUser.nickname ?? '—'}</Text>
-                                <Text style={{ color: color.text, marginBottom: 6 }}>邮箱: {persistedUser.email ?? '—'}</Text>
-                                <Text style={{ color: color.text, marginBottom: 6 }}>照片: {persistedUser.photoURL ?? persistedUser.photo ?? '—'}</Text>
-                                <Text style={{ color: color.mutedText, marginTop: 8 }}>原始: {JSON.stringify(persistedUser)}</Text>
-                                <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
-                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={refreshPersistedUser} style={{ marginRight: 8 }} />
-                                    <PrimaryButton title="清除" icon="delete" variant="outlined" onPress={async () => {
+                <View style={{ marginBottom: 18 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('user_info', language)}</Text>
+                    {user ? (
+                        <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                            <Text style={{ fontWeight: '600', color: color.title }}>{profile?.nickname ?? user.displayName ?? simpleT('unnamed', language)}</Text>
+                            <Text style={{ color: color.text, marginTop: 4 }}>{user.email ?? (user.isAnonymous ? simpleT('guest_account', language) : '')}</Text>
+                            <Text style={{ color: color.text, marginTop: 4 }}>{simpleT('identity', language)}: {profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
+                            <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
+                                {/* Helper to attempt revoke/signout for Google, best-effort */}
+                                <PrimaryButton
+                                    title={simpleT('logout', language)}
+                                    icon="logout"
+                                    variant="outlined"
+                                    onPress={async () => {
+                                        // Soft sign-out: clear in-memory auth but keep persisted user in storage
                                         try {
-                                            await removeLocal(CURRENT_USER_KEY);
-                                            setPersistedUser(null);
+                                            try { await GoogleSignin.revokeAccess(); } catch (_) {
+                                                try { await GoogleSignin.signOut(); } catch (_) { /* ignore */ }
+                                            }
                                         } catch (e) {
-                                            console.warn('remove persisted user', e);
+                                            // ignore errors from GoogleSignin (best-effort)
                                         }
-                                    }} iconColor={color.error} />
-                                </View>
-                            </>
-                        ) : (
-                            <>
-                                <Text style={{ color: color.mutedText }}>未检测到持久化用户</Text>
-                                <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
-                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={refreshPersistedUser} />
-                                </View>
-                            </>
-                        )}
+
+                                        await signOut();
+                                        (navigation as any).navigate('Login');
+                                    }}
+                                    style={{ marginRight: 8 }}
+                                    iconColor={color.highLighter}
+                                />
+
+                                <PrimaryButton
+                                    title={simpleT('delete_account', language)}
+                                    icon="account-remove"
+                                    variant="filled"
+                                    onPress={async () => {
+                                        // Confirm destructive action
+                                        Alert.alert(
+                                            simpleT('logout_confirm_title', language),
+                                            simpleT('logout_confirm_msg', language),
+                                            [
+                                                { text: simpleT('cancel', language), style: 'cancel' },
+                                                {
+                                                    text: simpleT('confirm', language),
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        try {
+                                                            try { await GoogleSignin.revokeAccess(); } catch (_) {
+                                                                try { await GoogleSignin.signOut(); } catch (_) { /* ignore */ }
+                                                            }
+                                                        } catch (e) {
+                                                            // ignore
+                                                        }
+                                                        // hard sign-out: remove persisted user
+                                                        await signOut();
+                                                        (navigation as any).navigate('Login');
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    }}
+                                    style={{ marginLeft: 8 }}
+                                />
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={{ padding: 12, backgroundColor: color.card, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                            <Text style={{ color: color.mutedText }}>{simpleT('not_logged_in', language)}</Text>
+                        </View>
+                    )}
+
+                </View>
+
+                <View style={{ marginBottom: 18 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('software_settings', language)}</Text>
+
+                    {/* Language dropdown */}
+                    {/* NOTE: SETTINGS_KEY now stores an object { language: string } for compatibility with LanguageProvider */}
+                        <InfoRow icon="translate" label="语言" text={language === 'zh' ? 'CN' : language === 'en' ? 'ENG' : (language ?? '')} />
+                        {/* display timezone and currency read-only for now */}
+                        <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'UTC'} />
+                        <InfoRow icon="currency-usd" label="货币" text={(global as any).__pokerpal_settings?.currency ?? 'USD'} />
+                    <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 8 }}>
+                        <SelectField value={language} onChange={(val) => { try { setLanguage(val); } catch (e) { /* ignore */ } }} options={[{ key: 'zh', label: 'CN' }, { key: 'en', label: 'ENG' }]} />
                     </View>
+                    <Text style={{ color: color.mutedText, fontSize: 12 }}>{simpleT('save_when_changed', language)}</Text>
+
+                    {/* Only show save/reset when settings changed from last saved state */}
+                    {(initialLanguage !== null && language !== initialLanguage) && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+                            <PrimaryButton title={simpleT('save', language)} icon="content-save" onPress={save} />
+                            <PrimaryButton title={simpleT('reset', language)} icon="restore" variant="outlined" onPress={reset} style={{ marginLeft: 12 }} iconColor={color.valueText} />
+                        </View>
+                    )}
+                    <Text style={{ color: color.mutedText, fontSize: 12, marginTop: 8 }}>{simpleT('logout_explain', language)}</Text>
                 </View>
-            </View>
 
-            <View style={{ marginBottom: 18 }}>
-                <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>软件设置</Text>
-
-                {/* Language dropdown */}
-                <InfoRow icon="translate" label="语言" text={settings.language === 'zh' ? 'CN' : settings.language === 'en' ? 'ENG' : (settings.language ?? '')} />
-                <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 16 }}>
-                    <SelectField value={settings.language} onChange={(val) => setSettings(s => ({ ...s, language: val }))} options={[{ key: 'zh', label: 'CN' }, { key: 'en', label: 'ENG' }]} />
-                </View>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-                    <PrimaryButton title="保存" icon="content-save" onPress={save} />
-                    <PrimaryButton title="重置" icon="restore" variant="outlined" onPress={reset} style={{ marginLeft: 12 }} iconColor={color.valueText} />
-                </View>
-            </View>
-
-            <View style={{ height: 40 }} />
+                <View style={{ height: 40 }} />
 
             </ScrollView>
 

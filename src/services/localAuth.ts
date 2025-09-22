@@ -132,6 +132,7 @@ export async function signOut() {
     return;
 }
 
+
 /**
  * Restore an existing user object (from persistent storage) into the shim.
  * This allows persisted sessions to be injected at app startup.

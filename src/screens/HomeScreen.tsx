@@ -27,8 +27,8 @@ import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/localAuth';
 import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
-import RequireMember from '@/components/RequireMember';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
+import usePermission from '@/hooks/usePermission';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -41,6 +41,7 @@ const HomeScreen = () => {
     const { finalized, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
     const { confirmPopup } = usePopup();
+    const { isHost } = usePermission();
 
     useEffect(() => {
         if (!finalized && gameId) {
@@ -84,6 +85,7 @@ const HomeScreen = () => {
 
     // Subscribe to auth state and fetch profile
     useEffect(() => {
+        console.log('HomeScreen: subscribing to auth state', isHost);
         const unsub = onAuthStateChanged(async (u: any) => {
             if (!u) {
                 setUser(null);
@@ -115,7 +117,7 @@ const HomeScreen = () => {
 
     return (
         <>
-            <ScrollView style={[styles.container,{paddingTop: 20}]}>
+            <ScrollView style={[styles.container, { paddingTop: 20 }]}>
                 <View style={styles.contentContainer}>
                     <View style={styles.headerSection}>
                         <MaterialCommunityIcons
@@ -146,9 +148,9 @@ const HomeScreen = () => {
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.userName}>{(persistedUser?.displayName ?? user.displayName) ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
                                         <Text style={styles.userEmail}>{persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                             <Text style={[styles.userEmail, { marginRight: 8 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
-                                            {user.profile?.role === 'member' && (
+                                            {isHost && (
                                                 <View style={{
                                                     backgroundColor: color.highLighter,
                                                     paddingHorizontal: 6,
@@ -164,36 +166,15 @@ const HomeScreen = () => {
                                         </View>
                                     </View>
                                 </View>
-                                {/* Member-only section with better visual hierarchy */}
-                                {/* <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.mediumGray }}>
-                                    <RequireMember fallback={
-                                        <View style={{ 
-                                            backgroundColor: color.lightGray, 
-                                            padding: 8, 
-                                            borderRadius: 6,
-                                            borderLeftWidth: 3,
-                                            borderLeftColor: color.weakGray
-                                        }}>
-                                            <Text style={{ color: color.text, fontSize: 12, fontStyle: 'italic' }}>会员专属功能已锁定</Text>
-                                        </View>
-                                    }>
-                                        <View style={{ 
-                                            backgroundColor: color.info, 
-                                            padding: 8, 
-                                            borderRadius: 6,
-                                            borderLeftWidth: 3,
-                                            borderLeftColor: color.info
-                                        }}>
-                                            <Text style={{ color: color.darkGray, fontWeight: '600', fontSize: 12 }}>✨ 会员专享：高级数据分析已解锁</Text>
-                                        </View>
-                                    </RequireMember>
-                                </View> */}
+
+
                             </View>
                         )}
                     </View>
 
                     <View style={styles.buttonsSection}>
                         <View style={styles.actionsCard}>
+                            {/* use a configuration list for buttons so we can conditionally show them */}
                             <PrimaryButton
                                 title="开始游戏"
                                 icon="play-circle"
@@ -204,68 +185,54 @@ const HomeScreen = () => {
                                 fullWidth={true}
                             />
 
-                            {/* <View style={[styles.buttonRow, { marginTop: 12 }]}>
-                                <PrimaryButton
-                                    title="游戏历史"
-                                    icon="history"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('GameHistory')}
-                                    style={styles.secondaryButton}
-                                    iconColor={color.info}
-                                />
-                                <PrimaryButton
-                                    title="本地游戏历史"
-                                    icon="history"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('Database')}
-                                    style={styles.secondaryButton}
-                                    iconColor={color.info}
-                                />
-                            </View> */}
-                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
-                                <PrimaryButton
-                                    title="游戏历史"
-                                    icon="history"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('GameHistory')}
-                                    style={[styles.secondaryButton, { width: '100%' }]}
-                                    iconColor={color.info}
-                                />
-                            </View>
+                            {[
+                                {
+                                    key: 'history',
+                                    title: '游戏历史',
+                                    icon: 'history',
+                                    onPress: () => navigation.navigate('GameHistory'),
+                                },
+                                {
+                                    key: 'localHistory',
+                                    title: '本地历史',
+                                    icon: 'history',
+                                    onPress: () => navigation.navigate('Database'),
+                                },
+                                {
+                                    key: 'ranking',
+                                    title: '玩家排行',
+                                    icon: 'account-group',
+                                    onPress: () => navigation.navigate('GamePlayerRank'),
+                                },
+                                {
+                                    key: 'settings',
+                                    title: '全局设置',
+                                    icon: 'cog-outline',
+                                    onPress: () => navigation.navigate('Settings'),
+                                },
+                            ].map((btn) => {
+                                // determine visibility: by default visible
+                                const visible = (() => {
+                                    // example: only host can see settings
+                                    if (btn.key === 'history') return isHost;
+                                    return true;
+                                })();
 
+                                if (!visible) return null;
 
-                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
-                                <PrimaryButton
-                                    title="本地历史(测试)"
-                                    icon="history"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('Database')}
-                                    style={[styles.secondaryButton, { width: '100%' }]}
-                                    iconColor={color.info}
-                                />
-                            </View>
-
-                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
-                                <PrimaryButton
-                                    title="玩家排行"
-                                    icon="account-group"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('GamePlayerRank')}
-                                    style={[styles.secondaryButton, { width: '100%' }]}
-                                    iconColor={color.info}
-                                />
-                            </View>
-
-                            <View style={[styles.buttonRow, { marginTop: 8 }]}>
-                                <PrimaryButton
-                                    title="全局设置(测试)"
-                                    icon="cog-outline"
-                                    variant="outlined"
-                                    onPress={() => navigation.navigate('Settings')}
-                                    style={[styles.secondaryButton, { width: '100%' }]}
-                                    iconColor={color.info}
-                                />
-                            </View>
+                                return (
+                                    <View key={btn.key} style={[styles.buttonRow, { marginTop: 8 }]}>
+                                        <PrimaryButton
+                                            title={btn.title}
+                                            icon={btn.icon as any}
+                                            variant="outlined"
+                                            onPress={btn.onPress}
+                                            style={[styles.secondaryButton, { width: '100%' }]}
+                                            iconColor={color.info}
+                                        />
+                                    </View>
+                                );
+                            })}
 
                             <PrimaryButton
                                 title="退出登录"
