@@ -92,7 +92,7 @@ export default function App() {
     (async () => {
       try {
         const raw = await getLocal<any>(SETTINGS_KEY);
-        const defaults = { language: 'en', timezone: 'UTC', currency: 'USD' };
+        const defaults = { language: 'en', timezone: 'UTC', currency: 'AUD' };
 
         let settings: any;
         if (!raw) {

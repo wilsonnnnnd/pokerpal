@@ -35,12 +35,12 @@ const getDefaults = (): AppSettings => {
     } catch (e) {
         // ignore
     }
-    return { language: 'en', timezone: tz, currency: 'USD' };
+    return { language: 'en', timezone: tz, currency: '' };
 };
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const [language, setLanguageState] = useState<Language>('en');
-    const [currency, setCurrencyState] = useState<string>('USD');
+    const [currency, setCurrencyState] = useState<string>('AUD');
 
     useEffect(() => {
         (async () => {
@@ -66,7 +66,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 }
 
                 setLanguageState(settings.language);
-                setCurrencyState(settings.currency ?? 'USD');
+                setCurrencyState(settings.currency ?? 'AUD');
                 try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
             } catch (e) {
                 // ignore
@@ -110,11 +110,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
     const formatCurrency = (v: number, code?: string) => {
         if (!Number.isFinite(v)) return '-';
-        const currencyCode = code ?? currency ?? (global as any).__pokerpal_settings?.currency ?? 'USD';
+        const currencyCode = code ?? currency ?? (global as any).__pokerpal_settings?.currency ?? 'AUD';
         try {
             return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode }).format(v);
         } catch (e) {
-            const symbolMap: Record<string, string> = { USD: '$', CNY: '¥', EUR: '€', GBP: '£', JPY: '¥' };
+            const symbolMap: Record<string, string> = { AUD: '$', CNY: '¥'};
             const sym = symbolMap[currencyCode] ?? currencyCode + ' ';
             return `${sym}${v.toFixed(2)}`;
         }
