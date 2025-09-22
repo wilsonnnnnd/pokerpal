@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Animated, Image } from 'react-native';
-import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { Player } from '@/types';
-import { useLogStore } from '@/stores/useLogStore';
 import { useGameStore } from '@/stores/useGameStore';
 
 

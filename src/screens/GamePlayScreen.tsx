@@ -35,7 +35,6 @@ import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
-import { saveGameToHistory } from '@/firebase/saveGameToHistory'; // 离线缓存（不要写远端）
 import { finalizeGameOnServer, saveGameToFirebase, saveGameToLocalSql } from '@/firebase/saveGame';         // 统一远端保存入口
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
@@ -224,17 +223,7 @@ export default function GamePlayScreen() {
                 return;
             }
 
-            // 1) 本地离线缓存（失败不继续）
-            try {
-                await saveGameToHistory();
-            } catch (e: any) {
-                Toast.show({
-                    type: 'error',
-                    text1: '保存失败',
-                    text2: `保存到本地存储失败：${e?.message || e}`,
-                });
-                return;
-            }
+            // 1) 本地离线缓存（已移除 saveGameToHistory；系统仍会在后续步骤写入本地 SQL 作为备份）
 
             // 2) 远端保存（明细）——带自动重试
             setSubmitPhase('saving');

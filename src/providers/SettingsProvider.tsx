@@ -14,6 +14,9 @@ export interface AppSettings {
 interface SettingsContextType {
     language: Language;
     setLanguage: (l: Language) => Promise<void>;
+    currency: string;
+    setCurrency: (c: string) => Promise<void>;
+    formatCurrency: (v: number, code?: string) => string;
 }
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -37,6 +40,7 @@ const getDefaults = (): AppSettings => {
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const [language, setLanguageState] = useState<Language>('en');
+    const [currency, setCurrencyState] = useState<string>('USD');
 
     useEffect(() => {
         (async () => {
@@ -62,6 +66,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 }
 
                 setLanguageState(settings.language);
+                setCurrencyState(settings.currency ?? 'USD');
                 try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
             } catch (e) {
                 // ignore
@@ -86,8 +91,37 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const setCurrency = async (c: string) => {
+        setCurrencyState(c);
+        try {
+            const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
+            const defaults = getDefaults();
+            const merged: AppSettings = {
+                language: existing?.language ?? defaults.language,
+                timezone: existing?.timezone ?? defaults.timezone,
+                currency: c ?? (existing?.currency ?? defaults.currency),
+            };
+            await setLocal(SETTINGS_KEY, merged).catch(() => {});
+            try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
+        } catch (e) {
+            // ignore
+        }
+    };
+
+    const formatCurrency = (v: number, code?: string) => {
+        if (!Number.isFinite(v)) return '-';
+        const currencyCode = code ?? currency ?? (global as any).__pokerpal_settings?.currency ?? 'USD';
+        try {
+            return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode }).format(v);
+        } catch (e) {
+            const symbolMap: Record<string, string> = { USD: '$', CNY: '¥', EUR: '€', GBP: '£', JPY: '¥' };
+            const sym = symbolMap[currencyCode] ?? currencyCode + ' ';
+            return `${sym}${v.toFixed(2)}`;
+        }
+    };
+
     return (
-        <SettingsContext.Provider value={{ language, setLanguage }}>
+        <SettingsContext.Provider value={{ language, setLanguage, currency, setCurrency, formatCurrency }}>
             {children}
         </SettingsContext.Provider>
     );

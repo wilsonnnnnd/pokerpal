@@ -85,7 +85,6 @@ const HomeScreen = () => {
 
     // Subscribe to auth state and fetch profile
     useEffect(() => {
-        console.log('HomeScreen: subscribing to auth state', isHost);
         const unsub = onAuthStateChanged(async (u: any) => {
             if (!u) {
                 setUser(null);

@@ -195,35 +195,35 @@ export default function GameHistoryScreen() {
         [buildGameHistoryItem, getHosterId]
     );
 
-    // —— 首屏加载 ——
-    useEffect(() => {
-        // 权限检查：非 host 用户直接返回首页
-        if (!permLoading && isHost === false) {
-            navigation.navigate('Home');
-            return;
-        }
+    // // —— 首屏加载 ——
+    // useEffect(() => {
+    //     // 权限检查：非 host 用户直接返回首页
+    //     if (!permLoading && isHost === false) {
+    //         navigation.navigate('Home');
+    //         return;
+    //     }
 
-        (async () => {
-            try {
-                setLoading(true);
-                // 重置分页状态
-                reachedEndRef.current = false;
-                nextCursorRef.current = null;
-                fetchedSetRef.current.clear();
-                await fetchPage('initial');
-            } catch (e) {
-                Toast.show({
-                    type: 'error',
-                    text1: '加载游戏历史失败',
-                    text2: '请检查网络或稍后重试',
-                    position: 'bottom',
-                    visibilityTime: 2000,
-                });
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [fetchPage]);
+    //     (async () => {
+    //         try {
+    //             setLoading(true);
+    //             // 重置分页状态
+    //             reachedEndRef.current = false;
+    //             nextCursorRef.current = null;
+    //             fetchedSetRef.current.clear();
+    //             await fetchPage('initial');
+    //         } catch (e) {
+    //             Toast.show({
+    //                 type: 'error',
+    //                 text1: '加载游戏历史失败',
+    //                 text2: '请检查网络或稍后重试',
+    //                 position: 'bottom',
+    //                 visibilityTime: 2000,
+    //             });
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     })();
+    // }, [fetchPage]);
 
     // —— 下拉刷新 ——
     const onRefresh = useCallback(async () => {

@@ -5,6 +5,7 @@ import { Player } from "@/types";
 import { FlatList, Modal, View, Text } from "react-native";
 import { PrimaryButton } from "./PrimaryButton";
 import { useGameStore } from "@/stores/useGameStore";
+import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
 // no currency settings anymore
 
@@ -16,9 +17,6 @@ function initials(name?: string) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function formatCash(v: number) {
-    return Number.isFinite(v) ? v.toFixed(2) : '-';
-}
 
 // 结算总览弹窗
 export function SettleSummaryModal({
@@ -32,6 +30,7 @@ export function SettleSummaryModal({
     onCancel: () => void;
     isLoading?: boolean;
 }) {
+    const { currency, formatCurrency } = useSettings();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
     // currency removed: show numeric cash differences
@@ -56,6 +55,7 @@ export function SettleSummaryModal({
                             const chipDiff = chipCount - buyIn;
                             const cashDiff = baseChipAmount === 0 ? 0 : chipDiff / (baseChipAmount / baseCashAmount);
                             const positive = cashDiff >= 0;
+                            const currency = (global as any).__pokerpal_settings?.currency ?? 'USD';
                             return (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md }}>
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
@@ -74,7 +74,7 @@ export function SettleSummaryModal({
 
                                     <View style={{ width: 110, alignItems: 'flex-end' }}>
                                         <View style={{ paddingVertical: Spacing.xs + 2, paddingHorizontal: Spacing.sm + 2, borderRadius: Radius.md, backgroundColor: positive ? (Palette.success + '20') : (Palette.error + '20') }}>
-                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCash(cashDiff)}` : `-${formatCash(Math.abs(cashDiff))}`}</Text>
+                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCurrency(cashDiff, currency)}` : `-${formatCurrency(Math.abs(cashDiff), currency)}`}</Text>
                                         </View>
                                     </View>
                                 </View>
@@ -85,6 +85,7 @@ export function SettleSummaryModal({
                             const totalBuyIn = players.reduce((s, p) => s + (p.totalBuyInChips ?? 0), 0);
                             const totalChipDiff = totalChips - totalBuyIn;
                             const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
+                            const currency = (global as any).__pokerpal_settings?.currency ?? 'USD';
                             const positive = totalCashDiff >= 0;
                             return (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: Spacing.md, borderTopWidth: 1, borderColor: '#F0F0F0', marginTop: Spacing.sm }}>
@@ -96,7 +97,7 @@ export function SettleSummaryModal({
                                     </View>
                                     <View style={{ width: 110, alignItems: 'flex-end' }}>
                                         <View style={{ paddingVertical: Spacing.xs + 2, paddingHorizontal: Spacing.md - 2, borderRadius: Radius.md, backgroundColor: positive ? (Palette.success + '20') : (Palette.error + '20') }}>
-                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCash(totalCashDiff)}` : `-${formatCash(Math.abs(totalCashDiff))}`}</Text>
+                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCurrency(totalCashDiff, currency)}` : `-${formatCurrency(Math.abs(totalCashDiff), currency)}`}</Text>
                                         </View>
                                     </View>
                                 </View>

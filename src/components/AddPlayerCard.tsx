@@ -73,7 +73,6 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
         // 清理函数，组件卸载或者依赖变化时执行
         return () => {
-            logSuccess('停止玩家同步监听', 'AddPlayerCard');
             stopPlayerSyncListener(logInfo);
         };
     }, [activeTab, gameId]);

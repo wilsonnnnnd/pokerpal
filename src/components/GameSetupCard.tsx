@@ -14,9 +14,7 @@ import { useGameStore } from '@/stores/useGameStore';
 import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
-import { useLogStore } from '@/stores/useLogStore';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
@@ -48,7 +46,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const [currencyInfo, setCurrencyInfo] = useState<{ code?: string; symbol?: string; rate?: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const { isHost } = usePermission();
-    const log = useLogStore((state) => state.log);
 
     // 创建refs用于存储输入框引用
     const smallBlindRef = useRef<TextInput | null>(null);
@@ -184,17 +181,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 baseCashAmount: gameData.baseCashAmount ?? 0,
             });
 
-            // 记录游戏设置
-            log('Game', `游戏设置: ${JSON.stringify({
-                gameId,
-                token,
-                smallBlind: gameData.smallBlind,
-                bigBlind: gameData.bigBlind,
-                baseChipAmount: gameData.baseChipAmount,
-                baseCashAmount: gameData.baseCashAmount,
-                created: new Date().toISOString(),
-                updated: new Date().toISOString(),
-            })}`);
 
             const user = await storage.getLocal(CURRENT_USER_KEY);
             if (isHost) {
@@ -244,44 +230,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         }
     };
 
-    useEffect(() => {
-        // 读取游戏存储信息
-        const logGameStorage = async () => {
-            try {
-                const value = await AsyncStorage.getItem('game-storage');
-                if (value !== null) {
-                    log('game-storage', JSON.stringify({
-                        level: 'Info',
-                        message: 'game-storage 数据',
-                        data: JSON.parse(value)
-                    }));
-                } else {
-                    log('game-storage', JSON.stringify({
-                        level: 'Info',
-                        message: '没有找到 game-storage 数据'
-                    }));
-                }
-            } catch (error) {
-                Toast.show({
-                    type: 'error',
-                    text1: '读取失败',
-                    text2: '无法读取游戏存储数据，请稍后再试',
-                    visibilityTime: 2000,
-                    position: 'bottom',
-                });
-
-                log('game-storage', JSON.stringify({
-                    level: 'Error',
-                    message: '读取失败',
-                    error: String(error)
-                }));
-            }
-        };
-
-        logGameStorage();
-        // currency removed: no-op
-    }, []);
-
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -291,7 +239,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.card}>
                         <View style={styles.header}>
-                            <MaterialCommunityIcons name="gamepad-variant" size={28} color={color.info} />
+                            <MaterialCommunityIcons name="cards-club" size={28} color={color.info} />
                             <Text style={styles.title}>游戏设置</Text>
                         </View>
 
@@ -300,7 +248,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             fieldName="smallBlind"
                             value={formValues.smallBlind}
                             placeholder="例如：50"
-                            icon="currency-usd"
+                            icon="scale-balance"
                             keyboardType="number-pad"
                             error={errors.smallBlind}
                             onChangeText={handleInputChange}
@@ -313,7 +261,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             fieldName="bigBlind"
                             value={formValues.bigBlind}
                             placeholder="例如：100"
-                            icon="currency-usd"
+                            icon="scale-balance"
                             keyboardType="number-pad"
                             error={errors.bigBlind}
                             onChangeText={handleInputChange}
@@ -326,7 +274,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             fieldName="baseChipAmount"
                             value={formValues.baseChipAmount}
                             placeholder="例如：1000"
-                            icon="cash"
+                            icon="wallet"
                             keyboardType="number-pad"
                             error={errors.baseChipAmount}
                             onChangeText={handleInputChange}
@@ -339,7 +287,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             fieldName="baseCashAmount"
                             value={formValues.baseCashAmount}
                             placeholder={currencyInfo.symbol ? `例如 (${currencyInfo.symbol})` : '例如'}
-                            icon="cash"
+                            icon="swap-horizontal"
                             keyboardType="number-pad"
                             error={errors.baseCashAmount}
                             onChangeText={handleInputChange}

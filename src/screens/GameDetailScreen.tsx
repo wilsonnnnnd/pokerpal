@@ -64,14 +64,14 @@ export default function GameDetailScreen() {
         const emit = () => {
             if (!latestGameDoc) return;
             const players: PlayerSnapshotCash[] = (latestPlayers || []).map((p: any) => ({
-                playerId: String(p.playerId ?? p.id ?? ''),
+                id: String(p.playerId ?? p.id ?? ''),
                 nickname: String(p.nickname ?? 'Unknown'),
                 totalBuyInCash: Number(p.totalBuyInCash) || 0,
                 settleCashAmount: Number(p.settleCashAmount) || 0,
                 settleCashDiff: Number(p.settleCashDiff) || 0,
                 settleROI: Number(p.settleROI) || 0,
                 buyInCount: Number(p.buyInCount) || 0,
-                photoUrl: p.photoUrl ?? null,
+                photoURL: p.photoURL ?? null,
             }));
 
             const totals = players.reduce((acc, p) => ({
@@ -212,8 +212,8 @@ export default function GameDetailScreen() {
                             </View>
                             <View style={styles.highlightContent}>
                                 <View style={styles.avatar}>
-                                    {topWinner.photoUrl ? (
-                                        <Image source={{ uri: topWinner.photoUrl }} style={styles.avatarImage} />
+                                    {topWinner.photoURL ? (
+                                        <Image source={{ uri: topWinner.photoURL }} style={styles.avatarImage} />
                                     ) : (
                                         <View style={[StyleSheet.absoluteFill, styles.avatarFallback, { backgroundColor: generateAvatarColor(topWinner.nickname) }]}>
                                             <Text style={styles.avatarText}>{initialOf(topWinner.nickname)}</Text>
@@ -234,8 +234,8 @@ export default function GameDetailScreen() {
                             </View>
                             <View style={styles.highlightContent}>
                                 <View style={styles.avatar}>
-                                    {topLoser.photoUrl ? (
-                                        <Image source={{ uri: topLoser.photoUrl }} style={styles.avatarImage} />
+                                    {topLoser.photoURL ? (
+                                        <Image source={{ uri: topLoser.photoURL }} style={styles.avatarImage} />
                                     ) : (
                                         <View style={[StyleSheet.absoluteFill, styles.avatarFallback, { backgroundColor: generateAvatarColor(topLoser.nickname) }]}>
                                             <Text style={styles.avatarText}>{initialOf(topLoser.nickname)}</Text>
@@ -261,7 +261,7 @@ export default function GameDetailScreen() {
                         const diff = Number(p.settleCashDiff) || 0;
                         const roi = Number(p.settleROI) || 0;
                         return (
-                            <View style={styles.playerCard} key={`${p.playerId || 'row'}-${idx}`}>
+                            <View style={styles.playerCard} key={`${p.id || 'row'}-${idx}`}>
                                 <View style={styles.playerCardHeader}>
                                     <View style={styles.playerIdentity}>
                                         <View style={styles.avatar}>

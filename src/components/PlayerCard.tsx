@@ -52,23 +52,12 @@ export function PlayerCard({
                         <View style={styles.nameContainer}>
                             <Text style={styles.name}>{player.nickname}</Text>
                             <View style={styles.statusContainer}>
-                                <View style={[styles.statusIndicator, { backgroundColor: player.isActive ? color.success : color.weakGray }]} />
+                                <View style={[styles.statusIndicator, { backgroundColor: player.isActive ? color.success : color.error }]} />
                                 <Text style={styles.statusText}>{player.isActive ? '在场' : '已离场'}</Text>
                             </View>
                         </View>
                     </View>
 
-                    {isSettled && (
-                        <View style={[styles.profitBadge, { backgroundColor: profit >= 0 ? color.success + '22' : color.error + '22' }]}>
-                            <MaterialCommunityIcons
-                                name={profit >= 0 ? 'arrow-up' : 'arrow-down'}
-                                size={16}
-                                color={profit >= 0 ? color.success : color.error}
-                            />
-                            <Text style={[styles.profitText, { color: profit >= 0 ? color.success : color.error }]}>{profit >= 0 ? '+' : ''}{profit}
-                            </Text>
-                        </View>
-                    )}
                 </View>
 
                 <View style={styles.detailsContainer}>
@@ -238,14 +227,17 @@ const styles = StyleSheet.create({
         marginTop: Spacing.xs 
     },
     statusIndicator: { 
-        width: Spacing.xs * 2, 
-        height: Spacing.xs * 2, 
-        borderRadius: Spacing.xs, 
-        marginRight: Spacing.xs 
+        width: 12,
+        height: 12,
+        borderRadius: 12,
+        marginRight: Spacing.xs,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.06)'
     },
     statusText: { 
         fontSize: 12, 
-        color: color.valueLabel 
+        color: color.valueLabel,
+        fontWeight: '600'
     },
     profitBadge: { 
         flexDirection: 'row', 
