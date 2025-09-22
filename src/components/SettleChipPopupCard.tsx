@@ -38,7 +38,7 @@ export const SettleChipPopupCard: React.FC<Props> = ({ player, onConfirm, onCanc
                 placeholder="筹码数"
             />
 
-            <View style={styles.buttonRow}>
+            <View style={[styles.buttonRow,{marginBottom: Spacing.md}]}>
                 <PrimaryButton
                     title="取消"
                     onPress={onCancel}
