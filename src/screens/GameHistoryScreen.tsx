@@ -23,10 +23,9 @@ import { Palette as color, Palette } from '@/constants';
 import Toast from 'react-native-toast-message';
 
 import { GameHistorystyles as styles } from '@/assets/styles';
-import { CURRENT_USER_KEY, gameDoc, hostGameDoc, playerDoc } from '@/constants/namingVar';
+import { gameDoc, hostGameDoc, playerDoc } from '@/constants/namingVar';
 import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
 import { GameHistoryItem, PlayerItem } from '@/types';
-import storage from '@/services/storageService';
 import usePermission from '@/hooks/usePermission';
 import RequireHost from '@/components/RequireHost';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -59,26 +58,30 @@ export default function GameHistoryScreen() {
     // 防重复拉取同一 gameId
     const fetchedSetRef = useRef<Set<string>>(new Set());
 
+
+    const listHostGameRecords = async (hoster: string) => {
+        const gamesColRef = collection(db, hostGameDoc, hoster, gameDoc);
+        const snapshot = await getDocs(gamesColRef);
+        
+        return snapshot.docs.map(doc => ({
+            id: doc.id,        // 这个就是 gameId
+            ...doc.data(),     // createdAt, updatedAt
+        }));
+    }
+
+
     // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——
     const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string): Promise<GameHistoryItem | null> => {
         try {
-            console.log('[GameHistory] buildGameHistoryItem start:', { gameId, owner });
             // 尝试主文档：/games/{gameId}
-            console.log('[GameHistory] trying main path:', gameDoc, '/', gameId);
             let gameSnap = await getDoc(doc(db, gameDoc, gameId));
-            console.log('[GameHistory] main path exists =', gameSnap.exists());
             let data: any = {};
 
             if (!gameSnap.exists() && owner) {
                 // 兼容新结构：/games/{owner}/game/{gameId}
-                try {
-                    console.log('[GameHistory] trying owner-scoped path:', gameDoc, '/', owner, '/game/', gameId);
-                    const altRef = doc(db, gameDoc, owner, gameDoc, gameId);
-                    gameSnap = await getDoc(altRef);
-                    console.log('[GameHistory] owner-scoped path exists =', gameSnap.exists());
-                } catch (e) {
-                    // ignore
-                }
+                // 兼容新结构：/games/{owner}/game/{gameId}
+                const altRef = doc(db, gameDoc, owner, 'game', gameId);
+                gameSnap = await getDoc(altRef);
             }
 
             if (!gameSnap.exists()) {
@@ -90,15 +93,14 @@ export default function GameHistoryScreen() {
 
             // 玩家子集合：/test-games/{gameId}/players
             // 玩家子集合：优先尝试主集合路径，否则尝试 owner 子集合路径
+            // 玩家子集合：优先尝试主集合路径 /games/{gameId}/players，否则尝试 owner 子集合 /games/{owner}/game/{gameId}/players
             let playersColRef = collection(db, gameDoc, gameId, playerDoc);
             let playersPathUsed = `${gameDoc}/${gameId}/${playerDoc}`;
-            if (!(await getDoc(doc(db, gameDoc, gameId))).exists() && owner) {
-                // fallback players path: /games/{owner}/game/{gameId}/players
+            if (!gameSnap.exists() && owner) {
                 playersColRef = collection(db, gameDoc, owner, 'game', gameId, playerDoc);
-                playersPathUsed = `${gameDoc}/${owner}//${gameId}/${playerDoc}`;
+                playersPathUsed = `${gameDoc}/${owner}/game/${gameId}/${playerDoc}`;
             }
             const playersSnap = await getDocs(playersColRef);
-            console.log('[GameHistory] players path used =', playersPathUsed, 'playerCount=', playersSnap.size);
 
             // 批量查用户档案
             const playerIds = playersSnap.docs.map((d) => String(d.id)).filter(Boolean);

@@ -127,8 +127,8 @@ export async function registerHostGameRecord(gameId: string) {
 			gameDocRef,
 			{
 				gameId,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString(),
+				created: new Date().toISOString(),
+				updated: new Date().toISOString(),
 			},
 			{ merge: true }
 		);
