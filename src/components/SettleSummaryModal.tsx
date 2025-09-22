@@ -5,7 +5,7 @@ import { FlatList, Modal, View, Text } from "react-native";
 import { PrimaryButton } from "./PrimaryButton";
 import { useGameStore } from "@/stores/useGameStore";
 import { Palette } from '@/constants/color.palette';
-import storage from '@/services/storageService';
+// no currency settings anymore
 
 // small helper to render initials
 function initials(name?: string) {
@@ -33,24 +33,7 @@ export function SettleSummaryModal({
 }) {
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
-    const [currencySymbol, setCurrencySymbol] = useState<string>('');
-    const [currencyRate, setCurrencyRate] = useState<number>(1);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const s = await storage.getLocal('@pokerpal:appSettings');
-                if (s) {
-                    const code = (s.defaultCurrency || 'AUD').toString().toUpperCase();
-                    const rate = Number(s.currencyRate ?? 1) || 1;
-                    const symbol = code === 'AUD' ? '$' : code === 'CNY' ? '¥' : '';
-                    setCurrencySymbol(symbol);
-                }
-            } catch (err) {
-                // ignore
-            }
-        })();
-    }, []);
+    // currency removed: show numeric cash differences
     return (
         <Modal transparent animationType="fade">
             <View style={styles.overlay}>
@@ -58,7 +41,7 @@ export function SettleSummaryModal({
                     {/* Header */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <Text style={styles.summaryTitle}>结算总览</Text>
-                        <Text style={{ color: Palette.mutedText, fontSize: 12 }}>{currencySymbol ? `${currencySymbol}` : ''}</Text>
+                        <Text style={{ color: Palette.mutedText, fontSize: 12 }} />
                     </View>
 
                     {/* List */}
@@ -90,7 +73,7 @@ export function SettleSummaryModal({
 
                                     <View style={{ width: 110, alignItems: 'flex-end' }}>
                                         <View style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 18, backgroundColor: positive ? (Palette.success + '20') : (Palette.error + '20') }}>
-                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${currencySymbol}${formatCash(cashDiff)}` : `-${currencySymbol}${formatCash(Math.abs(cashDiff))}`}</Text>
+                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCash(cashDiff)}` : `-${formatCash(Math.abs(cashDiff))}`}</Text>
                                         </View>
                                     </View>
                                 </View>
@@ -112,7 +95,7 @@ export function SettleSummaryModal({
                                     </View>
                                     <View style={{ width: 110, alignItems: 'flex-end' }}>
                                         <View style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: 18, backgroundColor: positive ? (Palette.success + '20') : (Palette.error + '20') }}>
-                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${currencySymbol}${formatCash(totalCashDiff)}` : `-${currencySymbol}${formatCash(Math.abs(totalCashDiff))}`}</Text>
+                                            <Text style={{ color: positive ? Palette.success : Palette.error, fontWeight: '700' }}>{positive ? `+${formatCash(totalCashDiff)}` : `-${formatCash(Math.abs(totalCashDiff))}`}</Text>
                                         </View>
                                     </View>
                                 </View>

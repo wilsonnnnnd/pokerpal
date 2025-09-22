@@ -4,7 +4,7 @@ import {
     writeBatch,
 } from 'firebase/firestore'
 import { db } from '@/firebase/config'
-import { userDoc } from '@/constants/namingDb'
+import { userDoc } from '@/constants/namingVar'
 
 // 玩家图表数据结构
 export type GraphPoint = {

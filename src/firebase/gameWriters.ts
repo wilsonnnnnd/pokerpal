@@ -10,7 +10,7 @@ import {
     Timestamp,
 } from 'firebase/firestore'
 import { BatchBuilder } from './batchBuilder'
-import { gameDoc, playerDoc, userDoc } from '@/constants/namingDb'
+import { gameDoc, playerDoc, userDoc } from '@/constants/namingVar'
 import { Player } from '@/types'
 import { preparePlayerGraphBatch } from './preparePlayerGraphBatch'
 

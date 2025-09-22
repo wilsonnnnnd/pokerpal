@@ -22,7 +22,7 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 import { collection, getDocs,Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { userByEmailDoc } from '@/constants/namingDb';
+import { userByEmailDoc } from '@/constants/namingVar';
 import { Ionicons } from '@expo/vector-icons';
 
 interface AddPlayerCardProps {

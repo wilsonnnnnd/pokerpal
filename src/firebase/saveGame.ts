@@ -23,7 +23,7 @@ import {
 } from './gameWriters'
 import { BatchBuilder } from './batchBuilder'
 import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
-import { gameDoc, hostGameDoc, userDoc } from '@/constants/namingDb'
+import { CURRENT_USER_KEY, gameDoc, hostGameDoc, userDoc } from '@/constants/namingVar'
 import { appendAction } from '@/services/localDb';
 import storage from '@/services/storageService';
 
@@ -103,11 +103,11 @@ export async function registerHostGameRecord(gameId: string) {
 	if (!gameId) return;
 
 	// 从本地存储获取当前用户
-	const pu = await storage.getLocal("@pokerpal:currentUser");
-	const hoster = pu?.displayName;
+	const pu = await storage.getLocal(CURRENT_USER_KEY);
+	const hoster = pu?.email;
 
 	if (!hoster) {
-		console.warn("registerHostGameRecord: no current user displayName found");
+		console.warn("registerHostGameRecord: no current user email found");
 		return;
 	}
 

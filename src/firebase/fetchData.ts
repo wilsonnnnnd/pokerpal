@@ -1,6 +1,6 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "./config";
-import { userDoc } from "@/constants/namingDb";
+import { userDoc } from "@/constants/namingVar";
 
 // 批量按 id 查询用户档案（为减少读次数，使用 where in，按 10 个一组拆分）
 export const fetchUserProfilesMap = async (ids: string[]) => {

@@ -18,6 +18,7 @@ import DatabaseScreen from '@/screens/DatabaseScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
+import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 
 
 export type RootStackParamList = {
@@ -86,34 +87,31 @@ export default function App() {
       }
     })();
 
-    // load app settings (currency, language) and attach to global for sync access
+    // load app language setting (attach for synchronous reads elsewhere)
     (async () => {
       try {
-        const SETTINGS_KEY = '@pokerpal:appSettings';
         const maybe = await getLocal(SETTINGS_KEY);
-        if (maybe) {
-          // attach for synchronous reads elsewhere: global.__pokerpal_settings
-          (global as any).__pokerpal_settings = maybe;
+        if (maybe && maybe.language) {
+          (global as any).__pokerpal_settings = { language: maybe.language };
         } else {
-          // write defaults and attach
-          const defaults = { defaultCurrency: 'AUD', currencyRate: 5, language: 'au' };
+          const defaults = { language: 'au' };
           try {
             await setLocal(SETTINGS_KEY, defaults);
           } catch (e) {
-            // ignore write errors but still attach defaults
+            // ignore
           }
           (global as any).__pokerpal_settings = defaults;
         }
       } catch (e) {
         console.warn('failed to load app settings', e);
-        (global as any).__pokerpal_settings = { defaultCurrency: 'AUD', currencyRate: 5, language: 'au' };
+        (global as any).__pokerpal_settings = { language: 'au' };
       }
     })();
 
     // restore persisted user (if any) into auth shim before subscribing
     (async () => {
       try {
-        const user = await storage.getLocal('@pokerpal:currentUser');
+        const user = await storage.getLocal(CURRENT_USER_KEY);
         if (user) {
           // shape-checking minimal: ensure uid exists
           if (user.uid) {

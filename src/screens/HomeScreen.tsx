@@ -28,6 +28,7 @@ import { onAuthStateChanged, signOut } from '@/services/localAuth';
 import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import RequireMember from '@/components/RequireMember';
+import { CURRENT_USER_KEY } from '@/constants/namingVar';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -93,7 +94,7 @@ const HomeScreen = () => {
             setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
             // load persisted user for avatar/name preference
             try {
-                const pu = await storage.getLocal('@pokerpal:currentUser');
+                const pu = await storage.getLocal(CURRENT_USER_KEY);
                 setPersistedUser(pu);
             } catch (e) {
                 // ignore

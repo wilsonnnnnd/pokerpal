@@ -14,7 +14,7 @@ import { collection, getDocs, limit, orderBy, query, startAfter, DocumentSnapsho
 import { db } from '@/firebase/config';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
-import { userDoc } from '@/constants/namingDb';
+import { userDoc } from '@/constants/namingVar';
 import Toast from 'react-native-toast-message';
 import { GamePlayerRankstyles as styles } from '@/assets/styles';
 

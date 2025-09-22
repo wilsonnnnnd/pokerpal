@@ -6,7 +6,7 @@
 import { db } from '@/firebase/config'
 import { doc, getDoc, Timestamp, WriteBatch } from 'firebase/firestore'
 import { Player } from '@/types'
-import { userDoc, userGraphDoc, userRecordDoc } from '@/constants/namingDb'
+import { userDoc, userGraphDoc, userRecordDoc } from '@/constants/namingVar'
 
 export type GraphPoint = {
     gameId: string

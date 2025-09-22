@@ -6,7 +6,7 @@ import { db } from '@/firebase/config';
 import { signInWithCredential, signInAnonymously } from '@/services/localAuth';
 import storage from '@/services/storageService';
 import { doc, setDoc,  } from 'firebase/firestore';
-import { userDoc, userByEmailDoc } from '@/constants/namingDb';
+import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
 
@@ -100,7 +100,7 @@ export default function LoginScreen() {
 
                 // localAuth now persists the current user; verify persistence for debugging
                 try {
-                    const persisted = await storage.getLocal('@pokerpal:currentUser');
+                    const persisted = await storage.getLocal(CURRENT_USER_KEY);
                 } catch (e) {
                     console.warn('Login: failed to read persisted user', e);
                 }
@@ -140,7 +140,7 @@ export default function LoginScreen() {
             // Persist current user locally
                 // localAuth persists the anonymous user; verify persistence
                 try {
-                    const persisted = await storage.getLocal('@pokerpal:currentUser');
+                    const persisted = await storage.getLocal(CURRENT_USER_KEY);
                 } catch (e) {
                     console.warn('Login: failed to read persisted guest user', e);
                 }

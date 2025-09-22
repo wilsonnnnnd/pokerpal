@@ -17,7 +17,6 @@ import { Palette as color } from '@/constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as yup from 'yup';
 import { useLogStore } from '@/stores/useLogStore';
-import localDb from '@/services/localDb';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from './InputField';
@@ -25,6 +24,8 @@ import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
 import { createGameOnServer } from '@/firebase/saveGame';
 import storage from '@/services/storageService';
+import { CURRENT_USER_KEY } from '@/constants/namingVar';
+// settings key removed from namingVar; no currency usage here
 
 
 interface GameSetupCardProps {
@@ -42,7 +43,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         baseChipAmount: '',
         baseCashAmount: '',
     });
-    const [currencyInfo, setCurrencyInfo] = useState<{ code: string; symbol: string; rate: number }>({ code: 'CNY', symbol: '¥', rate: 1 });
+    // currency removed — keep numeric inputs only
+    const [currencyInfo, setCurrencyInfo] = useState<{ code?: string; symbol?: string; rate?: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     const log = useLogStore((state) => state.log);
@@ -193,7 +195,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 updated: new Date().toISOString(),
             })}`);
 
-            const user = await storage.getLocal('@pokerpal:currentUser');
+            const user = await storage.getLocal(CURRENT_USER_KEY);
             //同步到Firebase
             await createGameOnServer({
                 gameId,
@@ -273,20 +275,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         };
 
         logGameStorage();
-        // load saved app settings (currency info)
-        (async () => {
-            try {
-                const s = await storage.getLocal('@pokerpal:appSettings');
-                if (s) {
-                    const code = (s.defaultCurrency || 'AUD').toString().toUpperCase();
-                    const rate = Number(s.currencyRate ?? 1) || 1;
-                    const symbol = code === 'AUD' ? '$' : code === 'CNY' ? '¥' : '';
-                    setCurrencyInfo({ code, symbol, rate });
-                }
-            } catch (err) {
-                // ignore
-            }
-        })();
+        // currency removed: no-op
     }, []);
 
     return (

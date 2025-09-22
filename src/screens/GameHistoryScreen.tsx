@@ -23,7 +23,7 @@ import { Palette as color, Palette } from '@/constants';
 import Toast from 'react-native-toast-message';
 
 import { GameHistorystyles as styles } from '@/assets/styles';
-import { gameDoc, hostGameDoc, playerDoc } from '@/constants/namingDb';
+import { CURRENT_USER_KEY, gameDoc, hostGameDoc, playerDoc } from '@/constants/namingVar';
 import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
 import { GameHistoryItem, PlayerItem } from '@/types';
 import storage from '@/services/storageService';
@@ -56,7 +56,7 @@ export default function GameHistoryScreen() {
 
     // 获取当前 hoster（沿用 displayName）
     const getHosterId = useCallback(async (): Promise<string | null> => {
-        const pu = await storage.getLocal('@pokerpal:currentUser');
+        const pu = await storage.getLocal(CURRENT_USER_KEY);
         const hoster = pu?.displayName;
         return hoster || null;
     }, []);

@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import storage from './storageService';
 import { getAuth, signInWithCredential as firebaseSignInWithCredential, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
+import { CURRENT_USER_KEY } from '@/constants/namingVar';
 
 type User = {
     uid: string;
@@ -55,7 +56,7 @@ export async function signInAnonymously() {
     currentUser = { uid, displayName: 'Guest', isAnonymous: true };
     notify();
     try {
-        await storage.setLocal('@pokerpal:currentUser', currentUser);
+        await storage.setLocal(CURRENT_USER_KEY, currentUser);
     } catch (e) {
         console.warn('localAuth: failed to persist anonymous user', e);
     }
@@ -81,7 +82,7 @@ export async function signInWithCredential(credential: any) {
             };
             notify();
             try {
-                await storage.setLocal('@pokerpal:currentUser', currentUser);
+                await storage.setLocal(CURRENT_USER_KEY, currentUser);
             } catch (e) {
                 console.warn('localAuth: failed to persist signed-in user', e);
             }
@@ -99,7 +100,7 @@ export async function signInWithCredential(credential: any) {
         };
         notify();
         try {
-            await storage.setLocal('@pokerpal:currentUser', currentUser);
+            await storage.setLocal(CURRENT_USER_KEY, currentUser);
         } catch (e) {
             console.warn('localAuth: failed to persist signed-in user', e);
         }
@@ -124,7 +125,7 @@ export async function signOut() {
     currentUser = null;
     notify();
     try {
-        await storage.removeLocal('@pokerpal:currentUser');
+        await storage.removeLocal(CURRENT_USER_KEY);
     } catch (e) {
         // non-fatal
     }

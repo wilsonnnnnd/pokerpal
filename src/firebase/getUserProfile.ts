@@ -1,6 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { userDoc } from '@/constants/namingDb';
+import { userDoc } from '@/constants/namingVar';
 
 export type UserProfile = {
     nickname?: string;

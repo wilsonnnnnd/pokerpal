@@ -1,7 +1,7 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
-import { userByEmailDoc, userDoc } from '@/constants/namingDb';
+import { userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { logInfo } from '@/utils/useLogger';
 
 export async function createOrUpdatePlayerInFirebase(player: Player): Promise<void> {

@@ -1,6 +1,6 @@
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { gameDoc } from '@/constants/namingDb';
+import { gameDoc } from '@/constants/namingVar';
 
 export const deleteGameFromFirebase = async (gameId: string) => {
     if (!gameId) return;

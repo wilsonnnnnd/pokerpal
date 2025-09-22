@@ -12,12 +12,9 @@ import SelectField from '@/components/SelectField';
 import { InfoRow } from '@/components/InfoRow';
 import { InputField } from '@/components/InputField';
 import MessagePopUp from '@/components/MessagePopUp';
-
-const SETTINGS_KEY = '@pokerpal:appSettings';
+import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 
 type AppSettings = {
-    defaultCurrency?: string;
-    currencyRate?: number; // e.g. 1 chip = X currency
     language?: string;
 };
 
@@ -31,8 +28,6 @@ export default function SettingsScreen() {
     const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
     const [settings, setSettings] = useState<AppSettings>({
-        defaultCurrency: 'AUD',
-        currencyRate: 5,
         language: 'au',
     });
 
@@ -59,12 +54,9 @@ export default function SettingsScreen() {
                     setSettings((s) => ({ ...s, ...parsed }));
                 }
                 // also load persisted current user (for debug/verification)
-                try {
-                    const pu = await getLocal('@pokerpal:currentUser');
-                    setPersistedUser(pu);
-                } catch (e) {
-                    // ignore
-                }
+                // use a single helper to load persisted user
+                const pu = await getLocal(CURRENT_USER_KEY);
+                setPersistedUser(pu);
             } catch (e) {
                 console.warn('load settings', e);
             } finally {
@@ -72,6 +64,16 @@ export default function SettingsScreen() {
             }
         })();
     }, []);
+
+    // helper to refresh persisted user from storage (used by UI buttons)
+    const refreshPersistedUser = async () => {
+        try {
+            const pu = await getLocal(CURRENT_USER_KEY);
+            setPersistedUser(pu);
+        } catch (e) {
+            console.warn('refresh persisted user', e);
+        }
+    };
 
     // subscribe user
     useEffect(() => {
@@ -93,11 +95,10 @@ export default function SettingsScreen() {
     }, []);
 
     const save = async () => {
-        try {
-            // basic validation
-            if (!settings.defaultCurrency) throw new Error('请选择默认货币');
-            if (!settings.language) throw new Error('请选择语言');
-            await setLocal(SETTINGS_KEY, settings);
+            try {
+                // basic validation (only language now)
+                if (!settings.language) throw new Error('请选择语言');
+                await setLocal(SETTINGS_KEY, settings);
             setPopup({
                 visible: true,
                 title: '保存成功',
@@ -124,7 +125,7 @@ export default function SettingsScreen() {
             message: '确定要重置为默认设置吗？',
             isWarning: true,
             onConfirm: async () => {
-                const def: AppSettings = { defaultCurrency: 'CNY', currencyRate: 1, language: 'zh' };
+                const def: AppSettings = { language: 'zh' };
                 setSettings(def);
                 await removeLocal(SETTINGS_KEY);
                 setPopup(prev => ({ ...prev, visible: false }));
@@ -170,17 +171,10 @@ export default function SettingsScreen() {
                                 <Text style={{ color: color.text, marginBottom: 6 }}>照片: {persistedUser.photoURL ?? persistedUser.photo ?? '—'}</Text>
                                 <Text style={{ color: color.mutedText, marginTop: 8 }}>原始: {JSON.stringify(persistedUser)}</Text>
                                 <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
-                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={async () => {
-                                        try {
-                                            const pu = await getLocal('@pokerpal:currentUser');
-                                            setPersistedUser(pu);
-                                        } catch (e) {
-                                            console.warn('refresh persisted user', e);
-                                        }
-                                    }} style={{ marginRight: 8 }} />
+                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={refreshPersistedUser} style={{ marginRight: 8 }} />
                                     <PrimaryButton title="清除" icon="delete" variant="outlined" onPress={async () => {
                                         try {
-                                            await removeLocal('@pokerpal:currentUser');
+                                            await removeLocal(CURRENT_USER_KEY);
                                             setPersistedUser(null);
                                         } catch (e) {
                                             console.warn('remove persisted user', e);
@@ -192,14 +186,7 @@ export default function SettingsScreen() {
                             <>
                                 <Text style={{ color: color.mutedText }}>未检测到持久化用户</Text>
                                 <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>
-                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={async () => {
-                                        try {
-                                            const pu = await getLocal('@pokerpal:currentUser');
-                                            setPersistedUser(pu);
-                                        } catch (e) {
-                                            console.warn('refresh persisted user', e);
-                                        }
-                                    }} />
+                                    <PrimaryButton title="刷新" icon="refresh" variant="outlined" onPress={refreshPersistedUser} />
                                 </View>
                             </>
                         )}
@@ -209,22 +196,6 @@ export default function SettingsScreen() {
 
             <View style={{ marginBottom: 18 }}>
                 <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>软件设置</Text>
-
-                {/* Currency dropdown */}
-                <InfoRow icon="cash" label="默认货币" text={settings.defaultCurrency === 'CNY' ? 'CNY (¥)' : settings.defaultCurrency === 'AUD' ? 'AUD (A$)' : (settings.defaultCurrency ?? '')} />
-                <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 12 }}>
-                    <SelectField value={settings.defaultCurrency} onChange={(val) => setSettings(s => ({ ...s, defaultCurrency: val }))} options={[{ key: 'CNY', label: 'CNY (¥)' }, { key: 'AUD', label: 'AUD (A$)' }]} />
-                </View>
-
-                <InputField
-                    label={"货币汇率"}
-                    fieldName="currencyRate"
-                    value={String(settings.currencyRate ?? '')}
-                    placeholder="1.0"
-                    icon="cash"
-                    keyboardType="numeric"
-                    onChangeText={(field, val) => setSettings(s => ({ ...s, currencyRate: Number(val) }))}
-                />
 
                 {/* Language dropdown */}
                 <InfoRow icon="translate" label="语言" text={settings.language === 'zh' ? 'CN' : settings.language === 'en' ? 'ENG' : (settings.language ?? '')} />
