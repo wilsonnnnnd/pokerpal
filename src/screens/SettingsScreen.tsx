@@ -167,7 +167,7 @@ export default function SettingsScreen() {
                                         }
 
                                         await signOut();
-                                        (navigation as any).navigate('Login');
+                                        // navigation will update automatically via App's auth subscription
                                     }}
                                     style={{ marginRight: 8 }}
                                     iconColor={color.highLighter}
@@ -197,7 +197,7 @@ export default function SettingsScreen() {
                                                         }
                                                         // hard sign-out: remove persisted user
                                                         await signOut();
-                                                        (navigation as any).navigate('Login');
+                                                        // navigation will update automatically via App's auth subscription
                                                     }
                                                 }
                                             ]

@@ -74,8 +74,8 @@ export default function App() {
   const [authUser, setAuthUser] = useState<any | null>(null);
 
   useEffect(() => {
-  // initialize local DB (expo-sqlite)
-  (async () => {
+    // initialize local DB (expo-sqlite)
+    (async () => {
       try {
         // localDb exports initSchema; older name initLocalDb was removed
         if (typeof (localDb as any).initSchema === 'function') {
@@ -185,7 +185,7 @@ export default function App() {
           </NavigationContainer>
         </PopupProvider>
         <Toast />
-  </SettingsProvider>
+      </SettingsProvider>
     </SafeAreaProvider>
   );
 }

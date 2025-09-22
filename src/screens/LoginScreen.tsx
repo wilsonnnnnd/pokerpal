@@ -27,28 +27,55 @@ export default function LoginScreen() {
     const saveUserProfile = async (user: { uid: string; email?: string | null; displayName?: string | null; photoURL?: string | null; isAnonymous?: boolean }) => {
         try {
             const uid = user.uid;
-            const data: any = {
-                nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
-                email: user.email ?? '',
-                photoURL: user.photoURL ?? '',
-                isActive: true,
-                role: user.isAnonymous ? 'guest' : 'player',
-                updated: new Date().toISOString(),
-            };
+            const userRef = doc(db, userDoc, uid);
+            // check if user doc exists
+            try {
+                const existing = await (await import('firebase/firestore')).getDoc(userRef);
+                const now = new Date().toISOString();
+                if (existing.exists()) {
+                    // only update the updated timestamp
+                    await setDoc(userRef, { updated: now }, { merge: true });
+                } else {
+                    const data: any = {
+                        nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
+                        email: user.email ?? '',
+                        photoURL: user.photoURL ?? '',
+                        isActive: true,
+                        role: user.isAnonymous ? 'guest' : 'player',
+                        updated: now,
+                    };
 
-            await setDoc(doc(db, userDoc, uid), {
-                ...data,
-                created: new Date().toISOString(),
-            }, { merge: true });
+                    await setDoc(userRef, {
+                        ...data,
+                        created: now,
+                    }, { merge: true });
 
-            if (user.email) {
-                const key = String(user.email).toLowerCase().trim();
-                await setDoc(doc(db, userByEmailDoc, key), {
-                    uid,
-                    nickname: data.nickname,
-                    photoURL: data.photoURL,
-                    registered: true,
-                    lastLinkedAt: new Date().toISOString(),
+                    if (user.email) {
+                        const key = String(user.email).toLowerCase().trim();
+                        await setDoc(doc(db, userByEmailDoc, key), {
+                            uid,
+                            nickname: data.nickname,
+                            photoURL: data.photoURL,
+                            registered: true,
+                            lastLinkedAt: new Date().toISOString(),
+                        }, { merge: true });
+                    }
+                }
+            } catch (e) {
+                // fallback: if getDoc fails for some reason, attempt to write full profile
+                const now = new Date().toISOString();
+                const data: any = {
+                    nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
+                    email: user.email ?? '',
+                    photoURL: user.photoURL ?? '',
+                    isActive: true,
+                    role: user.isAnonymous ? 'guest' : 'player',
+                    updated: now,
+                };
+
+                await setDoc(userRef, {
+                    ...data,
+                    created: now,
                 }, { merge: true });
             }
         } catch (error) {

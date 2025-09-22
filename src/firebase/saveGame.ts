@@ -26,6 +26,7 @@ import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { CURRENT_USER_KEY, gameDoc, hostGameDoc, userDoc } from '@/constants/namingVar'
 import { appendAction } from '@/services/localDb';
 import storage from '@/services/storageService';
+import { getHosterId } from '@/utils/hostInfo'
 
 
 
@@ -110,8 +111,7 @@ export async function registerHostGameRecord(gameId: string) {
 	if (!gameId) return;
 
 	// 从本地存储获取当前用户
-	const pu = await storage.getLocal(CURRENT_USER_KEY);
-	const hoster = pu?.DisplayName;
+	const hoster = await getHosterId();
 
 	if (!hoster) {
 		console.warn("registerHostGameRecord: no current user email found");

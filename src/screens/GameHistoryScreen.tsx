@@ -30,6 +30,7 @@ import storage from '@/services/storageService';
 import usePermission from '@/hooks/usePermission';
 import RequireHost from '@/components/RequireHost';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { getHosterId } from '@/utils/hostInfo';
 
 // ---- 导航类型 ----
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -58,28 +59,46 @@ export default function GameHistoryScreen() {
     // 防重复拉取同一 gameId
     const fetchedSetRef = useRef<Set<string>>(new Set());
 
-    // 获取当前 hoster（沿用 displayName）
-    const getHosterId = useCallback(async (): Promise<string | null> => {
-        const pu = await storage.getLocal(CURRENT_USER_KEY);
-        const hoster = pu?.displayName;
-        return hoster;
-    }, []);
-
     // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——
-    const buildGameHistoryItem = useCallback(async (gameId: string): Promise<GameHistoryItem | null> => {
+    const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string): Promise<GameHistoryItem | null> => {
         try {
-            // 主文档：/test-games/{gameId}
-            const gameRef = doc(db, gameDoc, gameId);
-            const gameSnap = await getDoc(gameRef);
+            console.log('[GameHistory] buildGameHistoryItem start:', { gameId, owner });
+            // 尝试主文档：/games/{gameId}
+            console.log('[GameHistory] trying main path:', gameDoc, '/', gameId);
+            let gameSnap = await getDoc(doc(db, gameDoc, gameId));
+            console.log('[GameHistory] main path exists =', gameSnap.exists());
+            let data: any = {};
+
+            if (!gameSnap.exists() && owner) {
+                // 兼容新结构：/games/{owner}/game/{gameId}
+                try {
+                    console.log('[GameHistory] trying owner-scoped path:', gameDoc, '/', owner, '/game/', gameId);
+                    const altRef = doc(db, gameDoc, owner, gameDoc, gameId);
+                    gameSnap = await getDoc(altRef);
+                    console.log('[GameHistory] owner-scoped path exists =', gameSnap.exists());
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             if (!gameSnap.exists()) {
-                // 主集合被清理或不存在，跳过
+                // 主集合或备选位置都不存在，跳过
                 return null;
             }
-            const data = gameSnap.data() ?? {};
+
+            data = gameSnap.data() ?? {};
 
             // 玩家子集合：/test-games/{gameId}/players
-            const playersColRef = collection(db, gameDoc, gameId, playerDoc);
+            // 玩家子集合：优先尝试主集合路径，否则尝试 owner 子集合路径
+            let playersColRef = collection(db, gameDoc, gameId, playerDoc);
+            let playersPathUsed = `${gameDoc}/${gameId}/${playerDoc}`;
+            if (!(await getDoc(doc(db, gameDoc, gameId))).exists() && owner) {
+                // fallback players path: /games/{owner}/game/{gameId}/players
+                playersColRef = collection(db, gameDoc, owner, 'game', gameId, playerDoc);
+                playersPathUsed = `${gameDoc}/${owner}//${gameId}/${playerDoc}`;
+            }
             const playersSnap = await getDocs(playersColRef);
+            console.log('[GameHistory] players path used =', playersPathUsed, 'playerCount=', playersSnap.size);
 
             // 批量查用户档案
             const playerIds = playersSnap.docs.map((d) => String(d.id)).filter(Boolean);
@@ -155,13 +174,16 @@ export default function GameHistoryScreen() {
 
             // 子集合：/hostGameDoc/{hoster}/{gameDoc}
             const baseCol = collection(doc(db, hostGameDoc, hoster), gameDoc);
-
+            console.log('[GameHistory] fetchPage for hoster=', hoster, 'mode=', mode);
             const q = nextCursorRef.current
                 ? query(baseCol, orderBy('created', 'desc'), startAfter(nextCursorRef.current), limit(PAGE_SIZE))
                 : query(baseCol, orderBy('created', 'desc'), limit(PAGE_SIZE));
 
             const snap = await getDocs(q);
             const docs = snap.docs;
+            // 打印查询结果的文档 id（对应 hostGameDoc/{hoster}/{gameDoc} 下的子文档 id）
+            const docIds = docs.map(d => d.id);
+            console.log('[GameHistory] hoster=', hoster, 'fetched host-game doc ids=', docIds);
 
             if (docs.length === 0) {
                 if (mode !== 'refresh') reachedEndRef.current = true;
@@ -175,7 +197,10 @@ export default function GameHistoryScreen() {
                 return true;
             });
 
-            const detailList = await Promise.all(ids.map((gid) => buildGameHistoryItem(gid)));
+            // 在获取每个 game 详情前打印 gameId（便于排查 owner-scoped 路径）
+            ids.forEach(gid => console.log('[GameHistory] will fetch game details for gameId=', gid, 'owner(hoster)=', hoster));
+
+            const detailList = await Promise.all(ids.map((gid) => buildGameHistoryItem(gid, hoster)));
             const built = (detailList.filter(Boolean) as GameHistoryItem[])
                 // 二次兜底排序，避免 serverTimestamp 初期为空导致抖动
                 .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
@@ -195,35 +220,35 @@ export default function GameHistoryScreen() {
         [buildGameHistoryItem, getHosterId]
     );
 
-    // // —— 首屏加载 ——
-    // useEffect(() => {
-    //     // 权限检查：非 host 用户直接返回首页
-    //     if (!permLoading && isHost === false) {
-    //         navigation.navigate('Home');
-    //         return;
-    //     }
+    // —— 首屏加载 ——
+    useEffect(() => {
+        // 权限检查：非 host 用户直接返回首页
+        if (!permLoading && isHost === false) {
+            navigation.navigate('Home');
+            return;
+        }
 
-    //     (async () => {
-    //         try {
-    //             setLoading(true);
-    //             // 重置分页状态
-    //             reachedEndRef.current = false;
-    //             nextCursorRef.current = null;
-    //             fetchedSetRef.current.clear();
-    //             await fetchPage('initial');
-    //         } catch (e) {
-    //             Toast.show({
-    //                 type: 'error',
-    //                 text1: '加载游戏历史失败',
-    //                 text2: '请检查网络或稍后重试',
-    //                 position: 'bottom',
-    //                 visibilityTime: 2000,
-    //             });
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     })();
-    // }, [fetchPage]);
+        (async () => {
+            try {
+                setLoading(true);
+                // 重置分页状态
+                reachedEndRef.current = false;
+                nextCursorRef.current = null;
+                fetchedSetRef.current.clear();
+                await fetchPage('initial');
+            } catch (e) {
+                Toast.show({
+                    type: 'error',
+                    text1: '加载游戏历史失败',
+                    text2: '请检查网络或稍后重试',
+                    position: 'bottom',
+                    visibilityTime: 2000,
+                });
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [fetchPage]);
 
     // —— 下拉刷新 ——
     const onRefresh = useCallback(async () => {

@@ -175,7 +175,8 @@ export default function GamePlayScreen() {
             setShowSettleSummary(false);
             clearLogs();
             resetPlayers();
-            navigation.navigate('Home');
+            // 清除导航历史并返回首页，避免用户通过返回键回到已结束的游戏
+            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
             Toast.show({
                 type: 'success',

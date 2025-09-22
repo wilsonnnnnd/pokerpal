@@ -130,7 +130,6 @@ export async function upsertUserAndCounters(
         email: player.email ?? '',
         photoURL: player.photoURL || '',
         isActive: true,
-        role: 'player',
         [userSnap.exists() ? 'updated' : 'created']: new Date().toISOString(),
     }, { merge: true })
 

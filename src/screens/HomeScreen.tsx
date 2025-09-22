@@ -249,7 +249,7 @@ const HomeScreen = () => {
                                         useGameStore.getState().resetGame();
                                         usePlayerStore.getState().resetPlayers();
                                         Toast.show({ type: 'success', text1: '已退出登录' });
-                                        navigation.navigate('Login');
+                                        // navigation will switch to AuthNavigator via auth subscription in App
                                     } catch (e) {
                                         Toast.show({ type: 'error', text1: '退出登录失败' });
                                     }
