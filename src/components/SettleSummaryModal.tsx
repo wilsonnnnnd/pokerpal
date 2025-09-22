@@ -55,7 +55,7 @@ export function SettleSummaryModal({
                             const chipDiff = chipCount - buyIn;
                             const cashDiff = baseChipAmount === 0 ? 0 : chipDiff / (baseChipAmount / baseCashAmount);
                             const positive = cashDiff >= 0;
-                            const currency = (global as any).__pokerpal_settings?.currency ?? 'USD';
+                            const currency = (global as any).__pokerpal_settings?.currency ?? 'AUD';
                             return (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md }}>
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
@@ -85,7 +85,7 @@ export function SettleSummaryModal({
                             const totalBuyIn = players.reduce((s, p) => s + (p.totalBuyInChips ?? 0), 0);
                             const totalChipDiff = totalChips - totalBuyIn;
                             const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
-                            const currency = (global as any).__pokerpal_settings?.currency ?? 'USD';
+                            const currency = (global as any).__pokerpal_settings?.currency ?? '';
                             const positive = totalCashDiff >= 0;
                             return (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: Spacing.md, borderTopWidth: 1, borderColor: '#F0F0F0', marginTop: Spacing.sm }}>

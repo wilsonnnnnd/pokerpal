@@ -118,7 +118,7 @@ export default function App() {
         try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
       } catch (e) {
         console.warn('failed to load app settings', e);
-        try { (global as any).__pokerpal_settings = { language: 'en', timezone: 'UTC', currency: 'USD' }; } catch (e) { /* ignore */ }
+        try { (global as any).__pokerpal_settings = { language: 'en', timezone: 'UTC', currency: 'AUD' }; } catch (e) { /* ignore */ }
       }
     })();
 
