@@ -62,7 +62,7 @@ export default function GameHistoryScreen() {
     const getHosterId = useCallback(async (): Promise<string | null> => {
         const pu = await storage.getLocal(CURRENT_USER_KEY);
         const hoster = pu?.displayName;
-        return hoster || null;
+        return hoster;
     }, []);
 
     // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——

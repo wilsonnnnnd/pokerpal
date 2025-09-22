@@ -111,7 +111,7 @@ export async function registerHostGameRecord(gameId: string) {
 
 	// 从本地存储获取当前用户
 	const pu = await storage.getLocal(CURRENT_USER_KEY);
-	const hoster = pu?.email;
+	const hoster = pu?.DisplayName;
 
 	if (!hoster) {
 		console.warn("registerHostGameRecord: no current user email found");
