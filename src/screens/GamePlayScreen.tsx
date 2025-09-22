@@ -47,6 +47,7 @@ import { RootStackParamList } from '../../App';
 import { Player } from '@/types';
 import { GamePlaystyles as styles } from '@/assets/styles';
 import Toast from 'react-native-toast-message';
+import usePermission from '@/hooks/usePermission';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -101,7 +102,7 @@ export default function GamePlayScreen() {
     const finalized = useGameStore((state) => state.finalized);
     const { resetPlayers, updatePlayer, removePlayer } = usePlayerStore.getState();
     const { setHeaderRight, setHeaderLeft, clearHeader } = useHeaderSlot((state) => state);
-
+    const { isHost } = usePermission();
     // ===== Utils hooks =====
     const { logs, log, clearLogs } = useLogger();
     const { confirmPopup: showPopup } = usePopup();
@@ -163,7 +164,10 @@ export default function GamePlayScreen() {
             const gameId = useGameStore.getState().gameId;
 
             setSubmitPhase('finalizing');
-            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+            if (isHost) {
+                await retry(() => finalizeGameOnServer(gameId), 3, 700);
+            }
+
 
             useGameStore.getState().finalizeGame();
             setPendingFinalize(false);
@@ -222,7 +226,7 @@ export default function GamePlayScreen() {
 
             // 1) 本地离线缓存（失败不继续）
             try {
-                saveGameToHistory();
+                await saveGameToHistory();
             } catch (e: any) {
                 Toast.show({
                     type: 'error',
@@ -234,11 +238,17 @@ export default function GamePlayScreen() {
 
             // 2) 远端保存（明细）——带自动重试
             setSubmitPhase('saving');
-            await retry(() => saveGameToFirebase(gameId, players), 3, 700);
+            if (isHost) {
+                await retry(() => saveGameToFirebase(gameId, players), 3, 700);
+            }
+
             await saveGameToLocalSql(gameId, players);
             // 3) finalize 落库（只写 updated/status，不触碰 created）——带自动重试
             setSubmitPhase('finalizing');
-            await retry(() => finalizeGameOnServer(gameId), 3, 700);
+            if (isHost) {
+                await retry(() => finalizeGameOnServer(gameId), 3, 700);
+            }
+
 
             // 4) 本地 finalize（最后一步，保证远端成功后再改本地）
             useGameStore.getState().finalizeGame();

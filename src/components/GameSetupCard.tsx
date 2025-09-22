@@ -25,6 +25,7 @@ import { generateToken } from '@/utils/getSecureNumber';
 import { createGameOnServer } from '@/firebase/saveGame';
 import storage from '@/services/storageService';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
+import usePermission from '@/hooks/usePermission';
 // settings key removed from namingVar; no currency usage here
 
 
@@ -46,7 +47,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     // currency removed — keep numeric inputs only
     const [currencyInfo, setCurrencyInfo] = useState<{ code?: string; symbol?: string; rate?: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
+    const { isHost } = usePermission();
     const log = useLogStore((state) => state.log);
 
     // 创建refs用于存储输入框引用
@@ -196,18 +197,21 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             })}`);
 
             const user = await storage.getLocal(CURRENT_USER_KEY);
-            //同步到Firebase
-            await createGameOnServer({
-                gameId,
-                smallBlind: gameData.smallBlind ?? 0,
-                bigBlind: gameData.bigBlind ?? 0,
-                baseChipAmount: gameData.baseChipAmount ?? 0,
-                baseCashAmount: gameData.baseCashAmount ?? 0,
-                finalized: false,
-                token,
-                createdBy: user?.displayName,
+            if (isHost) {
+                //同步到Firebase
+                await createGameOnServer({
+                    gameId,
+                    smallBlind: gameData.smallBlind ?? 0,
+                    bigBlind: gameData.bigBlind ?? 0,
+                    baseChipAmount: gameData.baseChipAmount ?? 0,
+                    baseCashAmount: gameData.baseCashAmount ?? 0,
+                    finalized: false,
+                    token,
+                    createdBy: user?.displayName,
 
-            });
+                });
+            }
+
             onConfirm();
         } catch (error) {
             if (error instanceof yup.ValidationError) {

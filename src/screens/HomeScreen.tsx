@@ -24,12 +24,12 @@ import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { onAuthStateChanged, signOut } from '@/services/localAuth';
 import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
-
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -117,7 +117,7 @@ const HomeScreen = () => {
 
     return (
         <>
-            <ScrollView style={[styles.container, { paddingTop: 20 }]}>
+            <ScrollView style={[styles.container, { paddingTop: Spacing.lg }]}>
                 <View style={styles.contentContainer}>
                     <View style={styles.headerSection}>
                         <MaterialCommunityIcons
@@ -140,7 +140,7 @@ const HomeScreen = () => {
                                             <Image source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }} style={styles.userAvatar} />
                                         ) : (
                                             <View style={styles.userAvatar}>
-                                                <Text style={{ color: color.text, fontWeight: '700' }}>{((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}</Text>
+                                                <Text style={{ color: color.text, fontWeight: '700', fontSize: FontSize.h3 }}>{((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}</Text>
                                             </View>
                                         )}
                                     </TouchableOpacity>
@@ -153,9 +153,9 @@ const HomeScreen = () => {
                                             {isHost && (
                                                 <View style={{
                                                     backgroundColor: color.highLighter,
-                                                    paddingHorizontal: 6,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 8,
+                                                    paddingHorizontal: Spacing.sm,
+                                                    paddingVertical: Spacing.xs,
+                                                    borderRadius: Radius.sm,
                                                     flexDirection: 'row',
                                                     alignItems: 'center'
                                                 }}>
@@ -171,6 +171,12 @@ const HomeScreen = () => {
                             </View>
                         )}
                     </View>
+                    {/* show user's aggregated profit card */}
+                    {user && (
+                        <View style={{ marginTop: Spacing.md }}>
+                            
+                        </View>
+                    )}
 
                     <View style={styles.buttonsSection}>
                         <View style={styles.actionsCard}>
@@ -214,14 +220,14 @@ const HomeScreen = () => {
                                 // determine visibility: by default visible
                                 const visible = (() => {
                                     // example: only host can see settings
-                                    if (btn.key === 'history') return isHost;
+                                    if (btn.key === 'history' || btn.key === 'ranking') return isHost;
                                     return true;
                                 })();
 
                                 if (!visible) return null;
 
                                 return (
-                                    <View key={btn.key} style={[styles.buttonRow, { marginTop: 8 }]}>
+                                    <View key={btn.key} style={[styles.buttonRow, { marginTop: Spacing.sm }]}>
                                         <PrimaryButton
                                             title={btn.title}
                                             icon={btn.icon as any}
@@ -249,7 +255,7 @@ const HomeScreen = () => {
                                         Toast.show({ type: 'error', text1: '退出登录失败' });
                                     }
                                 }}
-                                style={styles.logoutButton}
+                                style={[styles.logoutButton, { marginTop: Spacing.sm }]}
                                 iconColor={color.error}
                             />
                         </View>

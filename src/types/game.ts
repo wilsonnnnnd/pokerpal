@@ -1,13 +1,13 @@
 // ===== 子集合 players（现金口径）=====
 export type PlayerSnapshotCash = {
-  playerId: string;
+  id: string;
   nickname: string;
   totalBuyInCash: number;   // 现金总买入
   settleCashAmount: number; // 结算现金
   settleCashDiff: number;   // 盈亏（正盈利，负亏损）
   settleROI: number;        // 小数，例如 0.2 表示 20%
   buyInCount: number;
-  photoUrl?: string | null; // ✅ 统一为 photoUrl
+  photoURL?: string | null;
 };
 
 // ===== Game 主文档（以 Firestore 为准）=====
@@ -43,9 +43,9 @@ export type GameSnapshotUI = {
 
 // ===== 排行列表条目（只保留现金口径）=====
 export type PlayerItem = {
-  id: string;                 // = playerId
+  id: string;
   nickname: string;
-  photoUrl?: string | null;
+  photoURL?: string | null;
   buyInCount: number;
   totalBuyInCash: number;
   settleCashAmount: number;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 
 type Option = { key: string; label: string };
 
@@ -22,39 +23,40 @@ export default function SelectField({
                 onPress={() => setOpen((s) => !s)}
                 style={{
                     backgroundColor: color.lightBackground,
-                    padding: 12,
-                    borderRadius: 8,
+                    padding: Spacing.md,
+                    borderRadius: Radius.sm,
                     borderWidth: 1,
                     borderColor: color.borderColor
                 }}
             >
-                <Text style={{ color: color.valueText, fontSize: 16 }}>{current.label}</Text>
+                <Text style={{ color: color.valueText, fontSize: FontSize.body }}>{current.label}</Text>
             </TouchableOpacity>
             {open && (
                 <View style={{
                     backgroundColor: color.lightBackground,
-                    marginTop: 6,
-                    borderRadius: 8,
+                    marginTop: Spacing.xs,
+                    borderRadius: Radius.sm,
                     overflow: 'hidden',
                     borderWidth: 1,
                     borderColor: color.borderColor,
+                    // use elevation token where possible
                     shadowColor: color.shadowDark,
-                    shadowOffset: { width: 0, height: 2 },
+                    shadowOffset: { width: 0, height: Elevation.card ? 2 : 0 },
                     shadowOpacity: 0.1,
                     shadowRadius: 4,
-                    elevation: 3
+                    elevation: Elevation.card
                 }}>
                     {options.map((o) => (
                         <TouchableOpacity
                             key={o.key}
                             onPress={() => { onChange(o.key); setOpen(false); }}
                             style={{
-                                padding: 12,
+                                padding: Spacing.md,
                                 borderBottomWidth: 1,
                                 borderBottomColor: color.mediumGray
                             }}
                         >
-                            <Text style={{ color: color.valueText, fontSize: 16 }}>{o.label}</Text>
+                            <Text style={{ color: color.valueText, fontSize: FontSize.body }}>{o.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>

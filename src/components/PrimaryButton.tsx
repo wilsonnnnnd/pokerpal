@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButtonProps } from '@/types';
 import { Palette as color } from '@/constants';
+import { Button, Spacing, FontSize, Radius } from '@/constants/designTokens';
 
 export const PrimaryButton = ({
     title,
@@ -148,7 +149,7 @@ export const PrimaryButton = ({
 
 const styles = StyleSheet.create({
     button: {
-        borderRadius: 8,
+        borderRadius: Button.radius,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'row',
@@ -196,29 +197,29 @@ const styles = StyleSheet.create({
     },
     // 尺寸样式
     smallButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
+        paddingVertical: Math.max(6, Button.paddingVertical - 8),
+        paddingHorizontal: Spacing.md,
         minHeight: 32,
     },
     mediumButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 16,
+        paddingVertical: Math.max(8, Button.paddingVertical - 4),
+        paddingHorizontal: Spacing.lg,
         minHeight: 40,
     },
     largeButton: {
-        paddingVertical: 14,
-        paddingHorizontal: 20,
+        paddingVertical: Button.paddingVertical,
+        paddingHorizontal: Spacing.xl,
         minHeight: 48,
     },
     // 文字尺寸
     smallText: {
-        fontSize: 12,
+        fontSize: FontSize.small,
     },
     mediumText: {
-        fontSize: 14,
+        fontSize: FontSize.body,
     },
     largeText: {
-        fontSize: 16,
+        fontSize: FontSize.h3,
     },
     // 文字颜色
     lightText: { color: color.lightText },
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     },
     // 圆角样式
     rounded: {
-        borderRadius: 50,
+        borderRadius: Radius.round,
     },
     // 满宽样式
     fullWidth: {

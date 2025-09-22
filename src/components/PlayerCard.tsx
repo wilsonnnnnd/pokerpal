@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientCard } from './GradientCard';
 import { Player } from '@/types';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { PrimaryButton } from './PrimaryButton';
 
 export function PlayerCard({
@@ -172,22 +173,22 @@ const generatePlayerAvatar = (name: string) => {
 
 const styles = StyleSheet.create({
     touchableWrapper: {
-        marginHorizontal: 4,
-        marginVertical: 4,
+        marginHorizontal: Spacing.xs,
+        marginVertical: Spacing.xs,
     },
     cardWrapperPressed: {
         opacity: 0.97,
     },
     card: { 
         padding: 0, 
-        borderRadius: 16, 
+        borderRadius: Radius.lg, 
         overflow: 'hidden', 
-        elevation: 4 
+        elevation: Elevation.card 
     },
     avatar: { 
         width: 40, 
         height: 40, 
-        borderRadius: 20, 
+        borderRadius: Radius.round === 999 ? 20 : Radius.md, 
         justifyContent: 'center', 
         alignItems: 'center',
         shadowColor: '#000',
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
         borderRadius: 20 
     },
     avatarText: { 
-        fontSize: 20, 
+        fontSize: FontSize.h3, 
         fontWeight: 'bold', 
         color: color.lightText 
     },
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        paddingHorizontal: 16, 
-        paddingVertical: 12,
+        paddingHorizontal: Spacing.lg, 
+        paddingVertical: Spacing.md,
         borderBottomWidth: 1,
     borderBottomColor: color.mediumGray,
     },
@@ -227,20 +228,20 @@ const styles = StyleSheet.create({
         marginLeft: 12 
     },
     name: { 
-        fontSize: 18, 
+        fontSize: FontSize.h3, 
         fontWeight: '700', 
     color: color.valueText 
     },
     statusContainer: { 
         flexDirection: 'row', 
         alignItems: 'center', 
-        marginTop: 4 
+        marginTop: Spacing.xs 
     },
     statusIndicator: { 
-        width: 8, 
-        height: 8, 
-        borderRadius: 4, 
-        marginRight: 4 
+        width: Spacing.xs * 2, 
+        height: Spacing.xs * 2, 
+        borderRadius: Spacing.xs, 
+        marginRight: Spacing.xs 
     },
     statusText: { 
         fontSize: 12, 
@@ -249,76 +250,76 @@ const styles = StyleSheet.create({
     profitBadge: { 
         flexDirection: 'row', 
         alignItems: 'center', 
-        paddingHorizontal: 10, 
-        paddingVertical: 4, 
-        borderRadius: 12 
+        paddingHorizontal: Spacing.md, 
+        paddingVertical: Spacing.xs, 
+        borderRadius: Radius.md 
     },
     profitText: { 
-        fontSize: 14, 
+        fontSize: FontSize.body, 
         fontWeight: 'bold', 
-        marginLeft: 2 
+        marginLeft: Spacing.xs 
     },
     detailsContainer: { 
-        padding: 16, 
+        padding: Spacing.lg, 
         backgroundColor: color.lightBackground 
     },
     detailsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 12,
+    marginBottom: Spacing.lg,
     },
     detailItem: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
     backgroundColor: color.lightGray,
-        padding: 10,
-        borderRadius: 12,
-        marginHorizontal: 4,
+        padding: Spacing.md,
+        borderRadius: Radius.md,
+        marginHorizontal: Spacing.xs,
     },
     detailTexts: {
-        marginLeft: 8,
+        marginLeft: Spacing.sm,
     },
     detailValue: {
-        fontSize: 16,
+        fontSize: FontSize.body,
         fontWeight: '600',
     color: color.valueText,
     },
     detailLabel: {
-        fontSize: 12,
+        fontSize: FontSize.small,
     color: color.valueLabel,
-        marginTop: 2,
+        marginTop: Spacing.xs,
     },
     actions: { 
         flexDirection: 'row', 
-        padding: 16, 
+        padding: Spacing.lg, 
         borderTopWidth: 1, 
         borderTopColor: color.mediumGray, 
         backgroundColor: color.lightGray,
-        gap: 16,
+        gap: Spacing.lg,
     },
     buyinButton: { 
         flex: 1,
         backgroundColor: color.success,
-        borderRadius: 12,
+        borderRadius: Radius.md,
     },
     leaveButton: { 
         flex: 1,
         backgroundColor: color.error,
-        borderRadius: 12,
+        borderRadius: Radius.md,
     },
     returnButton: { 
         flex: 1,
         backgroundColor: color.info,
-        borderRadius: 12,
+        borderRadius: Radius.md,
     },
     leaveText: { 
-        fontSize: 14, 
+        fontSize: FontSize.body, 
         fontWeight: '600', 
         color: color.lightText 
     },
     buyinText: { 
-        fontSize: 14, 
+        fontSize: FontSize.body, 
         fontWeight: '600', 
         color: color.lightText 
     },

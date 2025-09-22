@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { Player } from '@/types';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -57,32 +58,32 @@ export const SettleChipPopupCard: React.FC<Props> = ({ player, onConfirm, onCanc
 const styles = StyleSheet.create({
     card: {
         backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 20,
+        borderRadius: Radius.lg,
+        padding: Spacing.lg,
     },
     title: {
-        fontSize: 20,
+        fontSize: FontSize.h3,
         fontWeight: '700',
-        marginBottom: 4,
+        marginBottom: Spacing.xs,
         color: '#2c3e50',
     },
     subtitle: {
-        fontSize: 16,
-        marginBottom: 12,
+        fontSize: FontSize.body,
+        marginBottom: Spacing.md,
         color: '#666',
     },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 10,
-        padding: 10,
-        fontSize: 18,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        fontSize: FontSize.h3,
         textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
     },
     buttonRow: {
         flexDirection: 'row',
-        gap: 12,
+        gap: Spacing.sm,
     },
     button: {
         flex: 1,

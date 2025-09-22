@@ -44,6 +44,10 @@ function validateSettlement(players: Player[]) {
  */
 export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 	const game = useGameStore.getState();
+	// compute conversion rate (cash per chip). fallback to 1 to avoid division by zero
+	const rate = game.baseChipAmount && Number(game.baseChipAmount) !== 0
+		? (Number(game.baseCashAmount ?? 0) / Number(game.baseChipAmount))
+		: 1;
 
 	const snapshotPayload = {
 		id: gameId,
@@ -57,10 +61,13 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 			id: p.id,
 			nickname: p.nickname,
 			buyInCount: p.buyInChipsList?.length ?? 0,
-			totalBuyInCash: p.totalBuyInChips ?? 0,
-			settleCashAmount: p.settleCashDiff ?? 0,
-			settleCashDiff: p.settleCashDiff ?? 0,
-			settleROI: p.settleROI ?? 0,
+			// convert chips to cash using rate
+			totalBuyInCash: (Number(p.totalBuyInChips) || 0) * rate,
+			// settleCashAmount should be derived from settleChipCount * rate
+			settleCashAmount: (Number((p as any).settleChipCount) || 0) * rate,
+			// keep settleCashDiff as-is (should already be in cash units if code earlier computed it)
+			settleCashDiff: Number((p as any).settleCashDiff) || 0,
+			settleROI: Number((p as any).settleROI) || 0,
 		})),
 	};
 
