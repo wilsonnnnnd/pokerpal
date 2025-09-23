@@ -20,10 +20,11 @@ import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-import { collection, getDocs,Timestamp } from 'firebase/firestore';
+import { collection, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { userByEmailDoc } from '@/constants/namingVar';
 import { Ionicons } from '@expo/vector-icons';
+import usePermission from '@/hooks/usePermission';
 
 interface AddPlayerCardProps {
     onConfirm: () => void;
@@ -54,7 +55,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [email, setEmail] = useState('');
     const [isFocused, setIsFocused] = useState({ nickname: false, email: false });
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-
+    const { isHost } = usePermission();
     const addPlayer = usePlayerStore((state) => state.addPlayer);
     const players = usePlayerStore((state) => state.players); // Get current players from store
     const getGame = useGameStore((state) => state.getGame);
@@ -66,18 +67,22 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (activeTab === Tab.SCAN && gameId) {
+        if (isHost && activeTab === Tab.SCAN && gameId) {
             // 开始监听
             startPlayerSyncListener(gameId, getGame().baseChipAmount, true, logInfo);
+            // 清理函数
+            return () => stopPlayerSyncListener(logInfo);
         }
-
-        // 清理函数，组件卸载或者依赖变化时执行
-        return () => {
-            stopPlayerSyncListener(logInfo);
-        };
-    }, [activeTab, gameId]);
+        return () => { /* no-op when not scanning */ };
+    }, [activeTab, gameId, isHost]);
 
     useEffect(() => {
+        // Only load registered users for hosts
+        if (!isHost) {
+            setIsLoadingUsers(false);
+            return;
+        }
+
         const loadUsers = async () => {
             setIsLoadingUsers(true);
             try {
@@ -90,18 +95,18 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             }
         };
         loadUsers();
-    }, []);
+    }, [isHost]);
 
     // Get the emails of existing players to filter them out
     const existingPlayerEmails = players.map(player => (player.email ?? '').toLowerCase()).filter(email => email);
 
     // Filter users: exclude those already added and match the search term
-    const filteredUsers = registeredUsers.filter(user => 
+    const filteredUsers = registeredUsers.filter(user =>
         // Filter out existing players by email
-        !existingPlayerEmails.includes(user.email.toLowerCase()) && 
+        !existingPlayerEmails.includes(user.email.toLowerCase()) &&
         // Match search term
         (user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.nickname.toLowerCase().includes(searchTerm.toLowerCase()))
+            user.nickname.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const toggleSelect = (email: string) => {
@@ -234,7 +239,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                     <View style={styles.tabContent}>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={20} color={color.text} style={styles.searchIcon} />
-                                <TextInput
+                            <TextInput
                                 style={styles.searchInput}
                                 placeholder="搜索玩家（昵称或邮箱）"
                                 value={searchTerm}
@@ -249,7 +254,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
                         {isLoadingUsers ? (
                             <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color={color.info} />
+                                <ActivityIndicator size="large" color={color.info} />
                                 <Text style={styles.loadingText}>正在加载玩家列表...</Text>
                             </View>
                         ) : filteredUsers.length === 0 ? (
@@ -323,14 +328,14 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             <View style={styles.inputContainer}>
                                 <Text style={styles.label}>玩家昵称</Text>
                                 <TextInput
-                                        style={[styles.input, isFocused.nickname && styles.inputFocused]}
-                                        placeholder="输入玩家昵称"
-                                        placeholderTextColor={color.mutedText}
-                                        value={nickname}
-                                        onChangeText={setNickname}
-                                        onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
-                                        onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
-                                    />
+                                    style={[styles.input, isFocused.nickname && styles.inputFocused]}
+                                    placeholder="输入玩家昵称"
+                                    placeholderTextColor={color.mutedText}
+                                    value={nickname}
+                                    onChangeText={setNickname}
+                                    onFocus={() => setIsFocused(prev => ({ ...prev, nickname: true }))}
+                                    onBlur={() => setIsFocused(prev => ({ ...prev, nickname: false }))}
+                                />
                             </View>
 
                             <View style={styles.inputContainer}>
@@ -372,38 +377,37 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
                 <Text style={styles.title}>添加玩家</Text>
 
-                {/* 选项卡导航 */}
+                {/* 选项卡导航：非房主只显示手动添加 */}
+
                 <View style={styles.tabBar}>
                     <TouchableOpacity
                         style={[styles.tabButton, activeTab === Tab.MANUAL && styles.activeTabButton]}
                         onPress={() => setActiveTab(Tab.MANUAL)}
                     >
                         <Ionicons name="create-outline" size={22} color={activeTab === Tab.MANUAL ? color.info : color.text} />
-                        <Text style={[styles.tabText, activeTab === Tab.MANUAL && styles.activeTabText]}>
-                            手动添加
-                        </Text>
+                        <Text style={[styles.tabText, activeTab === Tab.MANUAL && styles.activeTabText]}>手动添加</Text>
                     </TouchableOpacity>
+                    {isHost ? (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.tabButton, activeTab === Tab.SELECT && styles.activeTabButton]}
+                                onPress={() => setActiveTab(Tab.SELECT)}
+                            >
+                                <Ionicons name="people" size={22} color={activeTab === Tab.SELECT ? color.info : color.text} />
+                                <Text style={[styles.tabText, activeTab === Tab.SELECT && styles.activeTabText]}>选择玩家</Text>
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.tabButton, activeTab === Tab.SELECT && styles.activeTabButton]}
-                        onPress={() => setActiveTab(Tab.SELECT)}
-                    >
-                        <Ionicons name="people" size={22} color={activeTab === Tab.SELECT ? color.info : color.text} />
-                        <Text style={[styles.tabText, activeTab === Tab.SELECT && styles.activeTabText]}>
-                            选择玩家
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.tabButton, activeTab === Tab.SCAN && styles.activeTabButton]}
-                        onPress={() => setActiveTab(Tab.SCAN)}
-                    >
-                        <Ionicons name="qr-code" size={22} color={activeTab === Tab.SCAN ? color.info : color.text} />
-                        <Text style={[styles.tabText, activeTab === Tab.SCAN && styles.activeTabText]}>
-                            扫码加入
-                        </Text>
-                    </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.tabButton, activeTab === Tab.SCAN && styles.activeTabButton]}
+                                onPress={() => setActiveTab(Tab.SCAN)}
+                            >
+                                <Ionicons name="qr-code" size={22} color={activeTab === Tab.SCAN ? color.info : color.text} />
+                                <Text style={[styles.tabText, activeTab === Tab.SCAN && styles.activeTabText]}>扫码加入</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : null}
                 </View>
+
 
                 {renderTabContent()}
             </View>
@@ -653,10 +657,10 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     qrWrapper: {
-    padding: 15,
-    backgroundColor: color.lightBackground,
+        padding: 15,
+        backgroundColor: color.lightBackground,
         borderRadius: 12,
-    shadowColor: '#000',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
