@@ -9,6 +9,7 @@ import { onAuthStateChanged, signOut } from '@/services/localAuth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import SelectField from '@/components/SelectField';
+import { commonCurrencies, getCurrencySymbol } from '@/constants/currency';
 import { InfoRow } from '@/components/InfoRow';
 import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
@@ -29,10 +30,12 @@ export default function SettingsScreen() {
     const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
     // Use global settings provider
-    const { language, setLanguage } = useSettings();
-    // snapshot of saved language to detect changes
+    const { language, setLanguage, currency } = useSettings();
+    // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
+    const [initialCurrency, setInitialCurrency] = useState<string | null>(null);
     const initialSetRef = React.useRef(false);
+    const initialCurrencySetRef = React.useRef(false);
 
     // MessagePopUp state
     const [popup, setPopup] = useState<{
@@ -63,13 +66,17 @@ export default function SettingsScreen() {
         })();
     }, []);
 
-    // set initialLanguage once when provider has loaded persisted language
+    // set initialLanguage & initialCurrency once when provider has loaded persisted values
     useEffect(() => {
         if (!initialSetRef.current && language) {
             setInitialLanguage(language);
             initialSetRef.current = true;
         }
-    }, [language]);
+        if (!initialCurrencySetRef.current && currency !== undefined) {
+            setInitialCurrency(currency ?? null);
+            initialCurrencySetRef.current = true;
+        }
+    }, [language, currency]);
 
 
     // subscribe user
@@ -96,7 +103,15 @@ export default function SettingsScreen() {
             if (!language) throw new Error(simpleT('choose_language', language));
             // ensure provider persists
             await setLanguage(language);
+            // currency is read-only here; persist existing currency value into SETTINGS_KEY
+            try {
+                const existing = await getLocal<any>(SETTINGS_KEY);
+                const merged = { ...(existing || {}), language, currency: existing?.currency ?? (global as any).__pokerpal_settings?.currency ?? 'AUD' };
+                await setLocal(SETTINGS_KEY, merged).catch(() => {});
+                try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore */ }
             setInitialLanguage(language);
+            setInitialCurrency(currency ?? null);
             setPopup({
                 visible: true,
                 title: simpleT('save_success_title', language),
@@ -123,10 +138,11 @@ export default function SettingsScreen() {
             message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                const defaults = { language: 'en', timezone: 'UTC', currency: '' };
+                const defaults = { language: 'en', timezone: 'UTC', currency: 'AUD' };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
+                setInitialCurrency(defaults.currency);
                 setPopup(prev => ({ ...prev, visible: false }));
             },
             onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -221,9 +237,8 @@ export default function SettingsScreen() {
                     {/* Language dropdown */}
                     {/* NOTE: SETTINGS_KEY now stores an object { language: string } for compatibility with LanguageProvider */}
                         <InfoRow icon="translate" label="语言" text={language === 'zh' ? 'CN' : language === 'en' ? 'ENG' : (language ?? '')} />
-                        {/* display timezone and currency read-only for now */}
                         <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'UTC'} />
-                        <InfoRow icon="currency-usd" label="货币" text={(global as any).__pokerpal_settings?.currency ?? ''} />
+                        <InfoRow icon="currency-usd" label="货币" text={`${currency ?? ''} ${getCurrencySymbol(currency) ? `(${getCurrencySymbol(currency)})` : ''}`} />
                     <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 8 }}>
                         <SelectField value={language} onChange={(val) => { try { setLanguage(val); } catch (e) { /* ignore */ } }} options={[{ key: 'zh', label: 'CN' }, { key: 'en', label: 'ENG' }]} />
                     </View>
