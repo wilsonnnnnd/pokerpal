@@ -127,6 +127,7 @@ const HomeScreen = () => {
                         />
                         <Text style={styles.title}>德州扑克筹码记录器✍️</Text>
 
+                    </View>
                         {/* user card */}
                         {user && (
                             <View style={styles.userCard}>
@@ -169,13 +170,6 @@ const HomeScreen = () => {
 
                             </View>
                         )}
-                    </View>
-                    {/* show user's aggregated profit card */}
-                    {user && (
-                        <View style={{ marginTop: Spacing.md }}>
-                            
-                        </View>
-                    )}
 
                     <View style={styles.buttonsSection}>
                         <View style={styles.actionsCard}>

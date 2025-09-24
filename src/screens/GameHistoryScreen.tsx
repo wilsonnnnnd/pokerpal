@@ -82,7 +82,7 @@ export default function GameHistoryScreen() {
 
 
     // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——
-    const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string, preFetchedMainData?: any): Promise<GameHistoryItem | null> => {
+    const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string, preFetchedMainData?: any, indexAgg?: any): Promise<GameHistoryItem | null> => {
         try {
             // 优先使用预加载的主文档数据（如果有），减少单次网络请求
             let data: any = preFetchedMainData ?? null;
@@ -101,7 +101,7 @@ export default function GameHistoryScreen() {
 
             if (!data && owner) {
                 // 兼容 owner-scoped 路径：/games/{owner}/game/{gameId}
-                const altSnap = await getDoc(doc(db, gameDoc, owner, 'game', gameId));
+                const altSnap = await getDoc(doc(db, gameDoc, owner, gameDoc, gameId));
                 if (altSnap.exists()) {
                     data = altSnap.data() ?? {};
                     usedMainPath = false;
@@ -113,47 +113,58 @@ export default function GameHistoryScreen() {
                 return null;
             }
 
-            // 玩家子集合路径选择：如果主路径存在则使用 /games/{gameId}/players，否则使用 owner-scoped 路径
-            let playersColRef = usedMainPath
-                ? collection(db, gameDoc, gameId, playerDoc)
-                : collection(db, gameDoc, owner || '', 'game', gameId, playerDoc);
+            let players: PlayerItem[] | undefined = undefined;
+            let totalBuyInCash = 0, totalEndingCash = 0, totalDiffCash = 0;
 
-            const playersSnap = await getDocs(playersColRef);
+            // 如果索引文档提供了聚合数据，优先使用，避免读取 players 子集合
+            if (indexAgg && (indexAgg.totalBuyInCash !== undefined || indexAgg.playerCount !== undefined)) {
+                totalBuyInCash = Number(indexAgg.totalBuyInCash) || 0;
+                totalEndingCash = Number(indexAgg.totalEndingCash) || 0;
+                totalDiffCash = Number(indexAgg.totalDiffCash) || 0;
 
-            // 批量查用户档案
-            const playerIds = playersSnap.docs.map((d) => String(d.id)).filter(Boolean);
-            const profilesMap = await fetchUserProfilesMap(playerIds);
+                // players 可能未加载，保留 playerCount
+            } else {
+                // 玩家子集合路径选择：如果主路径存在则使用 /games/{gameId}/players，否则使用 owner-scoped 路径
+                let playersColRef = usedMainPath
+                    ? collection(db, gameDoc, gameId, playerDoc)
+                    : collection(db, gameDoc, owner || '', gameDoc, gameId, playerDoc);
 
-            // 组装玩家
-            const players: PlayerItem[] = playersSnap.docs.map((pdoc) => {
-                const pdata = pdoc.data() ?? {};
-                const uid = String(pdoc.id);
+                const playersSnap = await getDocs(playersColRef);
 
-                const profileData = profilesMap.get(uid);
-                const { displayName, photoUrl } = resolveNameAndPhoto({
-                    id: uid,
-                    playerData: pdata,
-                    profileData,
+                // 批量查用户档案
+                const playerIds = playersSnap.docs.map((d) => String(d.id)).filter(Boolean);
+                const profilesMap = await fetchUserProfilesMap(playerIds);
+
+                // 组装玩家
+                players = playersSnap.docs.map((pdoc) => {
+                    const pdata = pdoc.data() ?? {};
+                    const uid = String(pdoc.id);
+
+                    const profileData = profilesMap.get(uid);
+                    const { displayName, photoUrl } = resolveNameAndPhoto({
+                        id: uid,
+                        playerData: pdata,
+                        profileData,
+                    });
+
+                    return {
+                        id: uid,
+                        nickname: displayName,
+                        photoURL: photoUrl,
+                        buyInCount: Number(pdata.buyInCount) || 0,
+                        totalBuyInCash: Number(pdata.totalBuyInCash) || 0,
+                        settleCashAmount: Number(pdata.settleCashAmount) || 0,
+                        settleCashDiff: Number(pdata.settleCashDiff) || 0,
+                        settleROI: Number(pdata.settleROI) || 0,
+                    };
                 });
 
-                return {
-                    id: uid,
-                    nickname: displayName,
-                    photoUrl,
-                    buyInCount: Number(pdata.buyInCount) || 0,
-                    totalBuyInCash: Number(pdata.totalBuyInCash) || 0,
-                    settleCashAmount: Number(pdata.settleCashAmount) || 0,
-                    settleCashDiff: Number(pdata.settleCashDiff) || 0,
-                    settleROI: Number(pdata.settleROI) || 0,
-                };
-            });
-
-            // 汇总
-            let totalBuyInCash = 0, totalEndingCash = 0, totalDiffCash = 0;
-            for (const p of players) {
-                totalBuyInCash += p.totalBuyInCash;
-                totalEndingCash += p.settleCashAmount;
-                totalDiffCash += p.settleCashDiff;
+                // 汇总
+                for (const p of players) {
+                    totalBuyInCash += p.totalBuyInCash;
+                    totalEndingCash += p.settleCashAmount;
+                    totalDiffCash += p.settleCashDiff;
+                }
             }
 
             // 时间字段兜底：优先 created/updatedAt（Timestamp），退化到 created/updated（字符串）
@@ -174,6 +185,7 @@ export default function GameHistoryScreen() {
                 totalEndingCash,
                 totalDiffCash,
                 players,
+                playerCount: indexAgg?.playerCount ?? (players ? players.length : undefined),
             };
         } catch {
             return null;
@@ -223,8 +235,15 @@ export default function GameHistoryScreen() {
             // 批量预取主集合中存在的 game 文档，减少单独的 getDoc 请求
             const mainMap = await fetchMainGamesByIds(ids);
 
+            // 从 host 索引的 docs 中也可以直接读取聚合字段，优先使用索引文档的聚合数据来避免大量 players 子集合读取
+            const indexAggMap = new Map<string, any>();
+            for (const d of docs) {
+                // 索引文档本身可能就包含聚合字段：totalBuyInCash/totalEndingCash/totalDiffCash/playerCount/smallBlind/bigBlind/created/updated
+                indexAggMap.set(d.id, d.data());
+            }
+
             const detailList = await Promise.all(
-                ids.map((gid) => buildGameHistoryItem(gid, hoster, mainMap.get(gid)))
+                ids.map((gid) => buildGameHistoryItem(gid, hoster, mainMap.get(gid), indexAggMap.get(gid)))
             );
             const built = (detailList.filter(Boolean) as GameHistoryItem[])
                 // 二次兜底排序，避免 serverTimestamp 初期为空导致抖动
@@ -301,8 +320,9 @@ export default function GameHistoryScreen() {
 
     // —— 赢家/输家 ——  
     const pickTop = (game: GameHistoryItem) => {
-        if (!game.players.length) return { winner: null, loser: null };
-        const sorted = [...game.players].sort((a, b) => b.settleCashDiff - a.settleCashDiff);
+        const players = game.players ?? [];
+        if (players.length === 0) return { winner: null, loser: null };
+        const sorted = [...players].sort((a, b) => b.settleCashDiff - a.settleCashDiff);
         return { winner: sorted[0], loser: sorted[sorted.length - 1] };
     };
 
@@ -342,7 +362,7 @@ export default function GameHistoryScreen() {
                             <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
                         </View>
                         <View style={styles.playerCountContainer}>
-                            <Text style={styles.playerCountText}>{item.players.length}人参与</Text>
+                            <Text style={styles.playerCountText}>{item.playerCount ?? item.players?.length ?? 0}人参与</Text>
                         </View>
                     </View>
 

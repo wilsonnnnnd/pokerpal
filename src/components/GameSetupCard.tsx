@@ -22,6 +22,8 @@ import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
 import { createGameOnServer } from '@/firebase/saveGame';
 import storage from '@/services/storageService';
+import { SETTINGS_KEY } from '@/constants/namingVar';
+import { getCurrencySymbol } from '@/constants/currency';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 // settings key removed from namingVar; no currency usage here
@@ -46,6 +48,26 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const [currencyInfo, setCurrencyInfo] = useState<{ code?: string; symbol?: string; rate?: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const { isHost } = usePermission();
+
+    // 在组件初始化时尝试从全局或本地设置读取货币信息
+    useEffect(() => {
+        (async () => {
+            try {
+                const g = (global as any).__pokerpal_settings;
+                if (g && g.currency) {
+                    setCurrencyInfo({ code: g.currency, symbol: getCurrencySymbol(g.currency) });
+                    return;
+                }
+
+                const s = await storage.getLocal(SETTINGS_KEY);
+                if (s && s.currency) {
+                    setCurrencyInfo({ code: s.currency, symbol: getCurrencySymbol(s.currency) });
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
+    }, []);
 
     // 创建refs用于存储输入框引用
     const smallBlindRef = useRef<TextInput | null>(null);

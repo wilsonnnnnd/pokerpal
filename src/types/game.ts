@@ -63,7 +63,10 @@ export type GameHistoryItem = {
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
-  players: PlayerItem[];
+  // players 可以为空（当索引文档包含聚合信息时可省略子集合读取）
+  players?: PlayerItem[];
+  // 当不拉 players 时，可用此字段显示参与人数
+  playerCount?: number;
 };
 
 // Zustand store shape for game history persistence
