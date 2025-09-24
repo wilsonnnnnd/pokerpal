@@ -15,6 +15,8 @@ import {
     limit,
     startAfter,
     QueryDocumentSnapshot,
+    where,
+    documentId,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -59,47 +61,63 @@ export default function GameHistoryScreen() {
     const fetchedSetRef = useRef<Set<string>>(new Set());
 
 
-    const listHostGameRecords = async (hoster: string) => {
-        const gamesColRef = collection(db, hostGameDoc, hoster, gameDoc);
-        const snapshot = await getDocs(gamesColRef);
-        
-        return snapshot.docs.map(doc => ({
-            id: doc.id,        // 这个就是 gameId
-            ...doc.data(),     // createdAt, updatedAt
-        }));
-    }
+    // 批量读取主集合 /games/{gameId}（只针对 top-level gameDoc 路径），
+    // 使用 documentId() in 查询，Firestore 对 in 的限制是最多 10 个 id，所以需要分片。
+    const fetchMainGamesByIds = async (ids: string[]) => {
+        const map = new Map<string, any>();
+        if (!ids.length) return map;
+
+        const chunkSize = 10; // Firestore "in" 最大为 10
+        for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            const q = query(collection(db, gameDoc), where(documentId(), 'in', chunk));
+            const snap = await getDocs(q);
+            for (const d of snap.docs) {
+                map.set(d.id, d.data());
+            }
+        }
+
+        return map;
+    };
 
 
     // —— 构建单条 GameHistoryItem（从主集合 /test-games/{gameId} + /players 聚合）——
-    const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string): Promise<GameHistoryItem | null> => {
+    const buildGameHistoryItem = useCallback(async (gameId: string, owner?: string, preFetchedMainData?: any): Promise<GameHistoryItem | null> => {
         try {
-            // 尝试主文档：/games/{gameId}
-            let gameSnap = await getDoc(doc(db, gameDoc, gameId));
-            let data: any = {};
+            // 优先使用预加载的主文档数据（如果有），减少单次网络请求
+            let data: any = preFetchedMainData ?? null;
+            let usedMainPath = false;
 
-            if (!gameSnap.exists() && owner) {
-                // 兼容新结构：/games/{owner}/game/{gameId}
-                // 兼容新结构：/games/{owner}/game/{gameId}
-                const altRef = doc(db, gameDoc, owner, 'game', gameId);
-                gameSnap = await getDoc(altRef);
+            if (!data) {
+                // 尝试主文档：/games/{gameId}
+                const mainSnap = await getDoc(doc(db, gameDoc, gameId));
+                if (mainSnap.exists()) {
+                    data = mainSnap.data() ?? {};
+                    usedMainPath = true;
+                }
+            } else {
+                usedMainPath = true;
             }
 
-            if (!gameSnap.exists()) {
+            if (!data && owner) {
+                // 兼容 owner-scoped 路径：/games/{owner}/game/{gameId}
+                const altSnap = await getDoc(doc(db, gameDoc, owner, 'game', gameId));
+                if (altSnap.exists()) {
+                    data = altSnap.data() ?? {};
+                    usedMainPath = false;
+                }
+            }
+
+            if (!data) {
                 // 主集合或备选位置都不存在，跳过
                 return null;
             }
 
-            data = gameSnap.data() ?? {};
+            // 玩家子集合路径选择：如果主路径存在则使用 /games/{gameId}/players，否则使用 owner-scoped 路径
+            let playersColRef = usedMainPath
+                ? collection(db, gameDoc, gameId, playerDoc)
+                : collection(db, gameDoc, owner || '', 'game', gameId, playerDoc);
 
-            // 玩家子集合：/test-games/{gameId}/players
-            // 玩家子集合：优先尝试主集合路径，否则尝试 owner 子集合路径
-            // 玩家子集合：优先尝试主集合路径 /games/{gameId}/players，否则尝试 owner 子集合 /games/{owner}/game/{gameId}/players
-            let playersColRef = collection(db, gameDoc, gameId, playerDoc);
-            let playersPathUsed = `${gameDoc}/${gameId}/${playerDoc}`;
-            if (!gameSnap.exists() && owner) {
-                playersColRef = collection(db, gameDoc, owner, 'game', gameId, playerDoc);
-                playersPathUsed = `${gameDoc}/${owner}/game/${gameId}/${playerDoc}`;
-            }
             const playersSnap = await getDocs(playersColRef);
 
             // 批量查用户档案
@@ -202,7 +220,12 @@ export default function GameHistoryScreen() {
             // 在获取每个 game 详情前打印 gameId（便于排查 owner-scoped 路径）
             ids.forEach(gid => console.log('[GameHistory] will fetch game details for gameId=', gid, 'owner(hoster)=', hoster));
 
-            const detailList = await Promise.all(ids.map((gid) => buildGameHistoryItem(gid, hoster)));
+            // 批量预取主集合中存在的 game 文档，减少单独的 getDoc 请求
+            const mainMap = await fetchMainGamesByIds(ids);
+
+            const detailList = await Promise.all(
+                ids.map((gid) => buildGameHistoryItem(gid, hoster, mainMap.get(gid)))
+            );
             const built = (detailList.filter(Boolean) as GameHistoryItem[])
                 // 二次兜底排序，避免 serverTimestamp 初期为空导致抖动
                 .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
