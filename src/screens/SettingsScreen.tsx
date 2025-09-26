@@ -138,7 +138,7 @@ export default function SettingsScreen() {
             message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                const defaults = { language: 'en', timezone: 'UTC', currency: 'AUD' };
+                const defaults = { language: 'en', timezone: 'GMT+10', currency: 'AUD' };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
@@ -237,7 +237,7 @@ export default function SettingsScreen() {
                     {/* Language dropdown */}
                     {/* NOTE: SETTINGS_KEY now stores an object { language: string } for compatibility with LanguageProvider */}
                         <InfoRow icon="translate" label="语言" text={language === 'zh' ? 'CN' : language === 'en' ? 'ENG' : (language ?? '')} />
-                        <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'UTC'} />
+                        <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'GMT+10'} />
                         <InfoRow icon="currency-usd" label="货币" text={`${currency ?? ''} ${getCurrencySymbol(currency) ? `(${getCurrencySymbol(currency)})` : ''}`} />
                     <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 8 }}>
                         <SelectField value={language} onChange={(val) => { try { setLanguage(val); } catch (e) { /* ignore */ } }} options={[{ key: 'zh', label: 'CN' }, { key: 'en', label: 'ENG' }]} />

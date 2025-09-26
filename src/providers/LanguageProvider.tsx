@@ -26,7 +26,7 @@ export const useLanguage = () => {
 };
 
 const getDefaults = (): AppSettings => {
-    let tz = 'UTC';
+    let tz = 'GMT+10';
     try {
         const maybe = (Intl as any)?.DateTimeFormat?.().resolvedOptions?.()?.timeZone;
         if (maybe) tz = maybe;

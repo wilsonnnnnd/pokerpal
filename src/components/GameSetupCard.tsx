@@ -58,10 +58,19 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                     setCurrencyInfo({ code: g.currency, symbol: getCurrencySymbol(g.currency) });
                     return;
                 }
-
                 const s = await storage.getLocal(SETTINGS_KEY);
                 if (s && s.currency) {
                     setCurrencyInfo({ code: s.currency, symbol: getCurrencySymbol(s.currency) });
+                } else {
+                    // no currency info found: write default settings and update global
+                    const defaults = { language: 'en', timezone: 'GMT+10', currency: 'AUD' };
+                    try {
+                        await storage.setLocal(SETTINGS_KEY, defaults);
+                    } catch (e) {
+                        // ignore write errors
+                    }
+                    try { (global as any).__pokerpal_settings = defaults; } catch (e) { /* ignore */ }
+                    setCurrencyInfo({ code: defaults.currency, symbol: getCurrencySymbol(defaults.currency) });
                 }
             } catch (e) {
                 // ignore
