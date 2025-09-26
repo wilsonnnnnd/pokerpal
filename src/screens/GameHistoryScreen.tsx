@@ -210,7 +210,7 @@ export default function GameHistoryScreen() {
 
             // 子集合：/hostGameDoc/{hoster}/{gameDoc}
             const baseCol = collection(doc(db, hostGameDoc, hoster), gameDoc);
-            console.log('[GameHistory] fetchPage for hoster=', hoster, 'mode=', mode);
+            
             const q = nextCursorRef.current
                 ? query(baseCol, orderBy('created', 'desc'), startAfter(nextCursorRef.current), limit(PAGE_SIZE))
                 : query(baseCol, orderBy('created', 'desc'), limit(PAGE_SIZE));
@@ -219,7 +219,6 @@ export default function GameHistoryScreen() {
             const docs = snap.docs;
             // 打印查询结果的文档 id（对应 hostGameDoc/{hoster}/{gameDoc} 下的子文档 id）
             const docIds = docs.map(d => d.id);
-            console.log('[GameHistory] hoster=', hoster, 'fetched host-game doc ids=', docIds);
 
             if (docs.length === 0) {
                 if (mode !== 'refresh') reachedEndRef.current = true;
@@ -233,9 +232,7 @@ export default function GameHistoryScreen() {
                 return true;
             });
 
-            // 在获取每个 game 详情前打印 gameId（便于排查 owner-scoped 路径）
-            ids.forEach(gid => console.log('[GameHistory] will fetch game details for gameId=', gid, 'owner(hoster)=', hoster));
-
+            
             // 批量预取主集合中存在的 game 文档，减少单独的 getDoc 请求
             const mainMap = await fetchMainGamesByIds(ids);
 

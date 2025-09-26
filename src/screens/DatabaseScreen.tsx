@@ -142,7 +142,7 @@ const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPress }) =
                 >
                     {/* 左侧日期区域 - 本地数据标识 */}
                     <LinearGradient
-                        colors={[color.info, '#7FB3D9']} // 使用蓝色系区分本地数据
+                        colors={[color.primary, color.primary]} // 使用蓝色系区分本地数据
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
                         style={styles.dateContainer}
@@ -163,7 +163,7 @@ const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPress }) =
                         <View style={styles.cardHeader}>
                             <View style={styles.blindsContainer}>
                                 <MaterialCommunityIcons name="poker-chip" size={18} color={color.primary} />
-                                <Text style={styles.blindsText}>${h.smallBlind}/${h.bigBlind}</Text>
+                                <Text style={styles.blindsText}>{h.smallBlind}/{h.bigBlind}</Text>
                             </View>
                             <View style={[styles.playerBadge, { backgroundColor: 'rgba(164, 200, 225, 0.1)' }]}>
                                 <MaterialCommunityIcons name="account-group" size={16} color={color.info} />
@@ -413,7 +413,7 @@ export default function DatabaseScreen() {
 		>
 			{/* 页面头部 */}
 			<LinearGradient
-				colors={[color.info, '#7FB3D9']}
+				colors={[color.primary, color.primary]}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 1, y: 0 }}
 				style={localStyles.header}
