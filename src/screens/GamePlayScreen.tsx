@@ -29,7 +29,6 @@ import { SettleChipPopupCard } from '@/components/SettleChipPopupCard';
 import { EditBuyInPopupCard } from '@/components/EditBuyInPopupCard';
 import { LogViewer } from '@/components/LogViewer';
 import CallTimer, { CallTimerHandle } from '@/components/CallTimer';
-import InsuranceCalculator from '@/components/InsuranceCalculator';
 import DecisionWheel from '@/components/DecisionWheel';
 import { SettleSummaryModal } from '@/components/SettleSummaryModal';
 
@@ -39,6 +38,7 @@ import { finalizeGameOnServer, saveGameToFirebase, saveGameToLocalSql } from '@/
 import { usePopup } from '@/components/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { calcRate } from '@/firebase/gameWriters';                // 汇率计算
 
 // 类型 & 样式
@@ -58,7 +58,6 @@ type ModalState =
     | { type: 'settle'; player: Player }
     | { type: 'edit'; player: Player }
     | { type: 'wheel' }
-    | { type: 'Insurance' }
     | null;
 
 async function retry<T>(
@@ -373,32 +372,50 @@ export default function GamePlayScreen() {
         <>
             <StatusBar barStyle="dark-content" />
             <View style={styles.container}>
-                {/* ===== 顶部工具按钮 ===== */}
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                        style={styles.toolButton}
-                        onPress={() => timerRef.current?.show()}
-                    >
-                        <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
-                        <Text style={styles.toolButtonText}>计时器</Text>
-                    </TouchableOpacity>
+                {/* ===== 顶部工具按钮区域 ===== */}
+                <LinearGradient
+                    colors={[color.background, color.background]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={styles.toolsSection}
+                >
+                    
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity
+                            style={[styles.toolButton, styles.timerButton]}
+                            onPress={() => timerRef.current?.show()}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={[color.info, '#7FB8D4']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.toolButtonGradient}
+                            >
+                                <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
+                                <Text style={styles.toolButtonText}>计时器</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.toolButton}
-                        onPress={() => setModalState({ type: 'Insurance' })}
-                    >
-                        <MaterialCommunityIcons name="calculator" size={22} color="#fff" />
-                        <Text style={styles.toolButtonText}>保险计算</Text>
-                    </TouchableOpacity>
+                        {/* 保险计算器功能已移除 */}
 
-                    <TouchableOpacity
-                        style={styles.toolButton}
-                        onPress={() => setModalState({ type: 'wheel' })}
-                    >
-                        <MaterialCommunityIcons name="rotate-3d-variant" size={22} color="#fff" />
-                        <Text style={styles.toolButtonText}>决策转盘</Text>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity
+                            style={[styles.toolButton, styles.wheelButton]}
+                            onPress={() => setModalState({ type: 'wheel' })}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={[color.primary, color.highLighter]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.toolButtonGradient}
+                            >
+                                <MaterialCommunityIcons name="rotate-3d-variant" size={22} color="#fff" />
+                                <Text style={styles.toolButtonText}>决策转盘</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
 
                 {/* ===== 玩家列表 ===== */}
                 <FlatList
@@ -427,6 +444,7 @@ export default function GamePlayScreen() {
                             finalized={finalized}
                         />
                     )}
+                    ItemSeparatorComponent={() => <View style={{ height: Spacing.lg }} />}
                     showsVerticalScrollIndicator={false}
                     extraData={finalized} // 仅依赖 finalized，避免 players 引用变化导致全量刷新
                     ListFooterComponent={
@@ -435,20 +453,75 @@ export default function GamePlayScreen() {
                                 {/* ===== 分析卡片（展示筹码 + 现金）===== */}
                                 <View style={styles.analysisCard}>
                                     <LinearGradient
-                                        colors={['#f5f7fa', '#e4e7eb']}
+                                        colors={['#FFFFFF', '#F8F9FA']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
                                         style={styles.analysisHeader}
                                     >
-                                        <MaterialCommunityIcons
-                                            name="chart-box"
-                                            size={28}
-                                            color={color.highLighter}
-                                        />
-                                        <Text style={styles.analysisTitle}>游戏分析</Text>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <View style={{
+                                                width: 48,
+                                                height: 48,
+                                                borderRadius: 24,
+                                                backgroundColor: color.primary,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                shadowColor: color.primary,
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.25,
+                                                shadowRadius: 4,
+                                                elevation: 3,
+                                            }}>
+                                                <MaterialCommunityIcons
+                                                    name="chart-box-outline"
+                                                    size={24}
+                                                    color={color.lightText}
+                                                />
+                                            </View>
+                                            <View style={{ marginLeft: Spacing.md }}>
+                                                <Text style={[styles.analysisTitle, { 
+                                                    color: color.title,
+                                                    fontSize: FontSize.h3,
+                                                    fontWeight: '700'
+                                                }]}>游戏分析</Text>
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    color: color.mutedText,
+                                                    fontWeight: '500',
+                                                    marginTop: 2,
+                                                }}>实时数据统计</Text>
+                                            </View>
+                                        </View>
                                     </LinearGradient>
 
                                     <View style={styles.analysisCardContainer}>
                                         {/* 第一列：总体汇总 */}
-                                        <View style={styles.analysisSectionContainer}>
+                                        <View style={[styles.analysisSectionContainer, {
+                                            backgroundColor: '#FAFBFC',
+                                            borderRadius: Radius.md,
+                                            padding: Spacing.md,
+                                            marginBottom: Spacing.sm,
+                                        }]}>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                marginBottom: Spacing.sm,
+                                            }}>
+                                                <View style={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: 3,
+                                                    backgroundColor: color.highLighter,
+                                                    marginRight: Spacing.sm,
+                                                }} />
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    fontWeight: '600',
+                                                    color: color.mutedText,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: 0.5,
+                                                }}>总体汇总</Text>
+                                            </View>
                                             <InfoRow
                                                 icon="alert-decagram"
                                                 text={`${display.totalDiffChips}`}
@@ -460,20 +533,43 @@ export default function GamePlayScreen() {
                                                 icon="bank"
                                                 text={`${display.totalBuyInChips} `}
                                                 label="总买入"
-                                                iconColor={color.highLighter}
+                                                iconColor={color.info}
                                             />
                                             <InfoRow
                                                 icon="calculator-variant"
                                                 text={`${display.totalEndingChips}`}
                                                 label="结算总筹码"
-                                                iconColor={color.highLighter}
+                                                iconColor={color.success}
                                             />
                                         </View>
 
-                                        <View style={styles.analysisDivider} />
-
                                         {/* 第二列：赢家/输家 */}
-                                        <View style={styles.analysisSectionContainer}>
+                                        <View style={[styles.analysisSectionContainer, {
+                                            backgroundColor: '#F8FDF8',
+                                            borderRadius: Radius.md,
+                                            padding: Spacing.md,
+                                            marginBottom: Spacing.sm,
+                                        }]}>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                marginBottom: Spacing.sm,
+                                            }}>
+                                                <View style={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: 3,
+                                                    backgroundColor: '#FFD700',
+                                                    marginRight: Spacing.sm,
+                                                }} />
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    fontWeight: '600',
+                                                    color: color.mutedText,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: 0.5,
+                                                }}>输赢排行</Text>
+                                            </View>
                                             <InfoRow
                                                 icon="trophy-variant"
                                                 text={
@@ -496,10 +592,32 @@ export default function GamePlayScreen() {
                                             />
                                         </View>
 
-                                        <View style={styles.analysisDivider} />
-
                                         {/* 第三列：买入统计 */}
-                                        <View style={styles.analysisSectionContainer}>
+                                        <View style={[styles.analysisSectionContainer, {
+                                            backgroundColor: '#F7F9FD',
+                                            borderRadius: Radius.md,
+                                            padding: Spacing.md,
+                                        }]}>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                marginBottom: Spacing.sm,
+                                            }}>
+                                                <View style={{
+                                                    width: 6,
+                                                    height: 6,
+                                                    borderRadius: 3,
+                                                    backgroundColor: color.info,
+                                                    marginRight: Spacing.sm,
+                                                }} />
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    fontWeight: '600',
+                                                    color: color.mutedText,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: 0.5,
+                                                }}>买入统计</Text>
+                                            </View>
                                             <InfoRow
                                                 icon="arrow-up-bold-box"
                                                 text={
@@ -508,7 +626,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="最多买入"
-                                                iconColor={color.highLighter}
+                                                iconColor={color.primary}
                                             />
                                             <InfoRow
                                                 icon="arrow-down-bold-box"
@@ -518,7 +636,7 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="最少买入"
-                                                iconColor={color.highLighter}
+                                                iconColor={color.mutedText}
                                             />
                                             <InfoRow
                                                 icon="counter"
@@ -528,33 +646,41 @@ export default function GamePlayScreen() {
                                                         : '--'
                                                 }
                                                 label="最多买入次数"
-                                                iconColor={color.highLighter}
+                                                iconColor={color.info}
                                             />
                                         </View>
                                     </View>
                                 </View>
 
                                 {/* 结束游戏按钮 */}
-                                <PrimaryButton
-                                    title={
-                                        pendingFinalize
-                                            ? (isLoading ? '完成提交中…' : '重试完成提交')
-                                            : (isLoading
-                                                ? (submitPhase === 'saving' ? '保存中…' : submitPhase === 'finalizing' ? '完成提交中…' : '提交中…')
-                                                : '结束游戏')
-                                    }
-                                    onPress={pendingFinalize ? handleRetryFinalizeOnly : handleGameFinishPrompt}
-                                    style={styles.endGameButton}
-                                    textStyle={styles.endGameButtonText}
-                                    icon={pendingFinalize ? 'refresh' : 'stop-circle-outline'}
-                                    iconColor="#fff"
-                                    iconSize={24}
-                                    iconPosition="left"
-                                    size="large"
-                                    rounded
-                                    fullWidth
-                                    disabled={isLoading || finalized}
-                                />
+
+                                    <PrimaryButton
+                                        title={
+                                            pendingFinalize
+                                                ? (isLoading ? '完成提交中…' : '重试完成提交')
+                                                : (isLoading
+                                                    ? (submitPhase === 'saving' ? '保存中…' : submitPhase === 'finalizing' ? '完成提交中…' : '提交中…')
+                                                    : '结束游戏')
+                                        }
+                                        onPress={pendingFinalize ? handleRetryFinalizeOnly : handleGameFinishPrompt}
+                                        style={[styles.endGameButton, {
+                                            shadowColor: 'transparent',
+                                            elevation: 0,
+                                        }]}
+                                        textStyle={[styles.endGameButtonText, {
+                                            fontSize: FontSize.h3,
+                                            fontWeight: '700',
+                                        }]}
+                                        icon={pendingFinalize ? 'refresh' : 'stop-circle-outline'}
+                                        iconColor="#fff"
+                                        iconSize={24}
+                                        iconPosition="left"
+                                        size="large"
+                                        rounded
+                                        fullWidth
+                                        disabled={isLoading || finalized}
+                                    />
+                                
 
                             </>
                         )
@@ -573,13 +699,7 @@ export default function GamePlayScreen() {
                 {/* 计时器（组件内部自带弹出） */}
                 <CallTimer ref={timerRef} />
 
-                {/* 保险计算器 */}
-                {modalState?.type === 'Insurance' && (
-                    <InsuranceCalculator
-                        visible={modalState.type === 'Insurance'}
-                        onClose={() => setModalState(null)}
-                    />
-                )}
+                {/* 保险计算器: 已移除 */}
 
                 {/* 添加玩家 */}
                 {modalState?.type === 'add-player' && (

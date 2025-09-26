@@ -10,10 +10,12 @@ import {
     TouchableWithoutFeedback,
     TextInput,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '@/stores/useGameStore';
 import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import * as yup from 'yup';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
@@ -269,82 +271,130 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ScrollView contentContainerStyle={styles.scrollContainer}>
                     <View style={styles.card}>
-                        <View style={styles.header}>
-                            <MaterialCommunityIcons name="cards-club" size={28} color={color.info} />
+                        {/* Header Section with Gradient */}
+                        <LinearGradient
+                            colors={[color.primary, color.highLighter]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.headerGradient}
+                        >
+                            <View style={styles.iconContainer}>
+                                <MaterialCommunityIcons 
+                                    name="cards-playing-outline" 
+                                    size={32} 
+                                    color={color.lightText} 
+                                />
+                            </View>
                             <Text style={styles.title}>游戏设置</Text>
+                            <Text style={styles.subtitle}>配置你的德州扑克游戏</Text>
+                        </LinearGradient>
+
+                        {/* Form Section */}
+                        <View style={styles.formSection}>
+                            {/* Blind Settings */}
+                            <View style={styles.sectionContainer}>
+                                <View style={styles.sectionHeader}>
+                                    <MaterialCommunityIcons 
+                                        name="scale-balance" 
+                                        size={20} 
+                                        color={color.primary} 
+                                    />
+                                    <Text style={styles.sectionTitle}>盲注设置</Text>
+                                </View>
+                                
+                                <View style={styles.inputRow}>
+                                    <View style={styles.halfWidth}>
+                                        <InputField
+                                            label="小盲注"
+                                            fieldName="smallBlind"
+                                            value={formValues.smallBlind}
+                                            placeholder="50"
+                                            icon="scale-balance"
+                                            keyboardType="number-pad"
+                                            error={errors.smallBlind}
+                                            onChangeText={handleInputChange}
+                                            onBlur={() => handleBlur('smallBlind')}
+                                            inputRef={smallBlindRef}
+                                        />
+                                    </View>
+                                    <View style={styles.halfWidth}>
+                                        <InputField
+                                            label="大盲注"
+                                            fieldName="bigBlind"
+                                            value={formValues.bigBlind}
+                                            placeholder="100"
+                                            icon="scale-balance"
+                                            keyboardType="number-pad"
+                                            error={errors.bigBlind}
+                                            onChangeText={handleInputChange}
+                                            onBlur={() => handleBlur('bigBlind')}
+                                            inputRef={bigBlindRef}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Buy-in Settings */}
+                            <View style={styles.sectionContainer}>
+                                <View style={styles.sectionHeader}>
+                                    <MaterialCommunityIcons 
+                                        name="wallet-outline" 
+                                        size={20} 
+                                        color={color.primary} 
+                                    />
+                                    <Text style={styles.sectionTitle}>买入设置</Text>
+                                </View>
+
+                                <InputField
+                                    label="初始买入筹码"
+                                    fieldName="baseChipAmount"
+                                    value={formValues.baseChipAmount}
+                                    placeholder="1000"
+                                    icon="poker-chip"
+                                    keyboardType="number-pad"
+                                    error={errors.baseChipAmount}
+                                    onChangeText={handleInputChange}
+                                    onBlur={() => handleBlur('baseChipAmount')}
+                                    inputRef={defaultBuyInRef}
+                                />
+
+                                <InputField
+                                    label={`兑换金额 ${currencyInfo.symbol ? `(${currencyInfo.symbol})` : ''}`}
+                                    fieldName="baseCashAmount"
+                                    value={formValues.baseCashAmount}
+                                    placeholder={currencyInfo.symbol ? `例如: 100${currencyInfo.symbol}` : '100'}
+                                    icon="cash"
+                                    keyboardType="number-pad"
+                                    error={errors.baseCashAmount}
+                                    onChangeText={handleInputChange}
+                                    onBlur={() => handleBlur('baseCashAmount')}
+                                    inputRef={baseCashAmountRef}
+                                />
+                            </View>
                         </View>
 
-                        <InputField
-                            label="小盲注"
-                            fieldName="smallBlind"
-                            value={formValues.smallBlind}
-                            placeholder="例如：50"
-                            icon="scale-balance"
-                            keyboardType="number-pad"
-                            error={errors.smallBlind}
-                            onChangeText={handleInputChange}
-                            onBlur={() => handleBlur('smallBlind')}
-                            inputRef={smallBlindRef}
-                        />
-
-                        <InputField
-                            label="大盲注"
-                            fieldName="bigBlind"
-                            value={formValues.bigBlind}
-                            placeholder="例如：100"
-                            icon="scale-balance"
-                            keyboardType="number-pad"
-                            error={errors.bigBlind}
-                            onChangeText={handleInputChange}
-                            onBlur={() => handleBlur('bigBlind')}
-                            inputRef={bigBlindRef}
-                        />
-
-                        <InputField
-                            label="初始买入筹码"
-                            fieldName="baseChipAmount"
-                            value={formValues.baseChipAmount}
-                            placeholder="例如：1000"
-                            icon="wallet"
-                            keyboardType="number-pad"
-                            error={errors.baseChipAmount}
-                            onChangeText={handleInputChange}
-                            onBlur={() => handleBlur('baseChipAmount')}
-                            inputRef={defaultBuyInRef}
-                        />
-
-                        <InputField
-                            label={`兑换金额 ${currencyInfo.symbol ? `(${currencyInfo.symbol})` : ''}`}
-                            fieldName="baseCashAmount"
-                            value={formValues.baseCashAmount}
-                            placeholder={currencyInfo.symbol ? `例如 (${currencyInfo.symbol})` : '例如'}
-                            icon="swap-horizontal"
-                            keyboardType="number-pad"
-                            error={errors.baseCashAmount}
-                            onChangeText={handleInputChange}
-                            onBlur={() => handleBlur('baseCashAmount')}
-                            inputRef={baseCashAmountRef}
-                        />
-
-                        <View style={styles.buttonGroup}>
-                            {onCancel && (
+                        {/* Action Buttons */}
+                        <View style={styles.buttonSection}>
+                            <View style={styles.buttonGroup}>
+                                {onCancel && (
+                                    <PrimaryButton
+                                        title="取消"
+                                        icon="close"
+                                        iconPosition="left"
+                                        iconColor={color.mutedText}
+                                        onPress={onCancel}
+                                        variant="outlined"
+                                        style={styles.cancelButton}
+                                    />
+                                )}
                                 <PrimaryButton
-                                    title="取消"
-                                    icon="close"
-                                    iconPosition="left"
-                                    iconColor={color.error}
-                                    onPress={onCancel}
-                                    variant="outlined"
-                                    style={styles.cancelButton}
+                                    title="开始游戏"
+                                    icon="play-circle"
+                                    iconPosition="right"
+                                    onPress={handleStartGame}
+                                    style={styles.confirmButton}
                                 />
-                            )}
-                            <PrimaryButton
-                                title="开始游戏"
-                                icon="play-circle"
-                                iconPosition="right"
-                                onPress={handleStartGame}
-                                style={styles.confirmButton}
-                            />
+                            </View>
                         </View>
                     </View>
                 </ScrollView>
@@ -361,43 +411,111 @@ const styles = StyleSheet.create({
     scrollContainer: {
         flexGrow: 1,
         justifyContent: 'center',
-        paddingVertical: 20,
+        paddingVertical: Spacing.xl,
     },
     card: {
-        marginHorizontal: 20,
-        borderRadius: 20,
-        padding: 24,
+        marginHorizontal: Spacing.xl,
+        borderRadius: Radius.lg,
         backgroundColor: color.lightBackground,
         shadowColor: color.shadowLight,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
         elevation: 8,
+        overflow: 'hidden',
     },
-    header: {
-        flexDirection: 'row',
+    headerGradient: {
+        paddingVertical: Spacing.xl,
+        paddingHorizontal: Spacing.lg,
         alignItems: 'center',
-        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    iconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: Spacing.md,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginLeft: 10,
-        color: color.valueText,
+        fontSize: FontSize.h1,
+        fontWeight: '800',
+        color: color.lightText,
+        textAlign: 'center',
+        marginBottom: Spacing.xs,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
+    },
+    subtitle: {
+        fontSize: FontSize.body,
+        color: 'rgba(255, 255, 255, 0.9)',
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+    formSection: {
+        padding: Spacing.lg,
+    },
+    sectionContainer: {
+        marginBottom: Spacing.xs,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: Spacing.md,
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.md,
+        backgroundColor: color.lightGray,
+        borderRadius: Radius.sm,
+    },
+    sectionTitle: {
+        fontSize: FontSize.h3,
+        fontWeight: '700',
+        color: color.title,
+        marginLeft: Spacing.sm,
+    },
+    inputRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginHorizontal: -Spacing.xs,
+    },
+    halfWidth: {
+        flex: 1,
+        marginHorizontal: Spacing.xs,
+    },
+    buttonSection: {
+        padding: Spacing.lg,
+        backgroundColor: color.lightGray,
+        borderTopWidth: 1,
+        borderTopColor: color.borderColor,
     },
     buttonGroup: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 24,
     },
     cancelButton: {
-        borderColor: color.valueLabel,
+        borderColor: color.mutedText,
+        backgroundColor: 'transparent',
         flex: 1,
-        marginRight: 12,
+        marginRight: Spacing.md,
     },
     confirmButton: {
         backgroundColor: color.success,
         flex: 2,
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    // Legacy styles for backward compatibility
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: Spacing.xl,
     },
 });

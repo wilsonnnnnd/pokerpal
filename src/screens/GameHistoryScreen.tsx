@@ -29,7 +29,7 @@ import { gameDoc, hostGameDoc, playerDoc } from '@/constants/namingVar';
 import { fetchUserProfilesMap, resolveNameAndPhoto } from '@/firebase/fetchData';
 import { GameHistoryItem, PlayerItem } from '@/types';
 import usePermission from '@/hooks/usePermission';
-import RequireHost from '@/components/RequireHost';
+import RequireHost from '@/hooks/RequireHost';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { getHosterId } from '@/utils/hostInfo';
 

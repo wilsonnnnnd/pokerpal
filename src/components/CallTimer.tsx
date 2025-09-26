@@ -12,11 +12,13 @@ import {
     Vibration
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioRecorder, setAudioModeAsync, RecordingPresets, AudioModule } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { logError } from '@/utils/useLogger';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 
 /**
  * 德州扑克Call Timer组件的引用接口
@@ -24,21 +26,9 @@ import { Palette as color } from '@/constants';
 export interface CallTimerHandle {
     show: (initialSeconds?: number) => void;
     hide: () => void;
-    showLauncher: () => void; // 新增：显示启动界面
     reset: (newDuration?: number) => void;
     pause: () => void;
     resume: () => void;
-}
-
-/**
- * 计时模式定义
- */
-export interface TimerMode {
-    id: string;
-    name: string;
-    duration: number;
-    icon: string;
-    color: string;
 }
 
 /**
@@ -61,8 +51,6 @@ export interface CallTimerProps {
     soundEnabled?: boolean;
     /** 是否启用振动 */
     vibrationEnabled?: boolean;
-    /** 计时模式列表 */
-    timerModes?: TimerMode[];
 }
 
 // 常量
@@ -70,41 +58,9 @@ const RADIUS = 40;
 const STROKE_WIDTH = 8;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-// 默认计时模式
-const DEFAULT_TIMER_MODES: TimerMode[] = [
-    {
-        id: 'standard',
-        name: '标准',
-        duration: 30,
-        icon: 'timer-outline',
-    color: color.success
-    },
-    {
-        id: 'fast',
-        name: '快速',
-        duration: 15,
-        icon: 'flash-outline',
-    color: color.warning
-    },
-    {
-        id: 'long',
-        name: '加长',
-        duration: 60,
-        icon: 'hourglass-outline',
-    color: color.info
-    },
-    {
-        id: 'custom',
-        name: '自定义',
-        duration: 0,
-        icon: 'create-outline',
-    color: color.primary
-    }
-];
-
 /**
  * 德州扑克Call Timer组件
- * 集成启动选项和计时器功能
+ * 简化版本，移除模式选择功能
  */
 const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
     ({
@@ -113,22 +69,19 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         criticalThreshold = 5,
         onTimeUp = () => console.log('⏰ 时间到，触发默认操作'),
         onClose = () => { },
-        presetTimes = [15, 30, 45, 60, 90],
+        presetTimes = [15, 30, 60],
         soundEnabled = true,
         vibrationEnabled = true,
-        timerModes = DEFAULT_TIMER_MODES
     }, ref) => {
         // 模态框状态
         const [visible, setVisible] = useState(false);
-        const [showLauncherUI, setShowLauncherUI] = useState(true);
 
         // 计时器状态
         const [secondsLeft, setSecondsLeft] = useState(defaultDuration);
         const [initialDuration, setInitialDuration] = useState(defaultDuration);
-        const [running, setRunning] = useState(true);
+        const [running, setRunning] = useState(false);
         const [editingTime, setEditingTime] = useState(false);
         const [timeInput, setTimeInput] = useState('');
-        const [customTimerValue, setCustomTimerValue] = useState('30');
 
         // 音效状态
         const [isLoadingSound, setIsLoadingSound] = useState(false);
@@ -147,7 +100,6 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 setSecondsLeft(duration);
                 setInitialDuration(duration);
                 setVisible(true);
-                setShowLauncherUI(false); // 直接显示计时器
                 setRunning(true);
                 if (soundEnabled && !soundsLoaded) {
                     loadSounds();
@@ -155,13 +107,6 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             },
             hide: () => {
                 setVisible(false);
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                }
-            },
-            showLauncher: () => {
-                setVisible(true);
-                setShowLauncherUI(true);
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                 }
@@ -252,7 +197,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 计时器逻辑
         useEffect(() => {
-            if (running && secondsLeft > 0 && visible && !showLauncherUI) {
+            if (running && secondsLeft > 0 && visible) {
                 intervalRef.current = setInterval(() => {
                     setSecondsLeft(prev => {
                         if (prev <= 1) {
@@ -290,7 +235,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     clearInterval(intervalRef.current);
                 }
             };
-        }, [running, secondsLeft, visible, showLauncherUI, warningThreshold, criticalThreshold]);
+        }, [running, secondsLeft, visible, warningThreshold, criticalThreshold]);
 
         // 关闭模态框时重置状态
         useEffect(() => {
@@ -391,50 +336,13 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             }
         };
 
-        // 启动指定模式的计时器
-        const startTimerMode = (mode: TimerMode) => {
-            if (mode.id === 'custom') {
-                // 显示自定义时间输入
-                Alert.prompt(
-                    '自定义时间',
-                    '请输入计时时间（秒）',
-                    [
-                        {
-                            text: '取消',
-                            style: 'cancel'
-                        },
-                        {
-                            text: '确定',
-                            onPress: (value?: string) => {
-                                const seconds = parseInt(value ?? '30');
-                                if (isNaN(seconds) || seconds <= 0 || seconds > 600) {
-                                    Alert.alert('提示', '请输入1-600之间的有效时间（秒）');
-                                    return;
-                                }
-                                setSecondsLeft(seconds);
-                                setInitialDuration(seconds);
-                                setShowLauncherUI(false);
-                                setRunning(true);
-                                if (soundEnabled && !soundsLoaded) {
-                                    loadSounds();
-                                }
-                            }
-                        }
-                    ],
-                    'plain-text',
-                    customTimerValue,
-                    'number-pad'
-                );
-            } else {
-                // 启动预设模式
-                setSecondsLeft(mode.duration);
-                setInitialDuration(mode.duration);
-                setShowLauncherUI(false);
-                setRunning(true);
-                if (soundEnabled && !soundsLoaded) {
-                    loadSounds();
-                }
+        // 关闭模态框
+        const handleClose = () => {
+            setVisible(false);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
             }
+            onClose();
         };
 
         // 获取时间颜色
@@ -471,23 +379,6 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             if (!running) setRunning(true);
         };
 
-        // 关闭模态框
-        const handleClose = () => {
-            setVisible(false);
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-            onClose();
-        };
-
-        // 返回启动界面
-        const backToLauncher = () => {
-            setShowLauncherUI(true);
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-
         // 处理时间输入
         const handleTimeInputChange = (text: string) => {
             // 只允许输入数字
@@ -516,69 +407,52 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             setTimeInput('');
         };
 
-        // 渲染启动器UI
-        const renderLauncher = () => (
-            <View style={styles.launcherContainer}>
-                <Text style={styles.launcherTitle}>选择计时模式</Text>
-
-                <View style={styles.timerModes}>
-                    {timerModes.map(mode => (
-                        <TouchableOpacity
-                            key={mode.id}
-                            style={[styles.timerModeButton, { backgroundColor: mode.color }]}
-                            onPress={() => startTimerMode(mode)}
-                        >
-                            <Ionicons name={mode.icon as any} size={24} color={color.lightText} />
-                            <Text style={styles.timerModeText}>{mode.name}</Text>
-                            {mode.id !== 'custom' && (
-                                <Text style={styles.timerModeDuration}>{mode.duration}秒</Text>
-                            )}
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={handleClose}
-                >
-                    <Ionicons name="close" size={24} color={color.text} />
-                </TouchableOpacity>
-            </View>
-        );
-
         // 渲染计时器UI
         const renderTimer = () => (
-            <>
-                <Svg height={100} width={100}>
-                    <Circle
-                        stroke={color.mediumGray}
-                        fill="none"
-                        cx="50"
-                        cy="50"
-                        r={RADIUS}
-                        strokeWidth={STROKE_WIDTH}
-                    />
-                    <Circle
-                        stroke={getTimeColor()}
-                        fill="none"
-                        cx="50"
-                        cy="50"
-                        r={RADIUS}
-                        strokeWidth={STROKE_WIDTH}
-                        strokeDasharray={`${CIRCUMFERENCE}, ${CIRCUMFERENCE}`}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="round"
-                        rotation="-90"
-                        origin="50, 50"
-                    />
-                </Svg>
+            <LinearGradient
+                colors={['#FFFFFF', '#F8FAFB']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.timerContainer}
+            >
+                {/* 计时器圆环和时间显示 */}
+                <View style={styles.timerDisplay}>
+                    <View style={styles.timerRing}>
+                        <Svg height={120} width={120}>
+                            <Circle
+                                stroke="rgba(0, 0, 0, 0.08)"
+                                fill="none"
+                                cx="60"
+                                cy="60"
+                                r={RADIUS}
+                                strokeWidth={STROKE_WIDTH}
+                            />
+                            <Circle
+                                stroke={getTimeColor()}
+                                fill="none"
+                                cx="60"
+                                cy="60"
+                                r={RADIUS}
+                                strokeWidth={STROKE_WIDTH}
+                                strokeDasharray={`${CIRCUMFERENCE}, ${CIRCUMFERENCE}`}
+                                strokeDashoffset={strokeDashoffset}
+                                strokeLinecap="round"
+                                rotation="-90"
+                                origin="60, 60"
+                            />
+                        </Svg>
+                        <View style={styles.timeDisplayCenter}>
+                            <TouchableOpacity onPress={() => setEditingTime(true)}>
+                                <Text style={[styles.timeText, { color: getTimeColor() }]}>
+                                    {formatTime(secondsLeft)}
+                                </Text>
+                            </TouchableOpacity>
+                            <Text style={styles.timeUnit}>秒</Text>
+                        </View>
+                    </View>
+                </View>
 
-                <TouchableOpacity onPress={() => setEditingTime(true)}>
-                    <Text style={[styles.timeText, { color: getTimeColor() }]}>
-                        {formatTime(secondsLeft)}s
-                    </Text>
-                </TouchableOpacity>
-
+                {/* 预设时间按钮 */}
                 <View style={styles.presetContainer}>
                     {presetTimes.map((time) => (
                         <TouchableOpacity
@@ -589,74 +463,88 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             ]}
                             onPress={() => setPresetTime(time)}
                         >
-                            <Text
-                                style={[
-                                    styles.presetButtonText,
-                                    initialDuration === time && styles.activePresetButtonText
-                                ]}
+                            <LinearGradient
+                                colors={initialDuration === time 
+                                    ? [color.primary, color.highLighter]
+                                    : ['#FFFFFF', '#F5F5F5']}
+                                style={styles.presetButtonGradient}
                             >
-                                {time}s
-                            </Text>
+                                <Text
+                                    style={[
+                                        styles.presetButtonText,
+                                        initialDuration === time && styles.activePresetButtonText
+                                    ]}
+                                >
+                                    {time}s
+                                </Text>
+                            </LinearGradient>
                         </TouchableOpacity>
                     ))}
                 </View>
 
+                {/* 控制按钮 */}
                 <View style={styles.controlButtons}>
                     <TouchableOpacity
-                        style={[
-                            styles.controlButton,
-                            running ? styles.pauseButton : styles.resumeButton
-                        ]}
+                        style={styles.controlButtonWrapper}
                         onPress={() => setRunning(prev => !prev)}
                     >
-                        <Ionicons
-                            name={running ? "pause" : "play"}
-                            size={24}
-                            color={color.lightText}
-                        />
-                        <Text style={styles.controlButtonText}>
-                            {running ? '暂停' : '继续'}
-                        </Text>
+                        <LinearGradient
+                            colors={running 
+                                ? [color.warning, '#FFA726']
+                                : [color.success, '#66BB6A']}
+                            style={styles.controlButton}
+                        >
+                            <Ionicons
+                                name={running ? "pause" : "play"}
+                                size={24}
+                                color={color.lightText}
+                            />
+                            <Text style={styles.controlButtonText}>
+                                {running ? '暂停' : '继续'}
+                            </Text>
+                        </LinearGradient>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.controlButton, styles.resetButton]}
+                        style={styles.controlButtonWrapper}
                         onPress={() => {
                             setSecondsLeft(initialDuration);
                             setRunning(true);
                         }}
                     >
-                        <Ionicons name="refresh" size={24} color={color.lightText} />
-                        <Text style={styles.controlButtonText}>重置</Text>
+                        <LinearGradient
+                            colors={[color.strongGray, '#757575']}
+                            style={styles.controlButton}
+                        >
+                            <Ionicons name="refresh" size={24} color={color.lightText} />
+                            <Text style={styles.controlButtonText}>重置</Text>
+                        </LinearGradient>
                     </TouchableOpacity>
                 </View>
 
+                {/* 设置按钮 */}
                 <View style={styles.settingsContainer}>
                     <TouchableOpacity
                         style={styles.settingButton}
                         onPress={() => addSeconds(5)}
                     >
-                        <Ionicons name="add-circle-outline" size={22} color={color.title} />
-                        <Text style={styles.settingButtonText}>+5秒</Text>
+                        <View style={styles.settingButtonInner}>
+                            <Ionicons name="add-circle-outline" size={20} color={color.primary} />
+                            <Text style={styles.settingButtonText}>+5秒</Text>
+                        </View>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.settingButton}
                         onPress={() => addSeconds(15)}
                     >
-                        <Ionicons name="add-circle-outline" size={22} color={color.title} />
-                        <Text style={styles.settingButtonText}>+15秒</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.settingButton}
-                        onPress={backToLauncher}
-                    >
-                        <Ionicons name="apps-outline" size={22} color={color.title} />
-                        <Text style={styles.settingButtonText}>模式</Text>
+                        <View style={styles.settingButtonInner}>
+                            <Ionicons name="add-circle-outline" size={20} color={color.primary} />
+                            <Text style={styles.settingButtonText}>+15秒</Text>
+                        </View>
                     </TouchableOpacity>
                 </View>
-            </>
+            </LinearGradient>
         );
 
         // 渲染编辑时间UI
@@ -703,10 +591,6 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 return renderLoading();
             }
 
-            if (showLauncherUI) {
-                return renderLauncher();
-            }
-
             if (editingTime) {
                 return renderTimeEdit();
             }
@@ -722,10 +606,15 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 onRequestClose={handleClose}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, showLauncherUI && styles.launcherModalContent]}>
-                        {!showLauncherUI && !editingTime && !isLoadingSound && (
+                    <View style={[
+                        styles.modalContent, 
+                        editingTime && styles.timeEditModalContent
+                    ]}>
+                        {!editingTime && !isLoadingSound && (
                             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                                <Ionicons name="close" size={24} color={color.text} />
+                                <View style={styles.closeButtonCircle}>
+                                    <Ionicons name="close" size={20} color={color.mutedText} />
+                                </View>
                             </TouchableOpacity>
                         )}
 
@@ -740,216 +629,328 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-    backgroundColor: color.overlayDark,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-    backgroundColor: color.lightBackground,
-        padding: 24,
-        borderRadius: 20,
+        backgroundColor: 'transparent',
+        borderRadius: Radius.xl,
         alignItems: 'center',
-        elevation: 5,
-        width: '80%',
-        maxWidth: 320,
-    shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
+        elevation: 8,
+        width: '85%',
+        maxWidth: 340,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        overflow: 'hidden',
     },
     launcherModalContent: {
-        padding: 16,
         width: '90%',
-        maxWidth: 360,
+        maxWidth: 380,
+    },
+    timeEditModalContent: {
+        backgroundColor: color.lightBackground,
+        padding: Spacing.lg,
     },
     closeButton: {
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: Spacing.md,
+        right: Spacing.md,
         zIndex: 10,
-        padding: 8,
+    },
+    closeButtonCircle: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
 
     // 启动器样式
     launcherContainer: {
         width: '100%',
+        paddingVertical: Spacing.xl,
+        paddingHorizontal: Spacing.lg,
+    },
+    launcherHeader: {
         alignItems: 'center',
-        padding: 16,
+        marginBottom: Spacing.xl,
+    },
+    iconWrapper: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: Spacing.md,
+        shadowColor: color.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     launcherTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: FontSize.h2,
+        fontWeight: '700',
         color: color.title,
-        marginBottom: 20,
+        marginBottom: Spacing.xs,
+    },
+    launcherSubtitle: {
+        fontSize: FontSize.body,
+        color: color.mutedText,
+        textAlign: 'center',
+        fontWeight: '500',
     },
     timerModes: {
         width: '100%',
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
+        marginBottom: Spacing.lg,
     },
     timerModeButton: {
         width: '48%',
-        padding: 16,
-        borderRadius: 12,
+        marginBottom: Spacing.md,
+        borderRadius: Radius.md,
+        overflow: 'hidden',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+    },
+    timerModeGradient: {
+        padding: Spacing.lg,
         alignItems: 'center',
-        marginBottom: 16,
-        shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        minHeight: 100,
+        justifyContent: 'center',
+    },
+    timerModeIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: Spacing.sm,
     },
     timerModeText: {
         color: color.lightText,
-        fontWeight: 'bold',
-        fontSize: 16,
-        marginTop: 8,
+        fontWeight: '700',
+        fontSize: FontSize.h3,
+        marginBottom: Spacing.xs,
     },
     timerModeDuration: {
-        color: 'rgba(255,255,255,0.85)',
-        marginTop: 4,
-        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: FontSize.small,
+        fontWeight: '500',
     },
 
     // 计时器样式
+    timerContainer: {
+        width: '100%',
+        alignItems: 'center',
+        paddingVertical: Spacing.xl,
+        paddingHorizontal: Spacing.lg,
+    },
+    timerDisplay: {
+        alignItems: 'center',
+        marginBottom: Spacing.xl,
+    },
+    timerRing: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    timeDisplayCenter: {
+        position: 'absolute',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     timeText: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        marginTop: 12,
-        marginBottom: 8,
-        color: color.title,
+        fontSize: 36,
+        fontWeight: '800',
+        textAlign: 'center',
+        marginBottom: 2,
+    },
+    timeUnit: {
+        fontSize: FontSize.small,
+        color: color.mutedText,
+        fontWeight: '500',
     },
     presetContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        marginTop: 16,
-        marginBottom: 8,
+        marginBottom: Spacing.lg,
+        paddingHorizontal: Spacing.sm,
     },
     presetButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        margin: 4,
-        borderRadius: 20,
-        backgroundColor: color.lightGray,
-        borderWidth: 1,
-        borderColor: color.mediumGray,
+        margin: Spacing.xs,
+        borderRadius: Radius.md,
+        overflow: 'hidden',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    presetButtonGradient: {
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 50,
     },
     activePresetButton: {
-        backgroundColor: color.lightBackground,
-        borderColor: color.info,
+        elevation: 4,
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
     },
     presetButtonText: {
-        color: color.strongGray,
-        fontWeight: '500',
+        color: color.text,
+        fontWeight: '600',
+        fontSize: FontSize.body,
     },
     activePresetButtonText: {
-        color: color.info,
-        fontWeight: 'bold',
+        color: color.lightText,
+        fontWeight: '700',
     },
     controlButtons: {
         flexDirection: 'row',
-        marginTop: 20,
-        justifyContent: 'space-between',
         width: '100%',
+        marginBottom: Spacing.lg,
+        paddingHorizontal: Spacing.sm,
+    },
+    controlButtonWrapper: {
+        flex: 1,
+        marginHorizontal: Spacing.xs,
+        borderRadius: Radius.md,
+        overflow: 'hidden',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
     },
     controlButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        flex: 1,
-        marginHorizontal: 5,
-    },
-    pauseButton: {
-        backgroundColor: color.warning,
-    },
-    resumeButton: {
-        backgroundColor: color.success,
-    },
-    resetButton: {
-        backgroundColor: color.strongGray,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        minHeight: 48,
     },
     controlButtonText: {
         color: color.lightText,
-        fontWeight: 'bold',
-        marginLeft: 6,
+        fontWeight: '700',
+        marginLeft: Spacing.xs,
+        fontSize: FontSize.body,
     },
     settingsContainer: {
         flexDirection: 'row',
-        marginTop: 16,
         justifyContent: 'center',
+        paddingHorizontal: Spacing.lg,
     },
     settingButton: {
+        marginHorizontal: Spacing.sm,
+        borderRadius: Radius.md,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    settingButtonInner: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 8,
-        marginHorizontal: 8,
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.md,
     },
     settingButtonText: {
-        marginLeft: 4,
-        color: color.strongGray,
+        marginLeft: Spacing.xs,
+        color: color.text,
+        fontWeight: '600',
+        fontSize: FontSize.small,
     },
 
-    // 时间编辑样式
+    // 时间编辑样式 (保持原有但优化)
     timeInputContainer: {
         width: '100%',
-        padding: 20,
+        padding: Spacing.xl,
     },
     timeInputLabel: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontSize: FontSize.h3,
+        fontWeight: '700',
+        marginBottom: Spacing.lg,
         textAlign: 'center',
+        color: color.title,
     },
     timeInput: {
-        borderWidth: 1,
-        borderColor: color.mediumGray,
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 20,
+        borderWidth: 2,
+        borderColor: color.primary,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+        fontSize: FontSize.h3,
         textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
+        backgroundColor: color.lightBackground,
+        fontWeight: '600',
     },
     timeInputButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
     timeInputButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: Radius.md,
         flex: 1,
-        marginHorizontal: 5,
+        marginHorizontal: Spacing.xs,
         alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
     },
     cancelButton: {
         backgroundColor: color.lightGray,
     },
     cancelButtonText: {
-        color: color.strongGray,
-        fontWeight: '500',
+        color: color.text,
+        fontWeight: '600',
     },
     confirmButton: {
         backgroundColor: color.success,
     },
     confirmButtonText: {
         color: color.lightText,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
 
     // 加载样式
     loadingContainer: {
-        padding: 30,
+        padding: Spacing.xl,
         alignItems: 'center',
+        backgroundColor: color.lightBackground,
+        borderRadius: Radius.xl,
     },
     loadingText: {
-        marginTop: 12,
-        fontSize: 16,
+        marginTop: Spacing.md,
+        fontSize: FontSize.body,
         color: color.text,
+        fontWeight: '500',
     },
 });
 

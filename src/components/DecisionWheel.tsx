@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing, Vibration }
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
+import { Gradients } from '@/constants/gradients';
 import * as Haptics from 'expo-haptics';
 
 const OPTIONS = ['CALL', 'FOLD'];
@@ -17,26 +19,38 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
     const [spinning, setSpinning] = useState(false);
     const [showResult, setShowResult] = useState(false);
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
     
     // 当转盘停止时的脉动动画
     useEffect(() => {
         if (decision) {
+            // 结果卡片淡入动画
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+            }).start();
+            
+            // 脉动动画
             Animated.loop(
                 Animated.sequence([
                     Animated.timing(scaleAnim, {
-                        toValue: 1.05,
-                        duration: 700,
+                        toValue: 1.08,
+                        duration: 800,
+                        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
                         useNativeDriver: true,
                     }),
                     Animated.timing(scaleAnim, {
                         toValue: 1,
-                        duration: 700,
+                        duration: 800,
+                        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
                         useNativeDriver: true,
                     }),
                 ])
             ).start();
         } else {
             scaleAnim.setValue(1);
+            fadeAnim.setValue(0);
         }
     }, [decision]);
     
@@ -56,12 +70,12 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
         setShowResult(false);
 
         // 转盘旋转圈数和随机角度
-        const spinDegrees = 360 * 5 + Math.floor(Math.random() * 360);
+        const spinDegrees = 360 * 6 + Math.floor(Math.random() * 360);
         
         Animated.timing(rotateAnim, {
             toValue: spinDegrees,
-            duration: 3000,
-            easing: Easing.out(Easing.cubic),
+            duration: 3500,
+            easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
             useNativeDriver: true,
         }).start(() => {
             const finalDeg = spinDegrees % 360;
@@ -71,7 +85,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
             try {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (e) {
-                Vibration.vibrate(150);
+                Vibration.vibrate([100, 50, 100]);
             }
             
             setDecision(OPTIONS[index]);
@@ -90,7 +104,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
 
     return (
         <LinearGradient
-            colors={[color.primary, color.error, color.warning]}
+            colors={Gradients[0]}
             style={styles.container}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -114,15 +128,24 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                             }
                         ]}
                     >
-                        <View style={[styles.half, styles.leftHalf]}>
+                        <LinearGradient
+                            colors={['#4CAF50', '#45a049']}
+                            style={[styles.half, styles.leftHalf]}
+                        >
                             <Text style={styles.optionText}>CALL</Text>
-                        </View>
-                        <View style={[styles.half, styles.rightHalf]}>
+                        </LinearGradient>
+                        <LinearGradient
+                            colors={['#f44336', '#d32f2f']}
+                            style={[styles.half, styles.rightHalf]}
+                        >
                             <Text style={styles.optionText}>FOLD</Text>
-                        </View>
-                        <View style={styles.wheelCenter}>
+                        </LinearGradient>
+                        <LinearGradient
+                            colors={['#2c3e50', '#34495e']}
+                            style={styles.wheelCenter}
+                        >
                             <MaterialCommunityIcons name="cards-playing-outline" size={30} color={color.lightText} />
-                        </View>
+                        </LinearGradient>
                     </Animated.View>
 
                     <View style={styles.arrowContainer}>
@@ -137,8 +160,19 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                         disabled={spinning}
                         activeOpacity={0.8}
                     >
-                        <MaterialCommunityIcons name="rotate-360" size={20} color={color.lightText} />
-                        <Text style={styles.buttonText}>{spinning ? '转动中...' : '开始旋转'}</Text>
+                        <LinearGradient
+                            colors={spinning ? Gradients[5] : ['#2196F3', '#1976D2']}
+                            style={styles.buttonGradient}
+                        >
+                            <MaterialCommunityIcons 
+                                name={spinning ? "loading" : "rotate-360"} 
+                                size={20} 
+                                color={color.lightText} 
+                            />
+                            <Text style={styles.buttonText}>
+                                {spinning ? '转动中...' : '开始旋转'}
+                            </Text>
+                        </LinearGradient>
                     </TouchableOpacity>
                 </View>
 
@@ -146,15 +180,29 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                     <Animated.View 
                         style={[
                             styles.resultContainer,
-                            { transform: [{ scale: scaleAnim }] }
+                            { 
+                                transform: [{ scale: scaleAnim }],
+                                opacity: fadeAnim,
+                            }
                         ]}
                     >
                         <LinearGradient
-                                    colors={[color.primary, color.info, color.darkGray]}
-                                    style={styles.resultGradient}
-                                >
+                            colors={decision === 'CALL' ? ['#E8F5E8', '#D4EDDA'] : ['#F8D7DA', '#F5C6CB']}
+                            style={styles.resultGradient}
+                        >
+                            <MaterialCommunityIcons 
+                                name={decision === 'CALL' ? "check-circle" : "close-circle"}
+                                size={36}
+                                color={decision === 'CALL' ? color.success : color.error}
+                                style={{ marginBottom: Spacing.sm }}
+                            />
                             <Text style={styles.decisionResult}>决策结果</Text>
-                            <Text style={styles.decisionText}>{decision}</Text>
+                            <Text style={[
+                                styles.decisionText,
+                                { color: decision === 'CALL' ? color.success : color.error }
+                            ]}>
+                                {decision}
+                            </Text>
                         </LinearGradient>
                     </Animated.View>
                 )}
@@ -172,35 +220,35 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'space-around',
         alignItems: 'center',
-        padding: 20,
+        padding: Spacing.xl,
     },
     title: {
-        fontSize: 28,
+        fontSize: FontSize.h1,
         fontWeight: 'bold',
-    color: color.lightText,
-    textShadowColor: color.shadowDark,
+        color: color.valueText,
+        textShadowColor: color.shadowLight,
         textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 4,
-        marginBottom: 20,
+        textShadowRadius: 2,
+        marginBottom: Spacing.lg,
+        textAlign: 'center',
     },
     wheelContainer: {
         alignItems: 'center',
-        marginVertical: 20,
+        marginVertical: Spacing.xl,
     },
     wheel: {
-        width: 250,
-        height: 250,
-        borderRadius: 125,
+        width: 280,
+        height: 280,
+        borderRadius: 140,
         overflow: 'hidden',
-        borderWidth: 5,
-    borderColor: color.borderColor,
-    backgroundColor: color.lightBackground,
+        borderWidth: 6,
+        borderColor: color.lightText,
         flexDirection: 'row',
-        elevation: 10,
-    shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
+        elevation: Elevation.overlay,
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
         position: 'relative',
     },
     half: {
@@ -210,113 +258,113 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     leftHalf: {
-    backgroundColor: color.success,
+        // Gradient applied inline
     },
     rightHalf: {
-    backgroundColor: color.error,
-    },
-    segment: {
-        backgroundColor: color.success,
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        paddingBottom: 80,
+        // Gradient applied inline  
     },
     optionText: {
-        fontSize: 22,
-    color: color.lightText,
+        fontSize: FontSize.h2,
+        color: color.lightText,
         fontWeight: 'bold',
-    textShadowColor: color.shadowDark,
+        textShadowColor: color.shadowDark,
         textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 2,
+        textShadowRadius: 3,
     },
     wheelCenter: {
         position: 'absolute',
         top: '50%',
         left: '50%',
-        width: 60,
-        height: 60,
-        marginLeft: -30,
-        marginTop: -30,
-        borderRadius: 30,
-    backgroundColor: color.darkGray,
+        width: 70,
+        height: 70,
+        marginLeft: -35,
+        marginTop: -35,
+        borderRadius: 35,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 5,
+        elevation: Elevation.card,
+        borderWidth: 3,
+        borderColor: color.lightText,
     },
     arrowContainer: {
         position: 'absolute',
-        top: -25,
-        elevation: 6,
-    shadowColor: color.shadowDark,
+        top: -30,
+        elevation: Elevation.overlay,
+        shadowColor: color.shadowDark,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
     },
     closeButton: {
         position: 'absolute',
-        top: 20,
-        right: 20,
+        top: 50,
+        right: Spacing.xl,
         zIndex: 10,
-    backgroundColor: color.shadowDark,
-        borderRadius: 20,
-        padding: 8,
+        backgroundColor: color.shadowDark,
+        borderRadius: Radius.xl,
+        padding: Spacing.md,
+        elevation: Elevation.card,
     },
     buttonContainer: {
         width: '100%',
         alignItems: 'center',
-        marginTop: 30,
+        marginTop: Spacing.xl,
     },
     button: {
+        borderRadius: Radius.xl,
+        elevation: Elevation.card,
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        overflow: 'hidden',
+    },
+    spinButton: {
+        minWidth: 200,
+    },
+    buttonGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 25,
-        elevation: 5,
-    shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-    },
-    spinButton: {
-    backgroundColor: color.info,
-        minWidth: 180,
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
     },
     buttonText: {
-    color: color.lightText,
+        color: color.lightText,
         fontWeight: 'bold',
-        fontSize: 16,
-        marginLeft: 8,
+        fontSize: FontSize.body,
+        marginLeft: Spacing.sm,
     },
     resultContainer: {
-        marginTop: 20,
-        width: '80%',
-        borderRadius: 15,
+        marginTop: Spacing.xl,
+        width: '85%',
+        borderRadius: Radius.lg,
         overflow: 'hidden',
-        elevation: 8,
-    shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        elevation: Elevation.overlay,
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        borderWidth: 2,
+        borderColor: color.lightText,
     },
     resultGradient: {
-        paddingVertical: 20,
-        paddingHorizontal: 15,
+        paddingVertical: Spacing.xl,
+        paddingHorizontal: Spacing.lg,
         alignItems: 'center',
     },
     decisionResult: {
-        fontSize: 18,
+        fontSize: FontSize.h3,
         fontWeight: '600',
-    color: color.lightText,
-        marginBottom: 5,
+        color: color.valueText,
+        marginBottom: Spacing.sm,
     },
     decisionText: {
-        fontSize: 36,
+        fontSize: 42,
         fontWeight: 'bold',
-    color: color.lightText,
-    textShadowColor: color.shadowDark,
+        color: color.valueText,
+        textShadowColor: color.shadowLight,
         textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 4,
+        textShadowRadius: 2,
     }
 });

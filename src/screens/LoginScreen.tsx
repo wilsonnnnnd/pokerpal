@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Toast from 'react-native-toast-message';
 import { db } from '@/firebase/config';
@@ -9,6 +11,7 @@ import { doc, setDoc,  } from 'firebase/firestore';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 
 // iOS-only configuration: use the iOS client id
 GoogleSignin.configure({
@@ -189,31 +192,204 @@ export default function LoginScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor={color.background} />
-            <Image source={require('../../src/assets/PokerPal.png')} style={styles.logo} />
-            <Text style={styles.title}>欢迎使用 PokerPal</Text>
+        <LinearGradient
+            colors={[color.background, color.lightBackground]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.container}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
+                <View style={styles.logoContainer}>
+                    <View style={styles.logoWrapper}>
+                        <Image source={require('../../src/assets/PokerPal.png')} style={styles.logo} />
+                    </View>
+                </View>
+                <Text style={styles.title}>欢迎使用 PokerPal</Text>
+                <Text style={styles.subtitle}>德州扑克筹码管理专家</Text>
+            </View>
 
-            <TouchableOpacity style={[styles.googleBtn, { backgroundColor: color.info }]} onPress={onGoogleSignIn} disabled={loading}>
-                {loading ? <ActivityIndicator color={color.lightText} /> : <Text style={[styles.googleText, { color: color.lightText }]}>使用 Google 登录</Text>}
-            </TouchableOpacity>
+            {/* Login Actions */}
+            <View style={styles.actionsSection}>
+                <View style={styles.loginCard}>
+                    {/* Google Login Button */}
+                    <TouchableOpacity 
+                        style={[styles.primaryButton, styles.googleBtn]} 
+                        onPress={onGoogleSignIn} 
+                        disabled={loading}
+                        activeOpacity={0.8}
+                    >
+                        <LinearGradient
+                            colors={[color.primary, color.highLighter]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.buttonGradient}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={color.lightText} size="small" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons 
+                                        name="google" 
+                                        size={20} 
+                                        color={color.lightText} 
+                                        style={styles.buttonIcon}
+                                    />
+                                    <Text style={styles.primaryButtonText}>使用 Google 登录</Text>
+                                </>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.guestBtn, { backgroundColor: color.lightGray }]} onPress={onGuest} disabled={loading}>
-                <Text style={[styles.guestText, { color: color.title }]}>以访客身份继续</Text>
-            </TouchableOpacity>
+                    {/* Guest Login Button */}
+                    <TouchableOpacity 
+                        style={[styles.secondaryButton, styles.guestBtn]} 
+                        onPress={onGuest} 
+                        disabled={loading}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialCommunityIcons 
+                            name="account-outline" 
+                            size={20} 
+                            color={color.primary} 
+                            style={styles.buttonIcon}
+                        />
+                        <Text style={styles.secondaryButtonText}>以访客身份继续</Text>
+                    </TouchableOpacity>
+                </View>
 
-            <Text style={styles.note}>无需输入密码，授权后将保存昵称与头像以便统计与邀请。</Text>
-        </View>
+                {/* Info Note */}
+                <View style={styles.noteSection}>
+                    <MaterialCommunityIcons 
+                        name="information-outline" 
+                        size={16} 
+                        color={color.mutedText} 
+                        style={styles.infoIcon}
+                    />
+                    <Text style={styles.note}>
+                        无需输入密码，授权后将保存昵称与头像以便统计与邀请。
+                    </Text>
+                </View>
+            </View>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-    logo: { width: 140, height: 140, marginBottom: 20, resizeMode: 'contain' },
-    title: { fontSize: 20, marginBottom: 24, color: color.title },
-    googleBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center', marginBottom: 12 },
-    googleText: { fontWeight: '600' },
-    guestBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, width: '100%', alignItems: 'center' },
-    guestText: { fontWeight: '600' },
-    note: { marginTop: 16, color: color.text, fontSize: 12, textAlign: 'center' },
+    container: { 
+        flex: 1, 
+        paddingTop: 60,
+    },
+    heroSection: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.xl,
+    },
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: Spacing.xxl,
+    },
+    logoWrapper: {
+        padding: Spacing.lg,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: Radius.round,
+        shadowColor: color.shadowLight,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
+        marginBottom: Spacing.lg,
+    },
+    logo: { 
+        width: 120, 
+        height: 120, 
+        resizeMode: 'contain',
+    },
+    title: { 
+        fontSize: FontSize.h1,
+        fontWeight: '800', 
+        color: color.title,
+        textAlign: 'center',
+        marginBottom: Spacing.sm,
+    },
+    subtitle: {
+        fontSize: FontSize.body,
+        color: color.mutedText,
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+    actionsSection: {
+        paddingHorizontal: Spacing.xl,
+        paddingBottom: Spacing.xxl,
+    },
+    loginCard: {
+        backgroundColor: color.lightBackground,
+        borderRadius: Radius.lg,
+        padding: Spacing.lg,
+        shadowColor: color.shadowLight,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
+        marginBottom: Spacing.lg,
+    },
+    primaryButton: {
+        borderRadius: Radius.md,
+        marginBottom: Spacing.md,
+        overflow: 'hidden',
+    },
+    buttonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
+    },
+    buttonIcon: {
+        marginRight: Spacing.sm,
+    },
+    primaryButtonText: {
+        color: color.lightText,
+        fontSize: FontSize.body,
+        fontWeight: '700',
+    },
+    secondaryButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: Radius.md,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: color.primary,
+    },
+    secondaryButtonText: {
+        color: color.primary,
+        fontSize: FontSize.body,
+        fontWeight: '600',
+    },
+    noteSection: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: color.lightGray,
+        borderRadius: Radius.md,
+        padding: Spacing.md,
+    },
+    infoIcon: {
+        marginRight: Spacing.sm,
+        marginTop: 2,
+    },
+    note: {
+        flex: 1,
+        color: color.text,
+        fontSize: FontSize.small,
+        lineHeight: 18,
+    },
+    // Legacy styles for compatibility
+    googleBtn: {},
+    guestBtn: {},
 });

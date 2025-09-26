@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../App';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -116,122 +117,128 @@ const HomeScreen = () => {
 
     return (
         <>
-            <ScrollView style={[styles.container, { paddingTop: Spacing.lg }]}>
-                <View style={styles.contentContainer}>
-                    <View style={styles.headerSection}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+                {/* Hero Section with Gradient */}
+                <LinearGradient
+                    colors={[color.primary, color.highLighter]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroGradient}
+                >
+                    <View style={styles.icon}>
                         <MaterialCommunityIcons
                             name="cards-playing-outline"
-                            size={64}
-                            color={color.highLighter}
-                            style={styles.icon}
+                            size={72}
+                            color={color.lightText}
                         />
-                        <Text style={styles.title}>德州扑克筹码记录器✍️</Text>
-
                     </View>
-                        {/* user card */}
-                        {user && (
-                            <View style={styles.userCard}>
-                                <View style={styles.userInfoContainer}>
-                                    <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
-                                        {(
-                                            // Prefer persistedUser.photoURL if available, otherwise fallback to user.photoURL
-                                            (persistedUser?.photoURL ?? user.photoURL)
-                                        ) ? (
-                                            <Image source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }} style={styles.userAvatar} />
-                                        ) : (
-                                            <View style={styles.userAvatar}>
-                                                <Text style={{ color: color.text, fontWeight: '700', fontSize: FontSize.h3 }}>{((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}</Text>
+                    <Text style={styles.title}>德州扑克筹码记录器</Text>
+                    <Text style={styles.subtitle}>轻松管理，精确记录</Text>
+                </LinearGradient>
+
+                <View style={styles.mainContent}>
+                    {/* User Profile Card */}
+                    {user && (
+                        <View style={styles.userCard}>
+                            <View style={styles.userInfoContainer}>
+                                <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
+                                    {(persistedUser?.photoURL ?? user.photoURL) ? (
+                                        <Image 
+                                            source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }} 
+                                            style={styles.userAvatar} 
+                                        />
+                                    ) : (
+                                        <View style={styles.userAvatar}>
+                                            <Text style={{ 
+                                                color: color.text, 
+                                                fontWeight: '700', 
+                                                fontSize: FontSize.h2 
+                                            }}>
+                                                {((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+
+                                <View style={styles.userInfo}>
+                                    <Text style={styles.userName}>
+                                        {(persistedUser?.displayName ?? user.displayName) ?? 
+                                         (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}
+                                    </Text>
+                                    <Text style={styles.userEmail}>
+                                        {persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}
+                                    </Text>
+                                    <View style={styles.userRole}>
+                                        <Text style={styles.roleText}>
+                                            身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
+                                        </Text>
+                                        {isHost && (
+                                            <View style={styles.vipBadge}>
+                                                <MaterialCommunityIcons name="crown" size={12} color={color.lightText} />
+                                                <Text style={styles.vipText}>VIP</Text>
                                             </View>
                                         )}
-                                    </TouchableOpacity>
-
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.userName}>{(persistedUser?.displayName ?? user.displayName) ?? (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}</Text>
-                                        <Text style={styles.userEmail}>{persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}</Text>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Text style={[styles.userEmail, { marginRight: 8 }]}>身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
-                                            {isHost && (
-                                                <View style={{
-                                                    backgroundColor: color.highLighter,
-                                                    paddingHorizontal: Spacing.sm,
-                                                    paddingVertical: Spacing.xs,
-                                                    borderRadius: Radius.sm,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center'
-                                                }}>
-                                                    <MaterialCommunityIcons name="crown" size={12} color={color.darkGray} />
-                                                    <Text style={{ fontSize: 10, color: color.darkGray, fontWeight: '600', marginLeft: 2 }}>VIP</Text>
-                                                </View>
-                                            )}
-                                        </View>
                                     </View>
                                 </View>
-
-
                             </View>
-                        )}
+                        </View>
+                    )}
 
+                    {/* Action Buttons */}
                     <View style={styles.buttonsSection}>
                         <View style={styles.actionsCard}>
-                            {/* use a configuration list for buttons so we can conditionally show them */}
                             <PrimaryButton
-                                title="开始游戏"
+                                title="开始新游戏"
                                 icon="play-circle"
                                 iconColor={color.lightText}
                                 onPress={() => setModalVisible(true)}
-                                style={[styles.startGameButton, { borderRadius: 10 }]}
+                                style={styles.startGameButton}
                                 size="large"
                                 fullWidth={true}
                             />
 
-                            {[
-                                {
-                                    key: 'history',
-                                    title: '游戏历史',
-                                    icon: 'history',
-                                    onPress: () => navigation.navigate('GameHistory'),
-                                },
-                                {
-                                    key: 'localHistory',
-                                    title: '本地历史',
-                                    icon: 'history',
-                                    onPress: () => navigation.navigate('Database'),
-                                },
-                                {
-                                    key: 'ranking',
-                                    title: '玩家排行',
-                                    icon: 'account-group',
-                                    onPress: () => navigation.navigate('GamePlayerRank'),
-                                },
-                                {
-                                    key: 'settings',
-                                    title: '全局设置',
-                                    icon: 'cog-outline',
-                                    onPress: () => navigation.navigate('Settings'),
-                                },
-                            ].map((btn) => {
-                                // determine visibility: by default visible
-                                const visible = (() => {
-                                    // example: only host can see settings
-                                    if (btn.key === 'history' || btn.key === 'ranking') return isHost;
-                                    return true;
-                                })();
-
-                                if (!visible) return null;
-
-                                return (
-                                    <View key={btn.key} style={[styles.buttonRow, { marginTop: Spacing.sm }]}>
-                                        <PrimaryButton
-                                            title={btn.title}
-                                            icon={btn.icon as any}
-                                            variant="outlined"
-                                            onPress={btn.onPress}
-                                            style={[styles.secondaryButton, { width: '100%' }]}
-                                            iconColor={color.info}
-                                        />
-                                    </View>
-                                );
-                            })}
+                            <View style={styles.buttonGrid}>
+                                {[
+                                    {
+                                        key: 'history',
+                                        title: '游戏历史',
+                                        icon: 'history',
+                                        onPress: () => navigation.navigate('GameHistory'),
+                                        visible: isHost,
+                                    },
+                                    {
+                                        key: 'localHistory',
+                                        title: '本地历史',
+                                        icon: 'database',
+                                        onPress: () => navigation.navigate('Database'),
+                                        visible: true,
+                                    },
+                                    {
+                                        key: 'ranking',
+                                        title: '玩家排行',
+                                        icon: 'trophy',
+                                        onPress: () => navigation.navigate('GamePlayerRank'),
+                                        visible: isHost,
+                                    },
+                                    {
+                                        key: 'settings',
+                                        title: '全局设置',
+                                        icon: 'cog-outline',
+                                        onPress: () => navigation.navigate('Settings'),
+                                        visible: true,
+                                    },
+                                ].filter(btn => btn.visible).map((btn) => (
+                                    <PrimaryButton
+                                        key={btn.key}
+                                        title={btn.title}
+                                        icon={btn.icon as any}
+                                        variant="outlined"
+                                        onPress={btn.onPress}
+                                        style={styles.gridButton}
+                                        iconColor={color.info}
+                                    />
+                                ))}
+                            </View>
 
                             <PrimaryButton
                                 title="退出登录"
@@ -243,39 +250,38 @@ const HomeScreen = () => {
                                         useGameStore.getState().resetGame();
                                         usePlayerStore.getState().resetPlayers();
                                         Toast.show({ type: 'success', text1: '已退出登录' });
-                                        // navigation will switch to AuthNavigator via auth subscription in App
                                     } catch (e) {
                                         Toast.show({ type: 'error', text1: '退出登录失败' });
                                     }
                                 }}
-                                style={[styles.logoutButton, { marginTop: Spacing.sm }]}
+                                style={styles.logoutButton}
                                 iconColor={color.error}
                             />
                         </View>
                     </View>
-                    {/* 新游戏设置弹窗 */}
-                    <Modal visible={modalVisible} transparent animationType="fade">
-                        <View style={styles.overlay}>
-                            <GameSetupCard
-                                onConfirm={() => {
-                                    const { gameId } = useGameStore.getState(); // 重新获取 gameId
-                                    setModalVisible(false);
-                                    navigation.navigate('GamePlay', { gameId });
-                                }}
-                                onCancel={() => setModalVisible(false)}
-                            />
-
-                        </View>
-                    </Modal>
-
                 </View>
+
+                {/* Game Setup Modal */}
+                <Modal visible={modalVisible} transparent animationType="fade">
+                    <View style={styles.overlay}>
+                        <GameSetupCard
+                            onConfirm={() => {
+                                const { gameId } = useGameStore.getState();
+                                setModalVisible(false);
+                                navigation.navigate('GamePlay', { gameId });
+                            }}
+                            onCancel={() => setModalVisible(false)}
+                        />
+                    </View>
+                </Modal>
             </ScrollView>
+
+            {/* Footer */}
             <View style={styles.footerSection}>
                 <Text style={styles.footerText}>
-                    版本 1.0.0 · 轻松记录每局游戏
+                    版本 1.0.0 · 轻松记录每局游戏 ✨
                 </Text>
             </View>
-
         </>
     );
 };
