@@ -8,7 +8,7 @@ import { PopupProvider } from '@/components/PopupProvider';
 import { SettingsProvider } from '@/providers/SettingsProvider';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
-import storage, { getLocal, setLocal } from '@/services/storageService';
+import { getLocal, setLocal } from '@/services/storageService';
 import localDb from '@/services/localDb';
 import { Header } from '@/components/Header';
 import HomeScreen from '@/screens/HomeScreen';
@@ -92,7 +92,7 @@ export default function App() {
     (async () => {
       try {
         const raw = await getLocal<any>(SETTINGS_KEY);
-  const defaults = { language: 'CN', timezone: 'UTC', currency: 'AUD' };
+        const defaults = { language: 'CN', timezone: 'UTC', currency: 'AUD' };
 
         let settings: any;
         if (!raw) {
@@ -118,17 +118,17 @@ export default function App() {
         try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
       } catch (e) {
         console.warn('failed to load app settings', e);
-  try { (global as any).__pokerpal_settings = { language: 'CN', timezone: 'UTC', currency: 'AUD' }; } catch (e) { /* ignore */ }
+        try { (global as any).__pokerpal_settings = { language: 'CN', timezone: 'UTC', currency: 'AUD' }; } catch (e) { /* ignore */ }
       }
     })();
 
     // restore persisted user (if any) into auth shim before subscribing
     (async () => {
       try {
-        const user = await storage.getLocal(CURRENT_USER_KEY);
+        const user = await getLocal(CURRENT_USER_KEY);
         if (user) {
           // shape-checking minimal: ensure uid exists
-          if (user.uid) {
+          if ((user as any).uid) {
             restoreUser(user as any);
           }
         }
@@ -150,16 +150,8 @@ export default function App() {
         setInitializing(false);
       });
     } else {
-      // no auth available: just navigate to Login once navigation is ready
-      const tryNavigate = () => {
-        if (!navigationRef.isReady()) {
-          setTimeout(tryNavigate, 50);
-          return;
-        }
-        navigationRef.navigate('Login');
-        setInitializing(false);
-      };
-      tryNavigate();
+      // No auth available: NavigationContainer onReady() will handle navigating to Login
+      // We intentionally do not poll navigationRef here so the effect only runs on mount.
     }
 
     return () => {
@@ -169,13 +161,26 @@ export default function App() {
         // ignore
       }
     };
-  }, [navigationRef]);
+  }, []);
 
   return (
     <SafeAreaProvider>
       <SettingsProvider>
         <PopupProvider>
-          <NavigationContainer ref={navigationRef}>
+          <NavigationContainer
+            ref={navigationRef}
+            onReady={() => {
+              // If no auth subsystem available, navigate to Login immediately when navigation is ready
+              if (typeof onAuthStateChanged !== 'function') {
+                try {
+                  if (!navigationRef.isReady()) return;
+                  navigationRef.navigate('Login');
+                } catch (e) {
+                  // ignore
+                }
+              }
+            }}
+          >
             {initializing && (
               <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="large" />

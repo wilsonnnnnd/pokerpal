@@ -101,7 +101,7 @@ export default function GameHistoryScreen() {
 
             if (!data && owner) {
                 // 兼容 owner-scoped 路径：/games/{owner}/game/{gameId}
-                const altSnap = await getDoc(doc(db, gameDoc, owner, gameDoc, gameId));
+                const altSnap = await getDoc(doc(db, gameDoc, owner, 'game', gameId));
                 if (altSnap.exists()) {
                     data = altSnap.data() ?? {};
                     usedMainPath = false;
@@ -127,7 +127,7 @@ export default function GameHistoryScreen() {
                 // 玩家子集合路径选择：如果主路径存在则使用 /games/{gameId}/players，否则使用 owner-scoped 路径
                 let playersColRef = usedMainPath
                     ? collection(db, gameDoc, gameId, playerDoc)
-                    : collection(db, gameDoc, owner || '', gameDoc, gameId, playerDoc);
+                    : collection(db, gameDoc, owner || '', 'game', gameId, playerDoc);
 
                 const playersSnap = await getDocs(playersColRef);
 
@@ -187,7 +187,10 @@ export default function GameHistoryScreen() {
                 players,
                 playerCount: indexAgg?.playerCount ?? (players ? players.length : undefined),
             };
-        } catch {
+        } catch (e) {
+            // log error but don't break the whole list
+            // eslint-disable-next-line no-console
+            console.error('[GameHistory] buildGameHistoryItem error for', gameId, e);
             return null;
         }
     }, []);
