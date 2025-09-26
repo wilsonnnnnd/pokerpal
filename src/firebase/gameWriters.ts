@@ -92,15 +92,20 @@ export function queuePlayerGameWrite(
     rate: number
 ) {
     const playerRef = doc(db, gameDoc, gameId, playerDoc, player.id)
-    const totalBuyInCash = player.totalBuyInChips * rate
+    // normalize numeric fields to consistent precision
+    const totalBuyInCash = Number(((player.totalBuyInChips || 0) * rate).toFixed(2));
+    const settleCashAmount = typeof player.settleCashAmount === 'number' ? Number((player.settleCashAmount).toFixed(2)) : null;
+    const settleCashDiff = typeof player.settleCashDiff === 'number' ? Number((player.settleCashDiff).toFixed(2)) : null;
+    const settleROI = typeof player.settleROI === 'number' ? Number((player.settleROI).toFixed(6)) : null;
+
     bb.set(playerRef, {
         playerId: player.id,
         nickname: player.nickname,
-        buyInCount: player.buyInChipsList.length,
+        buyInCount: (player.buyInChipsList || []).length,
         totalBuyInCash,
-        settleCashAmount: player.settleCashAmount ?? null,
-        settleCashDiff: player.settleCashDiff ?? null,
-        settleROI: player.settleROI ?? null,
+        settleCashAmount,
+        settleCashDiff,
+        settleROI,
     })
     return { playerRef, totalBuyInCash }
 }
@@ -140,12 +145,13 @@ export async function upsertUserAndCounters(
     const currentProfit = existing.totalProfit ?? 0
     const newBuyInCash = currentBuyInCash + playerBuyInCash
     const newProfit = currentProfit + playerProfitCash
-    const newAverageROI = newBuyInCash === 0 ? 0 : newProfit / newBuyInCash
+        const newAverageROI = newBuyInCash === 0 ? 0 : newProfit / newBuyInCash
+        const storedAverageROI = Number(newAverageROI.toFixed(6));
 
     bb.update(userRef, {
         buyinInCash: increment(playerBuyInCash),
         totalProfit: increment(playerProfitCash),
-        averageROI: newAverageROI,
+            averageROI: storedAverageROI,
         gamesPlayed: increment(1),
         lastPlayedAt: new Date().toISOString(),
         // wins / losses（可选）
@@ -181,11 +187,11 @@ export async function ensureUserGameHistory(
         bb.set(gameHistoryRef, {
             gameId,
             created: new Date().toISOString(),
-            settleCashAmount: player.settleCashAmount ?? null,
-            settleCashDiff: player.settleCashDiff ?? null,
-            settleROI: player.settleROI ?? null,
+            settleCashAmount: typeof player.settleCashAmount === 'number' ? Number((player.settleCashAmount).toFixed(2)) : null,
+            settleCashDiff: typeof player.settleCashDiff === 'number' ? Number((player.settleCashDiff).toFixed(2)) : null,
+            settleROI: (typeof player.settleROI === 'number') ? Number(player.settleROI.toFixed(6)) : null,
             totalBuyInChips: player.totalBuyInChips,
-            totalBuyInCash,
+            totalBuyInCash: typeof totalBuyInCash === 'number' ? Number((totalBuyInCash).toFixed(2)) : totalBuyInCash,
             result: (player.settleCashDiff ?? 0) > 0 ? 'win' : (player.settleCashDiff ?? 0) < 0 ? 'lose' : 'even',
             finalizedAt: new Date().toISOString(),
         })

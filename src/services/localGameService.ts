@@ -21,8 +21,8 @@ export async function createPlayer(payload: Omit<PlayerLocal, 'id' | 'createdAt'
     const p: PlayerLocal = {
         id,
         nickname: payload.nickname,
-        totalProfit: payload.totalProfit ?? 0,
-        averageROI: payload.averageROI ?? 0,
+        totalProfit: Number(((payload.totalProfit ?? 0)).toFixed(2)),
+        averageROI: typeof payload.averageROI === 'number' ? Number((payload.averageROI).toFixed(6)) : (payload.averageROI ?? 0),
         gamesPlayed: payload.gamesPlayed ?? 0,
         photoURL: payload.photoURL,
         createdAt: now,
@@ -38,7 +38,14 @@ export async function updatePlayer(id: string, patch: Partial<PlayerLocal>): Pro
     const idx = list.findIndex((x) => x.id === id);
     if (idx === -1) return null;
     const now = new Date().toISOString();
-    const updated = { ...list[idx], ...patch, updatedAt: now };
+    const normalizedPatch: any = { ...patch };
+    if (typeof normalizedPatch.totalProfit === 'number') {
+        normalizedPatch.totalProfit = Number((normalizedPatch.totalProfit).toFixed(2));
+    }
+    if (typeof normalizedPatch.averageROI === 'number') {
+        normalizedPatch.averageROI = Number((normalizedPatch.averageROI).toFixed(6));
+    }
+    const updated = { ...list[idx], ...normalizedPatch, updatedAt: now };
     list[idx] = updated;
     await savePlayers(list);
     return updated;
@@ -73,7 +80,7 @@ export async function createGame(payload: {
         id,
         createdAt: now,
         players: payload.players,
-        initialBuyIn: payload.initialBuyIn,
+        initialBuyIn: Number((payload.initialBuyIn || 0).toFixed(2)),
         sbIndex: payload.players.findIndex((p) => p.isSB) ?? null,
         bbIndex: payload.players.findIndex((p) => p.isBB) ?? null,
         meta: payload.meta ?? {},
@@ -98,7 +105,11 @@ export async function updateGame(gameId: string, patch: Partial<GameLocal>): Pro
     const list = await getGames();
     const idx = list.findIndex((g) => g.id === gameId);
     if (idx === -1) return null;
-    const updated = { ...list[idx], ...patch };
+    const updatedPatch = { ...patch } as any;
+    if (typeof updatedPatch.initialBuyIn === 'number') {
+        updatedPatch.initialBuyIn = Number((updatedPatch.initialBuyIn || 0).toFixed(2));
+    }
+    const updated = { ...list[idx], ...updatedPatch };
     list[idx] = updated;
     await saveGames(list);
     return updated;

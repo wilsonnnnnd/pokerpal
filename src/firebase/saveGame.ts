@@ -62,13 +62,14 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 			id: p.id,
 			nickname: p.nickname,
 			buyInCount: p.buyInChipsList?.length ?? 0,
-			// convert chips to cash using rate
-			totalBuyInCash: (Number(p.totalBuyInChips) || 0) * rate,
+			// convert chips to cash using rate (cash fields use 2 decimal places)
+			totalBuyInCash: Number(((Number(p.totalBuyInChips) || 0) * rate).toFixed(2)),
 			// settleCashAmount should be derived from settleChipCount * rate
-			settleCashAmount: (Number((p as any).settleChipCount) || 0) * rate,
-			// keep settleCashDiff as-is (should already be in cash units if code earlier computed it)
-			settleCashDiff: Number((p as any).settleCashDiff) || 0,
-			settleROI: Number((p as any).settleROI) || 0,
+			settleCashAmount: Number(((Number((p as any).settleChipCount) || 0) * rate).toFixed(2)),
+			// keep settleCashDiff as-is but normalize to 2 decimals
+			settleCashDiff: Number((Number((p as any).settleCashDiff) || 0).toFixed(2)),
+			// ROI: store as fixed-precision ratio
+			settleROI: (typeof (p as any).settleROI === 'number') ? Number(((p as any).settleROI).toFixed(6)) : 0,
 		})),
 	};
 
