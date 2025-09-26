@@ -35,7 +35,7 @@ const getDefaults = (): AppSettings => {
     } catch (e) {
         // ignore
     }
-    return { language: 'en', timezone: tz, currency: '' };
+    return { language: 'zh', timezone: tz, currency: '' };
 };
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {

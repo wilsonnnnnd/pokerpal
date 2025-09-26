@@ -92,7 +92,7 @@ export default function App() {
     (async () => {
       try {
         const raw = await getLocal<any>(SETTINGS_KEY);
-        const defaults = { language: 'CN', timezone: 'GMT+10', currency: 'AUD' };
+  const defaults = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' };
 
         let settings: any;
         if (!raw) {
@@ -118,7 +118,7 @@ export default function App() {
         try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
       } catch (e) {
         console.warn('failed to load app settings', e);
-        try { (global as any).__pokerpal_settings = { language: 'CN', timezone: 'GMT+10', currency: 'AUD' }; } catch (e) { /* ignore */ }
+  try { (global as any).__pokerpal_settings = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' }; } catch (e) { /* ignore */ }
       }
     })();
 

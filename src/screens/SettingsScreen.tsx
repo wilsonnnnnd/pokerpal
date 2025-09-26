@@ -29,7 +29,7 @@ export default function SettingsScreen() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
-    // Use global settings provider
+    // Use global settings provider (language, timezone, currency handled by SettingsProvider)
     const { language, setLanguage, currency } = useSettings();
     // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function SettingsScreen() {
     useEffect(() => {
         (async () => {
             try {
-                // language is loaded by LanguageProvider; just load persisted user for debug
+                // language/timezone/currency are loaded by SettingsProvider; just load persisted user for debug
                 const pu = await getLocal(CURRENT_USER_KEY);
                 setPersistedUser(pu);
             } catch (e) {
@@ -138,7 +138,7 @@ export default function SettingsScreen() {
             message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                const defaults = { language: 'en', timezone: 'GMT+10', currency: 'AUD' };
+                const defaults = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
@@ -235,7 +235,7 @@ export default function SettingsScreen() {
                     <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('software_settings', language)}</Text>
 
                     {/* Language dropdown */}
-                    {/* NOTE: SETTINGS_KEY now stores an object { language: string } for compatibility with LanguageProvider */}
+                    {/* NOTE: SETTINGS_KEY stores an object { language, timezone, currency } and is managed by SettingsProvider */}
                         <InfoRow icon="translate" label="语言" text={language === 'zh' ? 'CN' : language === 'en' ? 'ENG' : (language ?? '')} />
                         <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'GMT+10'} />
                         <InfoRow icon="currency-usd" label="货币" text={`${currency ?? ''} ${getCurrencySymbol(currency) ? `(${getCurrencySymbol(currency)})` : ''}`} />
