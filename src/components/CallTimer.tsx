@@ -14,7 +14,7 @@ import {
 import Svg, { Circle } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAudioPlayer, useAudioRecorder, setAudioModeAsync, RecordingPresets, AudioModule } from 'expo-audio';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { logError } from '@/utils/useLogger';
 import { Palette as color } from '@/constants';
@@ -67,7 +67,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         defaultDuration = 30,
         warningThreshold = 10,
         criticalThreshold = 5,
-        onTimeUp = () => console.log('⏰ 时间到，触发默认操作'),
+        onTimeUp = () => {},
         onClose = () => { },
         presetTimes = [15, 30, 60],
         soundEnabled = true,
@@ -89,9 +89,67 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 引用
         const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    const soundRef = useRef<any | null>(null);
-    const warningRef = useRef<any | null>(null);
-    const timeupRef = useRef<any | null>(null);
+
+        // 使用 expo-audio 的 useAudioPlayer hook
+        const audioPlayer = useAudioPlayer();
+
+        // 设置音频模式
+        useEffect(() => {
+            const setupAudio = async () => {
+                try {
+                    await setAudioModeAsync({ 
+                        playsInSilentMode: true, 
+                        allowsRecording: false 
+                    });
+                } catch (e) {
+                    // 设置音频模式失败时静默处理
+                }
+            };
+            setupAudio();
+        }, []);
+
+        // 加载音效
+        const loadSounds = async () => {
+            if (soundsLoaded) return;
+            setIsLoadingSound(true);
+            try {
+                if (audioPlayer) {
+                    audioPlayer.replace(require('../assets/sounds/clock-alarm.mp3'));
+                    setSoundsLoaded(true);
+                } else {
+                    setSoundsLoaded(false);
+                }
+            } catch (error) {
+                logError('加载音效失败', error instanceof Error ? error.message : String(error));
+                setSoundsLoaded(false);
+            } finally {
+                setIsLoadingSound(false);
+            }
+        };
+
+        // 播放音效
+        const playSound = async () => {
+            if (!soundEnabled) return;
+            try {
+                if (audioPlayer && soundsLoaded) {
+                    audioPlayer.seekTo(0);
+                    audioPlayer.play();
+                }
+            } catch (error) {
+                logError('播放音效失败', error instanceof Error ? error.message : String(error));
+            }
+        };
+
+        // 停止音效
+        const stopSound = async () => {
+            try {
+                if (audioPlayer && soundsLoaded) {
+                    audioPlayer.pause();
+                }
+            } catch (error) {
+                logError('停止音效失败', error instanceof Error ? error.message : String(error));
+            }
+        };
 
         // 暴露方法给父组件
         useImperativeHandle(ref, () => ({
@@ -110,6 +168,8 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                 }
+                // 停止播放音频
+                stopSound();
             },
             reset: (newDuration?: number) => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
@@ -122,76 +182,12 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             resume: () => setRunning(true),
         }));
 
-        // 加载音效
-        const loadSounds = async () => {
-            if (soundsLoaded) return;
-
-            try {
-                setIsLoadingSound(true);
-
-                // try expo-audio AudioModule first if available
-                let _timeupSound: any = null;
-                try {
-                    if (AudioModule && (AudioModule as any).loadAsync) {
-                        // Some builds may expose a loadAsync on AudioModule
-                        _timeupSound = await (AudioModule as any).loadAsync(require('../assets/sounds/clock-alarm.mp3'));
-                    } else if (AudioModule && (AudioModule as any).createSound) {
-                        _timeupSound = await (AudioModule as any).createSound(require('../assets/sounds/clock-alarm.mp3'));
-                    }
-                } catch (e) {
-                    _timeupSound = null;
-                }
-
-                // fallback to expo-av dynamically
-                if (!_timeupSound) {
-                    try {
-                        // eslint-disable-next-line global-require
-                        const { Audio: AVAudio } = require('expo-av');
-                        _timeupSound = new AVAudio.Sound();
-                        await _timeupSound.loadAsync(require('../assets/sounds/clock-alarm.mp3'));
-                    } catch (err) {
-                        logError('加载音效失败 (expo-av fallback)', err instanceof Error ? err.message : String(err));
-                        _timeupSound = null;
-                    }
-                }
-
-                timeupRef.current = _timeupSound;
-                setSoundsLoaded(Boolean(_timeupSound));
-            } catch (error) {
-                logError('加载音效失败', error instanceof Error ? error.message : String(error));
-            } finally {
-                setIsLoadingSound(false);
-            }
-        };
-
-        // 卸载音效
-        const unloadSounds = async () => {
-            try {
-                if (timeupRef.current) {
-                    try {
-                        if (typeof timeupRef.current.unloadAsync === 'function') {
-                            await timeupRef.current.unloadAsync();
-                        } else if (typeof timeupRef.current.release === 'function') {
-                            await timeupRef.current.release();
-                        }
-                    } catch (e) {
-                        // ignore unload errors
-                    }
-                    timeupRef.current = null;
-                }
-                setSoundsLoaded(false);
-            } catch (error) {
-                logError('卸载音效失败', error instanceof Error ? error.message : String(error));
-            }
-        };
-
         // 组件卸载时清理
         useEffect(() => {
             return () => {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                 }
-                unloadSounds();
             };
         }, []);
 
@@ -204,21 +200,15 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             if (intervalRef.current) clearInterval(intervalRef.current);
                             setRunning(false);
                             onTimeUp();
-                            playTimeupSound();
+                            // 倒计时结束时播放声音
+                            playSound();
                             triggerHapticFeedback('heavy');
                             return 0;
                         }
 
-                        // 在警告阈值时播放提示音
-                        if (prev === warningThreshold + 1) {
-                            playWarningSound();
+                        // 倒计时到10秒时触发触感反馈（只触发一次）
+                        if (prev === 11) { // prev - 1 = 10，所以在11的时候触发，确保在倒数到10秒时反馈
                             triggerHapticFeedback('medium');
-                        }
-
-                        // 在紧急阈值内每秒播放滴答声
-                        if (prev <= criticalThreshold + 1) {
-                            playTickSound();
-                            triggerHapticFeedback('light');
                         }
 
                         return prev - 1;
@@ -246,60 +236,6 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             }
         }, [visible]);
 
-        // 播放警告音效
-        const playWarningSound = async () => {
-            if (soundEnabled && soundsLoaded && warningRef.current) {
-                try {
-                    if (typeof warningRef.current.setPositionAsync === 'function') {
-                        await warningRef.current.setPositionAsync(0);
-                    }
-                    if (typeof warningRef.current.playAsync === 'function') {
-                        await warningRef.current.playAsync();
-                    } else if (typeof warningRef.current.play === 'function') {
-                        await warningRef.current.play();
-                    }
-                } catch (error) {
-                    logError('播放警告音效失败', error instanceof Error ? error.message : String(error));
-                }
-            }
-        };
-
-        // 播放滴答音效
-        const playTickSound = async () => {
-            if (soundEnabled && soundsLoaded && soundRef.current) {
-                try {
-                    if (typeof soundRef.current.setPositionAsync === 'function') {
-                        await soundRef.current.setPositionAsync(0);
-                    }
-                    if (typeof soundRef.current.playAsync === 'function') {
-                        await soundRef.current.playAsync();
-                    } else if (typeof soundRef.current.play === 'function') {
-                        await soundRef.current.play();
-                    }
-                } catch (error) {
-                    logError('播放滴答音效失败', error instanceof Error ? error.message : String(error));
-                }
-            }
-        };
-
-        // 播放时间结束音效
-        const playTimeupSound = async () => {
-            if (soundEnabled && soundsLoaded && timeupRef.current) {
-                try {
-                    if (typeof timeupRef.current.setPositionAsync === 'function') {
-                        await timeupRef.current.setPositionAsync(0);
-                    }
-                    if (typeof timeupRef.current.playAsync === 'function') {
-                        await timeupRef.current.playAsync();
-                    } else if (typeof timeupRef.current.play === 'function') {
-                        await timeupRef.current.play();
-                    }
-                } catch (error) {
-                    logError('播放结束音效失败', error instanceof Error ? error.message : String(error));
-                }
-            }
-        };
-
         // 触发触觉反馈
         const triggerHapticFeedback = (intensity: 'light' | 'medium' | 'heavy') => {
             if (!vibrationEnabled) return;
@@ -311,10 +247,12 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             break;
                         case 'medium':
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            // 10秒提醒使用更强烈的触感反馈
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                             break;
                         case 'heavy':
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            // 倒计时结束使用通知型触感反馈
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                             break;
                     }
                 } else {
@@ -324,10 +262,12 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             Vibration.vibrate(50);
                             break;
                         case 'medium':
-                            Vibration.vibrate(100);
+                            // 10秒提醒振动模式：短震-停顿-短震
+                            Vibration.vibrate([0, 150, 100, 150]);
                             break;
                         case 'heavy':
-                            Vibration.vibrate([0, 250, 100, 250]);
+                            // 倒计时结束振动模式：长震提醒
+                            Vibration.vibrate([0, 300, 150, 300]);
                             break;
                     }
                 }
@@ -342,6 +282,8 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
+            // 停止播放音频
+            stopSound();
             onClose();
         };
 
@@ -486,7 +428,14 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 <View style={styles.controlButtons}>
                     <TouchableOpacity
                         style={styles.controlButtonWrapper}
-                        onPress={() => setRunning(prev => !prev)}
+                        onPress={() => {
+                            const newRunning = !running;
+                            setRunning(newRunning);
+                            // 如果暂停计时器，同时停止音频播放
+                            if (!newRunning) {
+                                stopSound();
+                            }
+                        }}
                     >
                         <LinearGradient
                             colors={running 
@@ -646,10 +595,6 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         overflow: 'hidden',
     },
-    launcherModalContent: {
-        width: '90%',
-        maxWidth: 380,
-    },
     timeEditModalContent: {
         backgroundColor: color.lightBackground,
         padding: Spacing.lg,
@@ -672,87 +617,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
-    },
-
-    // 启动器样式
-    launcherContainer: {
-        width: '100%',
-        paddingVertical: Spacing.xl,
-        paddingHorizontal: Spacing.lg,
-    },
-    launcherHeader: {
-        alignItems: 'center',
-        marginBottom: Spacing.xl,
-    },
-    iconWrapper: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: Spacing.md,
-        shadowColor: color.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    launcherTitle: {
-        fontSize: FontSize.h2,
-        fontWeight: '700',
-        color: color.title,
-        marginBottom: Spacing.xs,
-    },
-    launcherSubtitle: {
-        fontSize: FontSize.body,
-        color: color.mutedText,
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    timerModes: {
-        width: '100%',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginBottom: Spacing.lg,
-    },
-    timerModeButton: {
-        width: '48%',
-        marginBottom: Spacing.md,
-        borderRadius: Radius.md,
-        overflow: 'hidden',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-    },
-    timerModeGradient: {
-        padding: Spacing.lg,
-        alignItems: 'center',
-        minHeight: 100,
-        justifyContent: 'center',
-    },
-    timerModeIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: Spacing.sm,
-    },
-    timerModeText: {
-        color: color.lightText,
-        fontWeight: '700',
-        fontSize: FontSize.h3,
-        marginBottom: Spacing.xs,
-    },
-    timerModeDuration: {
-        color: 'rgba(255,255,255,0.9)',
-        fontSize: FontSize.small,
-        fontWeight: '500',
     },
 
     // 计时器样式
@@ -884,7 +748,7 @@ const styles = StyleSheet.create({
         fontSize: FontSize.small,
     },
 
-    // 时间编辑样式 (保持原有但优化)
+    // 时间编辑样式
     timeInputContainer: {
         width: '100%',
         padding: Spacing.xl,
