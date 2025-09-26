@@ -1,9 +1,10 @@
 // src/screens/GameHistoryScreen.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
     collection,
@@ -329,123 +330,226 @@ export default function GameHistoryScreen() {
         return { winner: sorted[0], loser: sorted[sorted.length - 1] };
     };
 
-    // —— 渲染卡片 ——  
-    const renderGameCard = ({ item }: { item: GameHistoryItem }) => {
-        const { winner, loser } = pickTop(item);
-        const { day, month, year, time } = (() => {
-            if (!item.created) return { day: '--', month: '--', year: '--', time: '--:--' };
-            const d = new Date(item.created);
-            return {
-                day: String(d.getDate()).padStart(2, '0'),
-                month: String(d.getMonth() + 1).padStart(2, '0'),
-                year: String(d.getFullYear()),
-                time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
-            };
-        })();
+// ---- 游戏卡片组件 ----
+interface GameCardProps {
+    item: GameHistoryItem;
+    index: number;
+    onPress: (item: GameHistoryItem) => void;
+    pickTop: (game: GameHistoryItem) => { winner: any; loser: any };
+}
 
-        return (
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => navigation.navigate('GameDetail', { game: item })}
-                activeOpacity={0.7}
-            >
-                <View style={styles.dateContainer}>
-                    <View style={styles.dateBox}>
-                        <Text style={styles.dateText}>{day}</Text>
-                        <Text style={styles.monthText}>{month}</Text>
-                        <Text style={styles.yearText}>{year}</Text>
-                    </View>
-                    <Text style={styles.timeText}>{time}</Text>
-                </View>
+const GameCard: React.FC<GameCardProps> = ({ item, index, onPress, pickTop }) => {
+    const { winner, loser } = pickTop(item);
+    const { day, month, year, time } = (() => {
+        if (!item.created) return { day: '--', month: '--', year: '--', time: '--:--' };
+        const d = new Date(item.created);
+        return {
+            day: String(d.getDate()).padStart(2, '0'),
+            month: String(d.getMonth() + 1).padStart(2, '0'),
+            year: String(d.getFullYear()),
+            time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+        };
+    })();
 
-                <View style={styles.cardContent}>
-                    <View style={styles.cardHeader}>
-                        <View style={styles.blindsContainer}>
-                            <MaterialCommunityIcons name="poker-chip" size={20} color={color.highLighter || '#d46613'} />
-                            <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
-                        </View>
-                        <View style={styles.playerCountContainer}>
-                            <Text style={styles.playerCountText}>{item.playerCount ?? item.players?.length ?? 0}人参与</Text>
-                        </View>
-                    </View>
+    // 动画值
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-                    {/* 统计 */}
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="bank" size={18} color={color.highLighter || '#d46613'} />
-                            <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{money(item.totalBuyInCash)}</Text>
-                                <Text style={styles.statLabel}>总买入筹码</Text>
-                            </View>
-                        </View>
+    // 进入动画
+    useEffect(() => {
+        const delay = Math.min(index * 100, 500); // 最大延迟500ms
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                delay,
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                delay,
+                tension: 50,
+                friction: 7,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [index, fadeAnim, scaleAnim]);
 
-                        <View style={styles.statItem}>
-                            <MaterialCommunityIcons name="calculator-variant" size={18} color={color.highLighter || '#d46613'} />
-                            <View style={styles.statTexts}>
-                                <Text style={styles.statValue}>{money(item.totalEndingCash)}</Text>
-                                <Text style={styles.statLabel}>结算筹码</Text>
-                            </View>
-                        </View>
+    const handlePress = () => {
+        // 点击动画
+        Animated.sequence([
+            Animated.timing(scaleAnim, {
+                toValue: 0.95,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+        ]).start();
 
-                        <View style={styles.statItem}>
-                            <MaterialCommunityIcons
-                                name={item.totalDiffCash >= 0 ? 'arrow-up-bold-circle' : 'arrow-down-bold-circle'}
-                                size={18}
-                                color={item.totalDiffCash >= 0 ? Palette.success : Palette.error}
-                            />
-                            <View style={styles.statTexts}>
-                                <Text
-                                    style={[
-                                        styles.statValue,
-                                        { color: item.totalDiffCash >= 0 ? Palette.success : Palette.error },
-                                    ]}
-                                >
-                                    {item.totalDiffCash >= 0 ? '+' : '-'}{(Math.abs(item.totalDiffCash))}
-                                </Text>
-                                <Text style={styles.statLabel}>总差额</Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* 最大赢家/输家 */}
-                    {winner && loser && (
-                        <View style={styles.playersContainer}>
-                            <View style={styles.playerRow}>
-                                <View style={styles.playerInfo}>
-                                    <MaterialCommunityIcons name="trophy" size={16} color="#FFD700" />
-                                    <Text style={styles.playerName}>{winner.nickname}</Text>
-                                </View>
-                                <Text style={[styles.playerProfit, { color: Palette.success }]}>
-                                    +${money(winner.settleCashDiff)}
-                                </Text>
-                            </View>
-
-                            <View style={styles.playerRow}>
-                                <View style={styles.playerInfo}>
-                                    <MaterialCommunityIcons name="emoticon-sad" size={16} color="#9E9E9E" />
-                                    <Text style={styles.playerName}>{loser.nickname}</Text>
-                                </View>
-                                <Text style={[styles.playerProfit, { color: Palette.error }]}>
-                                    -${money(Math.abs(loser.settleCashDiff))}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-
-                    <View style={styles.cardFooter}>
-                        <MaterialCommunityIcons name="chevron-right" size={20} color="#9E9E9E" />
-                    </View>
-                </View>
-            </TouchableOpacity>
-        );
+        // 导航
+        onPress(item);
     };
+
+    return (
+        <Animated.View
+            style={[
+                styles.card,
+                {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                },
+            ]}
+        >
+            <TouchableOpacity
+                style={styles.cardTouchable}
+                onPress={handlePress}
+                activeOpacity={0.9}
+            >
+                <LinearGradient
+                    colors={['#FFFFFF', '#F8FAFB']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.cardGradient}
+                >
+                    {/* 左侧日期区域 - 优化设计 */}
+                    <LinearGradient
+                        colors={[color.primary, color.highLighter]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0, y: 1 }}
+                        style={styles.dateContainer}
+                    >
+                        <View style={styles.dateBox}>
+                            <Text style={styles.dateText}>{day}</Text>
+                            <View style={styles.dateSeparator} />
+                            <Text style={styles.monthYearText}>{month}/{year.slice(2)}</Text>
+                        </View>
+                        <View style={styles.timeContainer}>
+                            <MaterialCommunityIcons name="clock-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
+                            <Text style={styles.timeText}>{time}</Text>
+                        </View>
+                    </LinearGradient>
+
+                    <View style={styles.cardContent}>
+                        {/* 头部信息 - 改进布局 */}
+                        <View style={styles.cardHeader}>
+                            <View style={styles.blindsContainer}>
+                                <MaterialCommunityIcons name="poker-chip" size={18} color={color.primary} />
+                                <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
+                            </View>
+                            <View style={styles.playerBadge}>
+                                <MaterialCommunityIcons name="account-group" size={16} color={color.success} />
+                                <Text style={styles.playerCountText}>{item.playerCount ?? item.players?.length ?? 0}</Text>
+                            </View>
+                        </View>
+
+                        {/* 统计数据 - 改进视觉效果 */}
+                        <View style={styles.statsContainer}>
+                            <View style={styles.statCard}>
+                                <MaterialCommunityIcons name="bank" size={16} color={color.info} />
+                                <View style={styles.statTexts}>
+                                    <Text style={styles.statValue}>${money(item.totalBuyInCash)}</Text>
+                                    <Text style={styles.statLabel}>买入</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.statDivider} />
+
+                            <View style={styles.statCard}>
+                                <MaterialCommunityIcons name="calculator-variant" size={16} color={color.warning} />
+                                <View style={styles.statTexts}>
+                                    <Text style={styles.statValue}>${money(item.totalEndingCash)}</Text>
+                                    <Text style={styles.statLabel}>结算</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.statDivider} />
+
+                            <View style={styles.statCard}>
+                                <MaterialCommunityIcons
+                                    name={item.totalDiffCash >= 0 ? 'trending-up' : 'trending-down'}
+                                    size={16}
+                                    color={item.totalDiffCash >= 0 ? Palette.success : Palette.error}
+                                />
+                                <View style={styles.statTexts}>
+                                    <Text
+                                        style={[
+                                            styles.statValue,
+                                            { color: item.totalDiffCash >= 0 ? Palette.success : Palette.error },
+                                        ]}
+                                    >
+                                        {item.totalDiffCash >= 0 ? '+' : ''}${money(item.totalDiffCash)}
+                                    </Text>
+                                    <Text style={styles.statLabel}>差额</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* 最大赢家/输家 - 改进设计 */}
+                        {winner && loser && (
+                            <View style={styles.playersContainer}>
+                                <View style={styles.playerRow}>
+                                    <View style={styles.playerInfo}>
+                                        <View style={styles.winnerBadge}>
+                                            <MaterialCommunityIcons name="trophy" size={12} color="#FFD700" />
+                                        </View>
+                                        <Text style={styles.playerName} numberOfLines={1}>{winner.nickname}</Text>
+                                    </View>
+                                    <Text style={[styles.playerProfit, { color: Palette.success }]}>
+                                        +${money(winner.settleCashDiff)}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.playerRow}>
+                                    <View style={styles.playerInfo}>
+                                        <View style={styles.loserBadge}>
+                                            <MaterialCommunityIcons name="arrow-down" size={12} color="#9E9E9E" />
+                                        </View>
+                                        <Text style={styles.playerName} numberOfLines={1}>{loser.nickname}</Text>
+                                    </View>
+                                    <Text style={[styles.playerProfit, { color: Palette.error }]}>
+                                        -${money(Math.abs(loser.settleCashDiff))}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* 右侧箭头 */}
+                        <View style={styles.cardFooter}>
+                            <MaterialCommunityIcons name="chevron-right" size={20} color={color.mutedText} />
+                        </View>
+                    </View>
+                </LinearGradient>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+    // —— 渲染卡片 ——  
+    const renderGameCard = ({ item, index }: { item: GameHistoryItem; index: number }) => (
+        <GameCard 
+            item={item} 
+            index={index}
+            onPress={(game) => navigation.navigate('GameDetail', { game })}
+            pickTop={pickTop}
+        />
+    );
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={'#d46613'} />
-                <Text style={styles.loadingText}>加载游戏历史...</Text>
-            </View>
+            <LinearGradient
+                colors={[color.background, color.lightBackground]}
+                style={styles.loadingContainer}
+            >
+                <View style={styles.loadingContent}>
+                    <ActivityIndicator size="large" color={color.primary} />
+                    <Text style={styles.loadingText}>加载游戏历史...</Text>
+                    <Text style={styles.loadingSubText}>正在获取您的游戏记录</Text>
+                </View>
+            </LinearGradient>
         );
     }
 
@@ -453,23 +557,47 @@ export default function GameHistoryScreen() {
     return (
         <RequireHost
             loadingFallback={(
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={'#d46613'} />
-                    <Text style={styles.loadingText}>正在检查权限...</Text>
-                </View>
+                <LinearGradient
+                    colors={[color.background, color.lightBackground]}
+                    style={styles.loadingContainer}
+                >
+                    <View style={styles.loadingContent}>
+                        <ActivityIndicator size="large" color={color.primary} />
+                        <Text style={styles.loadingText}>正在检查权限...</Text>
+                        <Text style={styles.loadingSubText}>请稍候</Text>
+                    </View>
+                </LinearGradient>
             )}
             denyFallback={(
-                <View style={styles.emptyContainer}>
-                    <MaterialCommunityIcons name="lock" size={60} color="#BDBDBD" />
-                    <Text style={styles.emptyText}>无权限查看此页面</Text>
-                    <Text style={styles.emptySubText}>此功能仅对房主开放</Text>
-                    <View style={{ marginTop: 12 }}>
-                        <PrimaryButton title="返回首页" onPress={() => navigation.navigate('Home')} />
+                <LinearGradient
+                    colors={[color.background, color.lightBackground]}
+                    style={styles.emptyContainer}
+                >
+                    <View style={styles.emptyIconContainer}>
+                        <MaterialCommunityIcons name="shield-lock" size={64} color={color.mutedText} />
                     </View>
-                </View>
+                    <Text style={styles.emptyText}>权限受限</Text>
+                    <Text style={styles.emptySubText}>此功能仅对房主开放，请使用房主账号登录</Text>
+                    <TouchableOpacity 
+                        style={styles.emptyAction}
+                        onPress={() => navigation.navigate('Home')}
+                        activeOpacity={0.7}
+                    >
+                        <LinearGradient
+                            colors={[color.mutedText, color.strongGray]}
+                            style={styles.emptyActionGradient}
+                        >
+                            <MaterialCommunityIcons name="home" size={20} color={color.lightText} />
+                            <Text style={styles.emptyActionText}>返回首页</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </LinearGradient>
             )}
         >
-            <View style={styles.container}>
+            <LinearGradient
+                colors={[color.background, color.lightBackground]}
+                style={styles.container}
+            >
                 <FlatList
                     data={items}
                     keyExtractor={(item) => item.id}
@@ -478,22 +606,46 @@ export default function GameHistoryScreen() {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     onEndReachedThreshold={0.3}
                     onEndReached={onEndReached}
+                    showsVerticalScrollIndicator={false}
                     ListFooterComponent={
                         !reachedEndRef.current ? (
-                            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                                <ActivityIndicator size="small" color={'#d46613'} />
+                            <View style={styles.footerLoader}>
+                                <ActivityIndicator size="small" color={color.primary} />
+                                <Text style={styles.footerLoaderText}>加载更多...</Text>
+                            </View>
+                        ) : items.length > 0 ? (
+                            <View style={styles.footerEnd}>
+                                <Text style={styles.footerEndText}>已显示全部记录</Text>
                             </View>
                         ) : null
                     }
                     ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <MaterialCommunityIcons name="cards" size={60} color="#BDBDBD" />
+                        <LinearGradient
+                            colors={['rgba(255, 255, 255, 0.8)', 'rgba(248, 250, 251, 0.8)']}
+                            style={styles.emptyContainer}
+                        >
+                            <View style={styles.emptyIconContainer}>
+                                <MaterialCommunityIcons name="cards-variant" size={64} color={color.mutedText} />
+                            </View>
                             <Text style={styles.emptyText}>暂无游戏记录</Text>
-                            <Text style={styles.emptySubText}>开始一局新游戏吧！</Text>
-                        </View>
+                            <Text style={styles.emptySubText}>开始一局新游戏，创造精彩回忆！</Text>
+                            <TouchableOpacity 
+                                style={styles.emptyAction}
+                                onPress={() => navigation.navigate('Home')}
+                                activeOpacity={0.7}
+                            >
+                                <LinearGradient
+                                    colors={[color.primary, color.highLighter]}
+                                    style={styles.emptyActionGradient}
+                                >
+                                    <MaterialCommunityIcons name="plus" size={20} color={color.lightText} />
+                                    <Text style={styles.emptyActionText}>开始新游戏</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </LinearGradient>
                     }
                 />
-            </View>
+            </LinearGradient>
         </RequireHost>
     );
 }
