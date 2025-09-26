@@ -21,7 +21,8 @@ import { GamePlayerRankstyles as styles } from '@/assets/styles';
 // ===== 常量：服务端可排序字段（必须与 Firestore 索引一致）=====
 const SORT_TYPES = {
     TOTAL_PROFIT: 'totalProfit', // 总收益（现金口径）
-    ROI: 'averageROI',               // ROI 总和（前端再 / gamesPlayed 求平均）
+    // ROI 存储为加权 ROI（totalProfit / totalBuyInCash），即一个比率：0.2 表示 20%
+    ROI: 'averageROI',
     APPEARANCES: 'gamesPlayed',  // 参与场次
 } as const;
 
@@ -45,8 +46,8 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
         return AVATAR_COLORS[ch % AVATAR_COLORS.length];
     }, [safeName]);
 
-    // 平均 ROI（%）
-    const roiAvg = item.gamesPlayed > 0 ? ((Number(item.averageROI) || 0) / item.gamesPlayed) * 100 : 0;
+    // 平均 ROI（%）：averageROI 在后端/写入端已保持为加权比率（totalProfit / totalBuyInCash）
+    const roiAvg = (Number(item.averageROI) || 0) * 100;
     const roiText = roiAvg.toFixed(1);
     const isRoiPositive = roiAvg >= 0;
     const isCashPositive = (Number(item.totalProfit) || 0) >= 0;
@@ -236,8 +237,9 @@ export default function PlayerRankingScreen() {
         return list.slice().sort((a, b) => {
             if (sortBy === SORT_TYPES.TOTAL_PROFIT) return (b.totalProfit || 0) - (a.totalProfit || 0);
             if (sortBy === SORT_TYPES.ROI) {
-                const ar = a.gamesPlayed > 0 ? (a.averageROI / a.gamesPlayed) : 0;
-                const br = b.gamesPlayed > 0 ? (b.averageROI / b.gamesPlayed) : 0;
+                // 已将 averageROI 统一为 weighted ratio (totalProfit / totalBuyInCash)
+                const ar = Number(a.averageROI) || 0;
+                const br = Number(b.averageROI) || 0;
                 return br - ar;
             }
             if (sortBy === SORT_TYPES.APPEARANCES) return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);

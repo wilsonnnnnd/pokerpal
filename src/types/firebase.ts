@@ -5,6 +5,7 @@ export type FirebasePlayer = {
     nickname?: string;
     totalProfit?: number;
     totalCash?: number;
+    // roiSum: accumulated weighted ROI (totalProfit / totalBuyInCash), stored as a ratio (e.g. 0.2 => 20%)
     roiSum?: number;
     gamesPlayed?: number;
     photoURL?: string;

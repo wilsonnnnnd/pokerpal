@@ -54,7 +54,8 @@ export const usePlayerStore = create<PlayerState>()(
                 setEndingChips: (id, settleChipCount) =>
                     set((state) => {
                         const { baseCashAmount, baseChipAmount } = useGameStore.getState();
-                        const rate = baseCashAmount / baseChipAmount;
+                        // Guard against division by zero: if baseChipAmount is 0, rate should be 0
+                        const rate = baseChipAmount ? baseCashAmount / baseChipAmount : 0;
 
                         return {
                             players: state.players.map((p) => {
@@ -63,8 +64,9 @@ export const usePlayerStore = create<PlayerState>()(
                                 const settleChipDiff = settleChipCount - p.totalBuyInChips;
                                 const settleCashAmount = settleChipCount * rate;
                                 const settleCashDiff = settleChipDiff * rate;
-                                const settleROI =
-                                    settleCashDiff / (p.totalBuyInChips * rate);
+
+                                const denom = (p.totalBuyInChips * rate) || 0;
+                                const settleROI = denom ? settleCashDiff / denom : 0;
 
                                 return {
                                     ...p,
