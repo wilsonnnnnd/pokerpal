@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "pokerpal",
+    "owen": "hd-software",
     "slug": "pokerpal",
     "version": "1.0.0",
     "scheme": "pokerpal",
@@ -26,7 +27,11 @@
         "foregroundImage": "./src/assets/PokerPal.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.wilsonnnnd.pokerpal.dev"
+      "package": "com.wilsonnnnd.pokerpal.dev",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "plugins": [
       [
@@ -45,6 +50,7 @@
       "eas": {
         "projectId": "ee93057e-27d6-41c7-b9ae-d494fd7663c2"
       }
-    }
+    },
+    "owner": "hd-software"
   }
 }
