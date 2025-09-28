@@ -4,6 +4,7 @@ import { Player } from '@/types';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useLogger } from '@/utils/useLogger';
 import Toast from 'react-native-toast-message';
+import { gameDoc, playerDoc } from '@/constants/namingVar';
 
 function sanitizeRemotePlayer(remote: Partial<Player>, baseChipAmount: number): Player {
     return {
@@ -59,23 +60,20 @@ export function startPlayerSyncListener(
     currentGameIdRef = gameId;
     setSyncing(true);
 
-    const playerRef = collection(db, `games/${gameId}/players`);
+    const playerRef = collection(db, gameDoc, gameId, playerDoc);
     unsubscribeRef = onSnapshot(
         playerRef,
         (snapshot) => {
-            logFn('Sync', `✅ Received ${snapshot.docs.length} remote players for gameId=${gameId}`);
             const remotePlayers = snapshot.docs.map((doc) => {
                 const raw = doc.data();
-                logFn('Sync', `Player data: ${JSON.stringify(raw)}`);
+                logFn('Sync', `${raw.nickname || raw.email || '未命名'} join in game. (${doc.id})`);
                 return sanitizeRemotePlayer({ id: doc.id, ...raw }, baseChipAmount);
             });
 
             mergePlayers(remotePlayers);
-            logFn('Sync', `✅ 合并 ${remotePlayers.length} 位远程玩家数据`);
             setSyncing(false);
         },
         (error) => {
-            console.error('Error syncing players:', error);
             setSyncing(false);
             logFn('Sync', `❌ Error syncing players for gameId=${gameId}: ${error.message}`);
             Toast.show({
