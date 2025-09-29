@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { Player } from '@/types';
 import { useGameStore } from '@/stores/useGameStore';
+import { InputField } from './InputField';
 
 
 type Props = {
@@ -17,14 +18,32 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
     const [isFocused, setIsFocused] = useState(false);
     // 防止连续快速点击快捷按钮
     const [quickDisabled, setQuickDisabled] = useState(false);
-    // 根据当前游戏的大盲生成：bigBlind * 100 / 200 / 500 / 1000
-    const bigBlind = useGameStore.getState().bigBlind ?? 1;
+    // 根据当前游戏的基础筹码金额生成快速买入选项
+    const baseChipAmount = useGameStore.getState().baseChipAmount ?? 1000;
     
-    const multipliers = [100, 200, 500, 1000];
-    const presetValues = multipliers.map(m => ({
-        value: bigBlind * m,
-        label: `+${m}`
-    }));
+    // 基于基础筹码金额的专业买入选项：1x, 2x, 3x, 5x
+    const presetValues = [
+        {
+            value: baseChipAmount,
+            label: '标准买入',
+            subtitle: `${baseChipAmount}`
+        },
+        {
+            value: baseChipAmount * 2,
+            label: '双倍买入',
+            subtitle: `${baseChipAmount * 2}`
+        },
+        {
+            value: baseChipAmount * 3,
+            label: '三倍买入',
+            subtitle: `${baseChipAmount * 3}`
+        },
+        {
+            value: baseChipAmount * 5,
+            label: '深筹码',
+            subtitle: `${baseChipAmount * 5}`
+        }
+    ];
 
     const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -107,41 +126,38 @@ export const BuyInPopupCard: React.FC<Props> = ({ player, onSubmit, onCancel }) 
                     </View>
 
                     <View style={styles.body}>
-                        <Text style={styles.inputLabel}>筹码数量</Text>
-                        <View style={styles.inputContainer}>
-                            <View style={styles.chipIconContainer}>
-                                <MaterialCommunityIcons
-                                    name="poker-chip"
-                                    size={20}
-                                    color={color.highLighter}
-                                />
-                            </View>
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    isFocused && styles.inputFocused
-                                ]}
-                                value={amount}
-                                onChangeText={setAmount}
-                                keyboardType="number-pad"
-                                placeholder="输入筹码数"
-                                placeholderTextColor={color.mutedText}
-                                onFocus={() => setIsFocused(true)}
-                                onBlur={() => setIsFocused(false)}
-                            />
+                        <InputField
+                            label="筹码数量"
+                            fieldName="amount"
+                            value={amount}
+                            placeholder="输入筹码数"
+                            icon="poker-chip"
+                            keyboardType="number-pad"
+                            onChangeText={(field, value) => setAmount(value)}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={() => setIsFocused(false)}
+                            returnKeyType="done"
+                        />
+
+                        <View style={styles.baseChipInfo}>
+                            <MaterialCommunityIcons name="information-outline" size={16} color={color.info} />
+                            <Text style={styles.baseChipText}>
+                                当前游戏基础筹码: {baseChipAmount}
+                            </Text>
                         </View>
 
                         <Text style={styles.presetLabel}>快速添加：</Text>
                         <View style={styles.quickButtons}>
-                            {presetValues.map((item) => (
+                            {presetValues.map((item, index) => (
                                 <TouchableOpacity
-                                    key={item.value}
+                                    key={index}
                                     style={[styles.quickBtn, quickDisabled && styles.quickBtnDisabled]}
                                     onPress={() => appendPreset(item.value)}
                                     activeOpacity={0.7}
                                     disabled={quickDisabled}
                                 >
                                     <Text style={styles.quickText}>{item.label}</Text>
+                                    <Text style={styles.quickSubtext}>{item.subtitle}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -260,44 +276,20 @@ const styles = StyleSheet.create({
     body: {
         padding: 16,
     },
-    inputLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: color.strongGray,
-        marginBottom: 8,
-    },
-    inputContainer: {
+    baseChipInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
-    },
-    chipIconContainer: {
-        width: 40,
-        height: 48,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: color.lightGray,
-        borderTopLeftRadius: 8,
-        borderBottomLeftRadius: 8,
-        borderWidth: 1,
-        borderColor: color.borderColor || color.mediumGray,
-        borderRightWidth: 0,
-    },
-    input: {
-        flex: 1,
-        height: 48,
-        borderWidth: 1,
-        borderColor: color.borderColor || color.mediumGray,
-        borderTopRightRadius: 8,
-        borderBottomRightRadius: 8,
+        backgroundColor: 'rgba(0, 123, 255, 0.1)',
         paddingHorizontal: 12,
-        fontSize: 16,
-        color: color.valueText,
-        backgroundColor: color.lightGray,
+        paddingVertical: 8,
+        borderRadius: 6,
+        marginBottom: 12,
     },
-    inputFocused: {
-        borderColor: color.primary,
-        backgroundColor: color.lightBackground,
+    baseChipText: {
+        fontSize: 12,
+        color: color.info,
+        marginLeft: 6,
+        fontWeight: '500',
     },
     presetLabel: {
         fontSize: 14,
@@ -306,26 +298,37 @@ const styles = StyleSheet.create({
     },
     quickButtons: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        justifyContent: 'space-between',
         marginBottom: 16,
+        gap: 8,
     },
     quickBtn: {
+        flex: 1,
         backgroundColor: color.lightGray,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 10,
         borderRadius: 8,
-        marginRight: 8,
-        marginBottom: 8,
         borderWidth: 1,
         borderColor: color.borderColor || color.mediumGray,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     quickBtnDisabled: {
         opacity: 0.6,
     },
     quickText: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
         color: color.valueText,
+    },
+    quickSubtext: {
+        fontSize: 10,
+        color: color.mutedText,
+        marginTop: 2,
     },
     currentBuyIn: {
         flexDirection: 'row',

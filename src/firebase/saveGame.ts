@@ -45,10 +45,18 @@ function validateSettlement(players: Player[]) {
  */
 export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 	const game = useGameStore.getState();
+	console.log('Saving game snapshot to local SQL', { game, playerCount: players.length })
 	// compute conversion rate (cash per chip). fallback to 1 to avoid division by zero
 	const rate = game.baseChipAmount && Number(game.baseChipAmount) !== 0
 		? (Number(game.baseCashAmount ?? 0) / Number(game.baseChipAmount))
 		: 1;
+
+	// compute game-level aggregates from players
+	const totalBuyInChips = players.reduce((acc, p) => acc + (Number(p.totalBuyInChips) || 0), 0);
+	const totalEndingChips = players.reduce((acc, p) => acc + (Number((p as any).settleChipCount) || 0), 0);
+
+	const totalBuyInCash = Number((totalBuyInChips * rate).toFixed(2));
+	const totalEndingCash = Number((totalEndingChips * rate).toFixed(2));
 
 	const snapshotPayload = {
 		id: gameId,
@@ -56,8 +64,11 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 		updated: game.updated ?? Date.now(),
 		smallBlind: game.smallBlind,
 		bigBlind: game.bigBlind,
-		baseCashAmount: game.baseCashAmount,
-		baseChipAmount: game.baseChipAmount,
+		// store totals in both chips and cash (cash = chips * rate)
+		totalBuyInChips,
+		totalBuyInCash,
+		totalEndingChips,
+		totalEndingCash,
 		players: players.map((p: Player) => ({
 			id: p.id,
 			nickname: p.nickname,

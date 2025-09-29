@@ -8,6 +8,9 @@ export type PlayerSnapshotCash = {
   settleROI: number;        // 小数，例如 0.2 表示 20%
   buyInCount: number;
   photoURL?: string | null;
+  // 可选筹码口径字段（可能存在于 Firestore 或本地快照）
+  totalBuyInChips?: number;
+  settleChipCount?: number;
 };
 
 // ===== Game 主文档（以 Firestore 为准）=====
@@ -35,9 +38,16 @@ export type GameSnapshotUI = {
   rate?: number;
   created: string;          // ISO string
   updated: string;          // ISO string
+  baseChipAmount?: number; // 基础筹码（0 表示无）
+  baseCashAmount?: number; // 基础现金（0 表示无）
+  finalized: boolean;
+  token: string | null;
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff
+  // 可选筹码聚合
+  totalBuyInChips?: number;
+  totalEndingChips?: number;
   players: PlayerSnapshotCash[];
 };
 
@@ -59,7 +69,10 @@ export type GameHistoryItem = {
   bigBlind?: number;
   created: string;
   updated: string;
-  
+  baseChipAmount?: number; // 基础筹码（0 表示无）
+  baseCashAmount?: number; // 基础现金（0 表示无）
+  finalized: boolean;
+  token: string | null;
   totalBuyInCash: number;     // Σ totalBuyInCash
   totalEndingCash: number;    // Σ settleCashAmount
   totalDiffCash: number;      // Σ settleCashDiff

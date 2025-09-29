@@ -28,6 +28,7 @@ import { SETTINGS_KEY } from '@/constants/namingVar';
 import { getCurrencySymbol } from '@/constants/currency';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
+import { useLogger } from '@/utils/useLogger';
 // settings key removed from namingVar; no currency usage here
 
 
@@ -39,6 +40,8 @@ interface GameSetupCardProps {
 export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const setGame = useGameStore((state) => state.setGame);
     const setToken = useGameStore((state) => state.setToken);
+    const { clearLogs } = useLogger();
+    const { isHost } = usePermission();
     // 使用对象来管理表单状态
     const [formValues, setFormValues] = useState({
         smallBlind: '',
@@ -49,7 +52,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     // currency removed — keep numeric inputs only
     const [currencyInfo, setCurrencyInfo] = useState<{ code?: string; symbol?: string; rate?: number }>({});
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
-    const { isHost } = usePermission();
 
     // 在组件初始化时尝试从全局或本地设置读取货币信息
     useEffect(() => {
@@ -185,6 +187,9 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
         try {
             // 隐藏键盘
             Keyboard.dismiss();
+
+            // 清除之前游戏的日志缓存
+            clearLogs();
 
             // 转换值为数字类型
             const gameData = {

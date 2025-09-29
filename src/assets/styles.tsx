@@ -1187,7 +1187,7 @@ export const GameDetailstyles = StyleSheet.create({
     },
     statBox: {
         width: '48%',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: color.lightGray,
         borderRadius: Radius.sm,
         padding: Spacing.md,
         marginBottom: Spacing.sm,
@@ -1333,7 +1333,7 @@ export const GameDetailstyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: Spacing.xs,
-        backgroundColor: color.mediumGray,
+        backgroundColor: color.lightGray,
         paddingHorizontal: Spacing.sm,
         gap: Spacing.sm,
         borderRadius: Radius.sm,

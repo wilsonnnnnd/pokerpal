@@ -31,6 +31,7 @@ import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
+import { useLogger } from '@/utils/useLogger';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -43,6 +44,7 @@ const HomeScreen = () => {
     const isReady = useStoreReady();
     const { confirmPopup } = usePopup();
     const { isHost } = usePermission();
+    const { clearLogs } = useLogger();
 
     useEffect(() => {
         if (!finalized && gameId) {
@@ -60,6 +62,7 @@ const HomeScreen = () => {
                         await deleteGame(gameId);
                         useGameStore.getState().resetGame();
                         usePlayerStore.getState().resetPlayers();
+                        clearLogs(); // 清除之前游戏的日志缓存
 
                         Toast.show({
                             type: 'info',
@@ -249,6 +252,7 @@ const HomeScreen = () => {
                                         await signOut();
                                         useGameStore.getState().resetGame();
                                         usePlayerStore.getState().resetPlayers();
+                                        clearLogs(); // 清除日志缓存
                                         Toast.show({ type: 'success', text1: '已退出登录' });
                                     } catch (e) {
                                         Toast.show({ type: 'error', text1: '退出登录失败' });

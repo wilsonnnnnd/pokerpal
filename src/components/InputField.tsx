@@ -14,6 +14,8 @@ interface InputFieldProps {
     onChangeText: (field: string, value: string) => void;
     onFocus?: () => void;
     onBlur?: () => void;
+    onSubmitEditing?: () => void;
+    returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send' | 'default';
     inputRef?: React.RefObject<TextInput | null>;
 }
 
@@ -28,6 +30,8 @@ export const InputField: React.FC<InputFieldProps> = ({
     onChangeText,
     onFocus,
     onBlur,
+    onSubmitEditing,
+    returnKeyType = 'done',
     inputRef,
 }) => {
     return (
@@ -43,6 +47,8 @@ export const InputField: React.FC<InputFieldProps> = ({
                     onChangeText={(text) => onChangeText(fieldName, text)}
                     onFocus={onFocus}
                     onBlur={onBlur}
+                    onSubmitEditing={onSubmitEditing}
+                    returnKeyType={returnKeyType}
                     placeholder={placeholder}
                     placeholderTextColor={Palette.mutedText}
                     maxLength={10}
