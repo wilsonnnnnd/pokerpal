@@ -27,10 +27,20 @@ const dict: Record<string, Record<string, string>> = {
                 choose_language: 'Please choose a language',
                 logout: 'Logout',
                 delete_account: 'Delete account',
+            // 数据管理相关翻译
+            data_management: 'Data Management',
+            clear_database: 'Clear Database',
+            clear_database_description: 'Clearing the local database will delete all game history and player data. Cloud-synced data will not be affected.',
+            clear_database_title: 'Clear Database',
+            clear_database_confirm: 'Are you sure you want to clear all local data? This action cannot be undone, including:\\n• Game history\\n• Player data\\n• Local cache\\n\\nNote: This will not affect cloud-synced data.',
+            clear_success_title: 'Clear Successful',
+            clear_success_msg: 'Local database has been cleared successfully',
+            clear_fail_title: 'Clear Failed',
+            clear_fail_msg: 'An error occurred while clearing the database',
     },
     zh: {
             save_when_changed: '保存/重置按钮仅在您修改语言设置后显示。',
-            logout_explain: '“退出登录”：仅清除当前会话；“注销登录”：删除账户信息。',
+            logout_explain: '"退出登录"：仅清除当前会话；"注销登录"：删除账户信息。',
             save_success: '设置已保存到本地',
             user_info: '用户信息',
             unnamed: '未命名',
@@ -54,6 +64,16 @@ const dict: Record<string, Record<string, string>> = {
                 choose_language: '请选择语言',
                 logout: '退出登录',
                 delete_account: '注销登录',
+            // 数据管理相关翻译
+            data_management: '数据管理',
+            clear_database: '清除数据库',
+            clear_database_description: '清除本地数据库将删除所有游戏历史记录和玩家数据。云端已同步的数据不会受到影响。',
+            clear_database_title: '清除数据库',
+            clear_database_confirm: '确定要清除所有本地数据吗？此操作无法撤销，包括：\\n• 游戏历史记录\\n• 玩家数据\\n• 本地缓存\\n\\n注意：这不会影响云端已同步的数据。',
+            clear_success_title: '清除成功',
+            clear_success_msg: '本地数据库已清除完成',
+            clear_fail_title: '清除失败',
+            clear_fail_msg: '清除数据库时发生错误',
     },
 };
 

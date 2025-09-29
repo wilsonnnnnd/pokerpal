@@ -15,6 +15,8 @@ import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { useSettings } from '@/providers/SettingsProvider';
 import { simpleT } from '@/i18n/simpleT';
+import { execSql } from '@/services/localDb';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type AppSettings = {
     language?: string;
@@ -149,6 +151,77 @@ export default function SettingsScreen() {
         });
     };
 
+    const clearDatabase = async () => {
+        setPopup({
+            visible: true,
+            title: simpleT('clear_database_title', language),
+            message: simpleT('clear_database_confirm', language),
+            isWarning: true,
+            onConfirm: async () => {
+                setPopup(prev => ({ ...prev, visible: false }));
+                setLoading(true);
+                
+                try {
+                    // 清除 SQLite 数据库表
+                    const tables = ['players', 'games', 'game_players', 'actions'];
+                    for (const table of tables) {
+                        try {
+                            await execSql(`DELETE FROM ${table}`);
+                        } catch (e) {
+                            console.warn(`Failed to clear table ${table}:`, e);
+                        }
+                    }
+
+                    // 清除内存中的数据存储
+                    if ((global as any).__pokerpal_store) {
+                        (global as any).__pokerpal_store = {
+                            players: [],
+                            games: [],
+                            game_players: [],
+                            actions: [],
+                            _id: 1
+                        };
+                    }
+
+                    // 清除 AsyncStorage 中的游戏相关数据（保留用户设置）
+                    const keys = await AsyncStorage.getAllKeys();
+                    const gameRelatedKeys = keys.filter(key => 
+                        key.includes('game') || 
+                        key.includes('player') || 
+                        key.includes('history') ||
+                        key.includes('__pokerpal_store') ||
+                        key.includes('GAME_') ||
+                        key.includes('PLAYER_')
+                    );
+                    
+                    if (gameRelatedKeys.length > 0) {
+                        await AsyncStorage.multiRemove(gameRelatedKeys);
+                    }
+
+                    setPopup({
+                        visible: true,
+                        title: simpleT('clear_success_title', language),
+                        message: simpleT('clear_success_msg', language),
+                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+                    });
+                } catch (e: any) {
+                    setPopup({
+                        visible: true,
+                        title: simpleT('clear_fail_title', language),
+                        message: e?.message || simpleT('clear_fail_msg', language),
+                        isWarning: true,
+                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+                    });
+                } finally {
+                    setLoading(false);
+                }
+            },
+            onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+        });
+    };
+
     if (loading) return (
         <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={color.confirm} />
@@ -252,6 +325,24 @@ export default function SettingsScreen() {
                         </View>
                     )}
                     <Text style={{ color: color.mutedText, fontSize: 12, marginTop: 8 }}>{simpleT('logout_explain', language)}</Text>
+                </View>
+
+                {/* 数据管理部分 */}
+                <View style={{ marginBottom: 18 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('data_management', language)}</Text>
+                    
+                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                        <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('clear_database_description', language)}</Text>
+                        
+                        <PrimaryButton
+                            title={simpleT('clear_database', language)}
+                            icon="database-remove"
+                            variant="filled"
+                            onPress={clearDatabase}
+                            style={{ backgroundColor: color.error }}
+                            textStyle={{ color: color.background }}
+                        />
+                    </View>
                 </View>
 
                 <View style={{ height: 40 }} />

@@ -77,7 +77,49 @@ export default function GameDetailScreen() {
     const isLocal = Boolean(route.params?.isLocal === true && paramGame);
     useEffect(() => {
         if (isLocal && paramGame) {
-            setGame(paramGame);
+            // 为本地数据补全缺失字段
+            const enhancedGame = {
+                ...paramGame,
+                // 确保基础字段存在
+                baseCashAmount: Number(paramGame.baseCashAmount) || 0,
+                baseChipAmount: (() => {
+                    let chipAmount = Number(paramGame.baseChipAmount) || 0;
+                    const cashAmount = Number(paramGame.baseCashAmount) || 0;
+                    
+                    // 如果baseChipAmount为0但baseCashAmount有值，进行智能修复
+                    if (!chipAmount && cashAmount > 0) {
+                        // 根据常见的现金/筹码比例推算
+                        if (cashAmount >= 100) {
+                            chipAmount = cashAmount * 10; // 1现金 = 10筹码
+                        } else {
+                            chipAmount = cashAmount * 100; // 1现金 = 100筹码
+                        }
+                    }
+                    
+                    return chipAmount;
+                })(),
+                totalBuyInCash: Number(paramGame.totalBuyInCash) || 0,
+                totalEndingCash: Number(paramGame.totalEndingCash) || 0,
+                totalDiffCash: Number(paramGame.totalDiffCash) || 0,
+                totalBuyInChips: Number(paramGame.totalBuyInChips) || 0,
+                totalEndingChips: Number(paramGame.totalEndingChips) || 0,
+                // 计算兑换比率
+                rate: (() => {
+                    const baseCash = Number(paramGame.baseCashAmount) || 0;
+                    const baseChip = Number(paramGame.baseChipAmount) || 0;
+                    if (baseChip > 0 && baseCash > 0) {
+                        return baseCash / baseChip;
+                    }
+                    // 如果没有基础设定，从玩家数据推算
+                    const players = paramGame.players || [];
+                    const totalBuyInCash = players.reduce((sum: number, p: any) => sum + (Number(p.totalBuyInCash) || 0), 0);
+                    const totalBuyInChips = players.reduce((sum: number, p: any) => sum + (Number(p.totalBuyInChips) || 0), 0);
+                    return totalBuyInChips > 0 ? totalBuyInCash / totalBuyInChips : 1;
+                })()
+            };
+            
+            
+            setGame(enhancedGame);
             setLoading(false);
             setError(null);
         }
@@ -274,11 +316,15 @@ export default function GameDetailScreen() {
                     {/* 第二行：初始设定 */}
                     <View style={[styles.statsGrid, { marginTop: 12 }]}>
                         <View style={[styles.statBox, { backgroundColor: color.info + '10', borderColor: color.info + '20', borderWidth: 1 }]}>
-                            <Text style={[styles.statValue, { color: color.info }]}>{formatUtils.money(game.baseCashAmount || 0, formatCurrency)}</Text>
+                            <Text style={[styles.statValue, { color: color.info }]}>
+                                {Number(game.baseCashAmount) > 0 ? formatUtils.money(Number(game.baseCashAmount), formatCurrency) : '未设定'}
+                            </Text>
                             <Text style={[styles.statLabel, { color: color.info }]}>初始买入金额</Text>
                         </View>
                         <View style={[styles.statBox, { backgroundColor: color.warning + '10', borderColor: color.warning + '20', borderWidth: 1 }]}>
-                            <Text style={[styles.statValue, { color: color.warning }]}>{formatUtils.money(game.baseChipAmount || 0)}</Text>
+                            <Text style={[styles.statValue, { color: color.warning }]}>
+                                {Number(game.baseChipAmount) > 0 ? formatUtils.money(Number(game.baseChipAmount)) : '未设定'}
+                            </Text>
                             <Text style={[styles.statLabel, { color: color.warning }]}>初始买入筹码</Text>
                         </View>
                     </View>

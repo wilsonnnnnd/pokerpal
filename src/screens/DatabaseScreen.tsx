@@ -20,15 +20,68 @@ function toHistoryItem(action: any) {
 	// prefer payload if it contains a game snapshot shape
 	const payload = action.payload || null;
 	if (payload && payload.players && Array.isArray(payload.players)) {
+		// 从payload中提取基础设定，如果没有则尝试从玩家数据中推算
+		let baseCashAmount = Number(payload.baseCashAmount ?? 0);
+		let baseChipAmount = Number(payload.baseChipAmount ?? 0);
+		
+		// 如果payload中没有这些字段，尝试从其他可能的字段名获取
+		if (!baseCashAmount) {
+			baseCashAmount = Number(payload.initialCashAmount ?? payload.startCashAmount ?? 0);
+		}
+		if (!baseChipAmount) {
+			baseChipAmount = Number(payload.initialChipAmount ?? payload.startChipAmount ?? 0);
+		}
+		
+		// 智能修复：如果baseChipAmount为0但baseCashAmount有值，可能数据存储时有错误
+		// 在扑克游戏中，通常baseChipAmount应该是一个正数
+		if (!baseChipAmount && baseCashAmount > 0) {
+			// 尝试其他可能的字段名或者使用合理的默认值
+			baseChipAmount = Number(payload.chipAmount ?? payload.chips ?? payload.startingChips ?? 0);
+			
+			// 如果还是没有找到，根据常见的现金/筹码比例推算
+			if (!baseChipAmount) {
+				// 常见比例：1现金 = 10筹码 或 1现金 = 100筹码
+				// 根据baseCashAmount推算一个合理的baseChipAmount
+				if (baseCashAmount >= 100) {
+					baseChipAmount = baseCashAmount * 10; // 1现金 = 10筹码
+				} else {
+					baseChipAmount = baseCashAmount * 100; // 1现金 = 100筹码
+				}
+			}
+		}
+		
+		// 计算总差额和其他汇总数据
+		const totalBuyInCash = payload.players.reduce((sum: number, p: any) => sum + (Number(p.totalBuyInCash) || 0), 0);
+		const totalEndingCash = payload.players.reduce((sum: number, p: any) => sum + (Number(p.settleCashAmount) || 0), 0);
+		const totalDiffCash = totalEndingCash - totalBuyInCash;
+		const totalBuyInChips = payload.players.reduce((sum: number, p: any) => sum + (Number(p.totalBuyInChips) || 0), 0);
+		const totalEndingChips = payload.players.reduce((sum: number, p: any) => sum + (Number(p.settleChipCount) || 0), 0);
+		
+		// 只有当基础设定完全缺失时才从玩家数据推算
+		if (!baseCashAmount && !baseChipAmount && payload.players.length > 0) {
+			const playerCount = payload.players.length;
+			
+			if (totalBuyInCash > 0) {
+				baseCashAmount = Math.round(totalBuyInCash / playerCount);
+			}
+			if (totalBuyInChips > 0) {
+				baseChipAmount = Math.round(totalBuyInChips / playerCount);
+			}
+		}
+		
 		return {
 			id: String(action.id),
 			smallBlind: Number(payload.smallBlind ?? 0),
 			bigBlind: Number(payload.bigBlind ?? 0),
 			created: payload.created ?? action.createdAt ?? new Date().toISOString(),
 			updated: payload.updated ?? payload.created ?? action.createdAt ?? new Date().toISOString(),
-			totalBuyInCash: Number(payload.totalBuyInCash ?? 0),
-			totalEndingCash: Number(payload.totalEndingCash ?? 0),
-			totalDiffCash: Number(payload.totalDiffCash ?? 0),
+			baseCashAmount: baseCashAmount,
+			baseChipAmount: baseChipAmount,
+			totalBuyInCash: totalBuyInCash,
+			totalEndingCash: totalEndingCash,
+			totalDiffCash: totalDiffCash,
+			totalBuyInChips: totalBuyInChips,
+			totalEndingChips: totalEndingChips,
 			players: payload.players.map((p: any) => ({
 				playerId: String(p.playerId ?? p.id ?? ''),
 				nickname: String(p.nickname ?? p.displayName ?? 'Unknown'),
@@ -38,6 +91,9 @@ function toHistoryItem(action: any) {
 				buyInCount: Number(p.buyInCount) || 0,
 				photoUrl: p.photoUrl ?? null,
 				settleROI: Number(p.settleROI) || 0,
+				// 添加筹码相关字段
+				totalBuyInChips: Number(p.totalBuyInChips) || 0,
+				settleChipCount: Number(p.settleChipCount) || 0,
 			})),
 			__rawAction: action,
 		};

@@ -36,7 +36,6 @@ import { getHosterId } from '@/utils/hostInfo'
  */
 export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 	const game = useGameStore.getState();
-	console.log('Saving game snapshot to local SQL', { game, playerCount: players.length })
 	// compute conversion rate (cash per chip). fallback to 1 to avoid division by zero
 	const rate = game.baseChipAmount && Number(game.baseChipAmount) !== 0
 		? (Number(game.baseCashAmount ?? 0) / Number(game.baseChipAmount))
