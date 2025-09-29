@@ -30,15 +30,6 @@ import { getHosterId } from '@/utils/hostInfo'
 
 
 
-
-function validateSettlement(players: Player[]) {
-	if (!players?.length) return
-	const sum = players.reduce((acc, p) => acc + (p.settleCashDiff ?? 0), 0)
-	if (Math.abs(sum) > 0.01) {
-		throw new Error(`结算不平衡：所有玩家盈亏合计 = ${sum}`)
-	}
-}
-
 /**
  * 将与同步到 Firebase 相同的数据以快照形式写入本地 SQL（actions 表），
  * 用于离线或服务器写入失败时的本地持久化备份。
@@ -176,16 +167,7 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 		throw new Error('基础筹码为 0 导致汇率为 0，请检查游戏设置')
 	}
 
-
-
 	logInfo('Saving game to Firebase', { gameId, playerCount: players.length })
-
-	try {
-		validateSettlement(players)
-	} catch (e: any) {
-		Toast.show({ type: 'error', text1: '结算校验失败', text2: e?.message || '', position: 'bottom' })
-		throw e
-	}
 
 	const bb = new BatchBuilder(db, 450)
 	const gameRef = doc(db, gameDoc, gameId)

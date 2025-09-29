@@ -38,7 +38,10 @@ export function SettleSummaryModal({
     const baseCashAmount = useGameStore.getState().baseCashAmount;
     // currency removed: show numeric cash differences
     return (
-        <Modal transparent animationType="fade">
+        <Modal 
+            transparent 
+            animationType="fade"
+        >
             <View style={styles.overlay}>
                 <LinearGradient
                     colors={['#FFFFFF', '#FFFFFF']}

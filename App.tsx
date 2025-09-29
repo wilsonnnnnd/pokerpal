@@ -188,8 +188,8 @@ export default function App() {
             )}
             {authUser ? <MainNavigator /> : <AuthNavigator />}
           </NavigationContainer>
+          <Toast />
         </PopupProvider>
-        <Toast />
       </SettingsProvider>
     </SafeAreaProvider>
   );

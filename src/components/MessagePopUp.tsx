@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Modal } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MsgPopUpProps } from '@/types';
 import { Palette as color } from '@/constants';
@@ -59,19 +59,25 @@ const MsgPopUp: React.FC<MsgPopUpProps> = ({
     }
     
     return (
-        <View style={styles.overlay}>
-            <Animated.View 
-                style={[
-                    styles.popup, 
-                    { 
-                        opacity: fadeAnim, 
-                        transform: [{ scale: fadeAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.9, 1]
-                        }) }] 
-                    }
-                ]}
-            >
+        <Modal 
+            visible={isVisible}
+            transparent
+            animationType="none"
+            statusBarTranslucent
+        >
+            <View style={styles.overlay}>
+                <Animated.View 
+                    style={[
+                        styles.popup, 
+                        { 
+                            opacity: fadeAnim, 
+                            transform: [{ scale: fadeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.9, 1]
+                            }) }] 
+                        }
+                    ]}
+                >
                 {/* 标题区域 */}
                 <View style={styles.titleContainer}>
                     <Text style={[styles.title, isWarning && styles.warningTitle]}>{title}</Text>
@@ -121,20 +127,16 @@ const MsgPopUp: React.FC<MsgPopUpProps> = ({
                 </View>
             </Animated.View>
         </View>
+        </Modal>
     );
 };
 
 const styles = StyleSheet.create({
     overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
+        flex: 1,
         backgroundColor: color.overlayDark,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1000,
     },
     popup: {
     backgroundColor: color.lightBackground,

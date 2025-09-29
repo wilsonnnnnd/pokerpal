@@ -88,6 +88,7 @@ export default function GamePlayScreen() {
     const timerRef = useRef<CallTimerHandle>(null);
     const [isLoading, setIsLoading] = useState(false);
     const submittingRef = useRef(false);
+    const [balanceDiffConfirmed, setBalanceDiffConfirmed] = useState(false);
     type SubmitPhase = 'idle' | 'saving' | 'finalizing' | 'done';
     const [submitPhase, setSubmitPhase] = useState<SubmitPhase>('idle');
     const [pendingFinalize, setPendingFinalize] = useState(false);
@@ -174,6 +175,7 @@ export default function GamePlayScreen() {
             setShowSettleSummary(false);
             clearLogs();
             resetPlayers();
+            setBalanceDiffConfirmed(false); // 重置差额确认状态
             // 清除导航历史并返回首页，避免用户通过返回键回到已结束的游戏
             navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
 
@@ -209,17 +211,42 @@ export default function GamePlayScreen() {
             const gameId = game.gameId;
             const rate = calcRate(game.baseCashAmount, game.baseChipAmount);
 
-            const totalBuyInCash = players.reduce((sum, p) => sum + p.totalBuyInChips * rate, 0);
-            const totalEndingCash = players.reduce((sum, p) => sum + (p.settleChipCount || 0) * rate, 0);
-            const diffCash = totalEndingCash - totalBuyInCash;
+            const totalBuyInChips = players.reduce((sum, p) => sum + p.totalBuyInChips, 0);
+            const totalEndingChips = players.reduce((sum, p) => sum + (p.settleChipCount || 0), 0);
+            const diffChips = totalEndingChips - totalBuyInChips;
 
-            if (Math.abs(diffCash) > 0.01) {
-                Toast.show({
-                    type: 'error',
-                    text1: '结算不平衡',
-                    text2: `差额 = ${diffCash.toFixed(2)}（请检查结算）`,
-                    position: 'bottom',
-                });
+            // 如果有差额且用户尚未确认，先关闭结算总览，然后显示差额确认
+            if (Math.abs(diffChips) > 0.01 && !balanceDiffConfirmed) {
+                // 先关闭结算总览
+                setShowSettleSummary(false);
+                setIsLoading(false);
+                submittingRef.current = false;
+                
+                // 延迟显示popup确保结算总览完全关闭
+                setTimeout(async () => {
+                    const shouldContinue = await showPopup({
+                        title: '结算差额提醒',
+                        message: `检测到结算差额：${diffChips > 0 ? '+' : ''}${diffChips}\n\n这可能是由于筹码丢失、找零或其他原因造成的。\n\n是否继续结账？`,
+                        isWarning: true,
+                    });
+
+                    if (shouldContinue) {
+                        // 用户确认，设置标记并记录日志
+                        setBalanceDiffConfirmed(true);
+                        log('Game', `⚠️ 用户确认在差额 ${diffChips.toFixed(2)} 的情况下继续结账`);
+
+                        // 重新打开结算总览
+                        setShowSettleSummary(true);
+                    } else {
+                        // 用户取消，显示提示
+                        Toast.show({
+                            type: 'info',
+                            text1: '结账已取消',
+                            text2: '请检查结算数据后重试',
+                            position: 'bottom',
+                        });
+                    }
+                }, 300);
                 return;
             }
 
@@ -248,11 +275,13 @@ export default function GamePlayScreen() {
             setShowSettleSummary(false);
             clearLogs();
             resetPlayers();
+            setBalanceDiffConfirmed(false); // 重置差额确认状态
             navigation.navigate('Home');
 
             Toast.show({
                 type: 'success',
                 text1: '🎉 已结束并上传',
+                text2: Math.abs(diffChips) > 0.01 ? `差额：${diffChips > 0 ? '+' : ''}${diffChips}` : undefined,
                 position: 'bottom',
             });
         } catch (e: any) {
@@ -278,7 +307,7 @@ export default function GamePlayScreen() {
             setIsLoading(false);
             submittingRef.current = false;
         }
-    }, [players]);
+    }, [players, balanceDiffConfirmed]);
 
 
     // ===== 返回键拦截：未结束前禁止返回 =====
