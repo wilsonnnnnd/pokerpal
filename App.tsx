@@ -20,6 +20,8 @@ import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
+import { getDeviceTimezone } from '@/utils/timezoneUtils';
+import { checkAndUpdateRatesOnAppStart } from '@/utils/exchangeRateUtils';
 
 
 export type RootStackParamList = {
@@ -88,11 +90,22 @@ export default function App() {
       }
     })();
 
+    // 检查并更新汇率数据（App启动时）
+    (async () => {
+      try {
+        await checkAndUpdateRatesOnAppStart();
+      } catch (e) {
+        console.warn('failed to check/update exchange rates on app start', e);
+      }
+    })();
+
     // load app setting object (language/timezone/currency) and attach for sync reads
     (async () => {
       try {
         const raw = await getLocal<any>(SETTINGS_KEY);
-  const defaults = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' };
+        // 使用设备时区作为默认值
+        const deviceTimezone = getDeviceTimezone();
+        const defaults = { language: 'zh', timezone: deviceTimezone, currency: 'AUD' };
 
         let settings: any;
         if (!raw) {
@@ -118,7 +131,9 @@ export default function App() {
         try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
       } catch (e) {
         console.warn('failed to load app settings', e);
-  try { (global as any).__pokerpal_settings = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' }; } catch (e) { /* ignore */ }
+        // 发生错误时也使用设备时区作为默认值
+        const fallbackTimezone = getDeviceTimezone();
+        try { (global as any).__pokerpal_settings = { language: 'zh', timezone: fallbackTimezone, currency: 'AUD' }; } catch (e) { /* ignore */ }
       }
     })();
 

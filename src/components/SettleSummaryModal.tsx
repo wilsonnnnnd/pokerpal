@@ -3,14 +3,15 @@ import { GamePlaystyles as styles } from "@/assets/styles";
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import { Player } from "@/types";
-import { FlatList, Modal, View, Text, TouchableOpacity, Image } from "react-native";
+import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButton } from "./PrimaryButton";
 import { useGameStore } from "@/stores/useGameStore";
 import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
-// no currency settings anymore
+import { getCurrencySymbol } from '@/constants/currency';
+import { simpleT } from '@/i18n/simpleT';
 
 // small helper to render initials
 function initials(name?: string) {
@@ -19,7 +20,6 @@ function initials(name?: string) {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
-
 
 // 结算总览弹窗
 export function SettleSummaryModal({
@@ -33,13 +33,17 @@ export function SettleSummaryModal({
     onCancel: () => void;
     isLoading?: boolean;
 }) {
-    const { currency, formatCurrency } = useSettings();
+    const { currency, formatCurrency, exchangeRates, formatAsRMB, language } = useSettings();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
-    // currency removed: show numeric cash differences
+    
+    // 货币切换状态
+    const [showRMB, setShowRMB] = useState(false);
+    const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? 'AUD';
+    
     return (
-        <Modal 
-            transparent 
+        <Modal
+            transparent
             animationType="fade"
         >
             <View style={styles.overlay}>
@@ -65,17 +69,17 @@ export function SettleSummaryModal({
                         borderBottomColor: Palette.mediumGray,
                     }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <MaterialCommunityIcons 
-                                name="chart-line" 
-                                size={28} 
-                                color={Palette.primary} 
+                            <MaterialCommunityIcons
+                                name="chart-line"
+                                size={28}
+                                color={Palette.primary}
                                 style={{ marginRight: Spacing.sm }}
                             />
                             <Text style={[styles.summaryTitle, {
                                 fontSize: FontSize.h2,
                                 fontWeight: '700',
                                 color: Palette.valueText,
-                            }]}>结算总览</Text>
+                            }]}>{simpleT('settlement_summary', language)}</Text>
                         </View>
                         <View style={{
                             backgroundColor: Palette.info + '20',
@@ -88,9 +92,55 @@ export function SettleSummaryModal({
                                 fontSize: FontSize.small,
                                 fontWeight: '600',
                             }}>
-                                {players.length} 位玩家
+                                {players.length} {simpleT('players', language)}
                             </Text>
                         </View>
+                    </View>
+
+                    {/* 货币切换开关 - 始终显示人民币选项 */}
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: Spacing.md,
+                        paddingHorizontal: Spacing.md,
+                        paddingVertical: Spacing.sm,
+                        backgroundColor: Palette.lightBackground,
+                        borderRadius: Radius.md,
+                        borderWidth: 1,
+                        borderColor: Palette.borderColor,
+                    }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <MaterialCommunityIcons
+                                name="currency-cny"
+                                size={20}
+                                color={Palette.primary}
+                                style={{ marginRight: Spacing.xs }}
+                            />
+                            <Text style={{
+                                fontSize: FontSize.body,
+                                fontWeight: '600',
+                                color: Palette.valueText,
+                            }}>
+                                {simpleT('show_rmb', language)}
+                            </Text>
+                            {currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                <Text style={{
+                                    fontSize: FontSize.small,
+                                    color: Palette.mutedText,
+                                    marginLeft: Spacing.xs,
+                                }}>
+                                    (1 {currentCurrency.toUpperCase()} ≈ ¥{exchangeRates.CNY ?? 4.7})
+                                </Text>
+                            )}
+                        </View>
+                        <Switch
+                            value={showRMB}
+                            onValueChange={setShowRMB}
+                            trackColor={{ false: Palette.lightGray, true: Palette.primary + '40' }}
+                            thumbColor={showRMB ? Palette.primary : Palette.mediumGray}
+                            ios_backgroundColor={Palette.lightGray}
+                        />
                     </View>
 
                     {/* List */}
@@ -104,7 +154,7 @@ export function SettleSummaryModal({
                             const chipDiff = chipCount - buyIn;
                             const cashDiff = baseChipAmount === 0 ? 0 : chipDiff / (baseChipAmount / baseCashAmount);
                             const positive = cashDiff >= 0;
-                            const currency = (global as any).__pokerpal_settings?.currency ?? 'AUD';
+                            
                             return (
                                 <View style={{
                                     flexDirection: 'row',
@@ -140,7 +190,6 @@ export function SettleSummaryModal({
                                                         resizeMode: 'cover',
                                                     }}
                                                     onError={() => {
-                                                        // 如果头像加载失败，可以在这里处理回退逻辑
                                                         console.log('头像加载失败:', item.photoURL);
                                                     }}
                                                 />
@@ -157,8 +206,8 @@ export function SettleSummaryModal({
                                                     marginRight: Spacing.md,
                                                 }}
                                             >
-                                                <Text style={{ 
-                                                    fontWeight: '700', 
+                                                <Text style={{
+                                                    fontWeight: '700',
                                                     color: 'white',
                                                     fontSize: FontSize.small,
                                                 }}>
@@ -179,7 +228,7 @@ export function SettleSummaryModal({
                                                 color: Palette.mutedText,
                                                 marginTop: 2,
                                             }}>
-                                                买入: {buyIn} → 结算: {chipCount}
+                                                {simpleT('buy_in', language)}: {buyIn} → {simpleT('settlement', language)}: {chipCount}
                                             </Text>
                                         </View>
                                     </View>
@@ -196,10 +245,10 @@ export function SettleSummaryModal({
                                             flexDirection: 'row',
                                             alignItems: 'center',
                                         }}>
-                                            <MaterialCommunityIcons 
-                                                name={positive ? "trending-up" : "trending-down"} 
-                                                size={14} 
-                                                color={positive ? Palette.success : Palette.error} 
+                                            <MaterialCommunityIcons
+                                                name={positive ? "trending-up" : "trending-down"}
+                                                size={14}
+                                                color={positive ? Palette.success : Palette.error}
                                             />
                                             <Text style={{
                                                 color: positive ? Palette.success : Palette.error,
@@ -207,9 +256,18 @@ export function SettleSummaryModal({
                                                 fontSize: FontSize.small,
                                                 marginLeft: 4,
                                             }}>
-                                                {positive ? `+${formatCurrency(cashDiff, currency)}` : `-${formatCurrency(Math.abs(cashDiff), currency)}`}
+                                                {positive ? '+' : '-'}{showRMB ? formatAsRMB(Math.abs(cashDiff), currentCurrency) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
                                             </Text>
                                         </View>
+                                        {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                            <Text style={{
+                                                fontSize: FontSize.small - 2,
+                                                color: Palette.mutedText,
+                                                marginTop: 2,
+                                            }}>
+                                                {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(cashDiff), currentCurrency)}
+                                            </Text>
+                                        )}
                                     </View>
                                 </View>
                             );
@@ -219,8 +277,8 @@ export function SettleSummaryModal({
                             const totalBuyIn = players.reduce((s, p) => s + (p.totalBuyInChips ?? 0), 0);
                             const totalChipDiff = totalChips - totalBuyIn;
                             const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
-                            const currency = (global as any).__pokerpal_settings?.currency ?? 'AUD';
                             const positive = totalCashDiff >= 0;
+                            
                             return (
                                 <View style={{
                                     flexDirection: 'row',
@@ -235,10 +293,10 @@ export function SettleSummaryModal({
                                 }}>
                                     {/* 合计信息 */}
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                        <MaterialCommunityIcons 
-                                            name="calculator" 
-                                            size={24} 
-                                            color={Palette.primary} 
+                                        <MaterialCommunityIcons
+                                            name="calculator"
+                                            size={24}
+                                            color={Palette.primary}
                                             style={{ marginRight: Spacing.sm }}
                                         />
                                         <View>
@@ -247,14 +305,14 @@ export function SettleSummaryModal({
                                                 fontSize: FontSize.h3,
                                                 color: Palette.valueText,
                                             }}>
-                                                合计
+                                                {simpleT('total', language)}
                                             </Text>
                                             <Text style={{
                                                 fontSize: FontSize.small,
                                                 color: Palette.text,
                                                 marginTop: 2,
                                             }}>
-                                                差额: {totalBuyIn - totalChips}
+                                                {simpleT('difference', language)}: {totalBuyIn - totalChips}
                                             </Text>
                                         </View>
                                     </View>
@@ -273,10 +331,10 @@ export function SettleSummaryModal({
                                             shadowRadius: 2,
                                         }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <MaterialCommunityIcons 
-                                                    name={positive ? "trending-up" : "trending-down"} 
-                                                    size={18} 
-                                                    color="white" 
+                                                <MaterialCommunityIcons
+                                                    name={positive ? "trending-up" : "trending-down"}
+                                                    size={18}
+                                                    color="white"
                                                 />
                                                 <Text style={{
                                                     color: 'white',
@@ -284,10 +342,20 @@ export function SettleSummaryModal({
                                                     fontSize: FontSize.body,
                                                     marginLeft: 4,
                                                 }}>
-                                                    {positive ? `+${formatCurrency(totalCashDiff, currency)}` : `-${formatCurrency(Math.abs(totalCashDiff), currency)}`}
+                                                    {positive ? '+' : '-'}{showRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
                                                 </Text>
                                             </View>
                                         </View>
+                                        {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                            <Text style={{
+                                                fontSize: FontSize.small - 2,
+                                                color: Palette.mutedText,
+                                                marginTop: 4,
+                                                textAlign: 'right',
+                                            }}>
+                                                {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                            </Text>
+                                        )}
                                     </View>
                                 </View>
                             );
@@ -295,12 +363,12 @@ export function SettleSummaryModal({
                     />
 
                     {/* Actions */}
-                    <View style={[styles.summaryButtonRow, { 
+                    <View style={[styles.summaryButtonRow, {
                         marginTop: Spacing.xl,
                         paddingTop: Spacing.lg,
                         borderTopWidth: 1,
                         borderTopColor: Palette.mediumGray,
-                    }]}> 
+                    }]}>
                         <TouchableOpacity
                             style={{
                                 flex: 1,
@@ -328,7 +396,7 @@ export function SettleSummaryModal({
                                     color: Palette.strongGray,
                                     marginLeft: Spacing.xs,
                                 }}>
-                                    取消
+                                    {simpleT('cancel', language)}
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>
@@ -355,10 +423,10 @@ export function SettleSummaryModal({
                                     justifyContent: 'center',
                                 }}
                             >
-                                <MaterialCommunityIcons 
-                                    name={isLoading ? "loading" : "check-circle"} 
-                                    size={20} 
-                                    color="white" 
+                                <MaterialCommunityIcons
+                                    name={isLoading ? "loading" : "check-circle"}
+                                    size={20}
+                                    color="white"
                                 />
                                 <Text style={{
                                     fontWeight: '600',
@@ -366,7 +434,7 @@ export function SettleSummaryModal({
                                     color: 'white',
                                     marginLeft: Spacing.xs,
                                 }}>
-                                    {isLoading ? '保存中...' : '确认保存'}
+                                    {isLoading ? simpleT('saving', language) : simpleT('confirm_save', language)}
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>

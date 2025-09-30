@@ -17,6 +17,7 @@ import { useSettings } from '@/providers/SettingsProvider';
 import { simpleT } from '@/i18n/simpleT';
 import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
 
 type AppSettings = {
     language?: string;
@@ -32,7 +33,18 @@ export default function SettingsScreen() {
     const [persistedUser, setPersistedUser] = useState<any | null>(null);
 
     // Use global settings provider (language, timezone, currency handled by SettingsProvider)
-    const { language, setLanguage, currency } = useSettings();
+    const { 
+        language, 
+        setLanguage, 
+        timezone, 
+        setTimezone, 
+        currency,
+        exchangeRates,
+        updateExchangeRates,
+        getLastRateUpdate,
+        clearRateCache,
+        isUpdatingRates
+    } = useSettings();
     // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
     const [initialCurrency, setInitialCurrency] = useState<string | null>(null);
@@ -140,8 +152,11 @@ export default function SettingsScreen() {
             message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                const defaults = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' };
+                // 使用设备时区作为默认值
+                const deviceTimezone = getDeviceTimezone();
+                const defaults = { language: 'zh', timezone: deviceTimezone, currency: 'AUD' };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
+                try { await setTimezone(defaults.timezone); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
                 setInitialCurrency(defaults.currency);
@@ -216,6 +231,102 @@ export default function SettingsScreen() {
                     });
                 } finally {
                     setLoading(false);
+                }
+            },
+            onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+        });
+    };
+
+    // 自动检测并更新设备时区
+    const autoDetectTimezone = async () => {
+        try {
+            setLoading(true);
+            const deviceTimezone = getDeviceTimezone();
+            
+            // 使用 SettingsProvider 的 setTimezone 来更新时区
+            await setTimezone(deviceTimezone);
+            
+            setPopup({
+                visible: true,
+                title: simpleT('timezone_updated', language),
+                message: `${simpleT('timezone_detected', language)}: ${getTimezoneDisplayName(deviceTimezone)}`,
+                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+            });
+        } catch (e: any) {
+            setPopup({
+                visible: true,
+                title: simpleT('timezone_error', language),
+                message: e?.message || simpleT('timezone_error_msg', language),
+                isWarning: true,
+                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 手动设置时区
+    const handleTimezoneChange = async (newTimezone: string) => {
+        try {
+            await setTimezone(newTimezone);
+        } catch (e) {
+            console.warn('Failed to set timezone:', e);
+        }
+    };
+
+    // 更新汇率
+    const handleUpdateExchangeRates = async () => {
+        try {
+            await updateExchangeRates();
+            
+            const lastUpdate = await getLastRateUpdate();
+            setPopup({
+                visible: true,
+                title: simpleT('rates_updated', language),
+                message: `${simpleT('rates_updated_msg', language)}${lastUpdate ? `\n${simpleT('last_update', language)}: ${lastUpdate}` : ''}`,
+                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+            });
+        } catch (e: any) {
+            setPopup({
+                visible: true,
+                title: simpleT('rates_update_failed', language),
+                message: e?.message || simpleT('rates_update_failed_msg', language),
+                isWarning: true,
+                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+            });
+        }
+    };
+
+    // 清除汇率缓存
+    const handleClearRateCache = async () => {
+        setPopup({
+            visible: true,
+            title: simpleT('clear_rate_cache', language),
+            message: simpleT('clear_rate_cache_confirm', language),
+            isWarning: true,
+            onConfirm: async () => {
+                try {
+                    await clearRateCache();
+                    setPopup({
+                        visible: true,
+                        title: simpleT('cache_cleared', language),
+                        message: simpleT('cache_cleared_msg', language),
+                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+                    });
+                } catch (e: any) {
+                    setPopup({
+                        visible: true,
+                        title: simpleT('cache_clear_failed', language),
+                        message: e?.message || simpleT('cache_clear_failed_msg', language),
+                        isWarning: true,
+                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
+                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
+                    });
                 }
             },
             onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -310,10 +421,43 @@ export default function SettingsScreen() {
                     {/* Language dropdown */}
                     {/* NOTE: SETTINGS_KEY stores an object { language, timezone, currency } and is managed by SettingsProvider */}
                         <InfoRow icon="translate" label="语言" text={language === 'zh' ? 'CN' : language === 'en' ? 'ENG' : (language ?? '')} />
-                        <InfoRow icon="clock-outline" label="时区" text={(global as any).__pokerpal_settings?.timezone ?? 'GMT+10'} />
+                        <InfoRow icon="clock-outline" label="时区" text={getTimezoneDisplayName(timezone)} />
                         <InfoRow icon="currency-usd" label="货币" text={`${currency ?? ''} ${getCurrencySymbol(currency) ? `(${getCurrencySymbol(currency)})` : ''}`} />
+                    
+                    {/* 语言设置 */}
                     <View style={{ paddingHorizontal: 12, marginTop: 6, marginBottom: 8 }}>
                         <SelectField value={language} onChange={(val) => { try { setLanguage(val); } catch (e) { /* ignore */ } }} options={[{ key: 'zh', label: 'CN' }, { key: 'en', label: 'ENG' }]} />
+                    </View>
+
+                    {/* 时区管理 */}
+                    <View style={{ marginTop: 16, marginBottom: 8 }}>
+                        <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('timezone_management', language)}</Text>
+                        
+                        {/* 自动检测时区按钮 */}
+                        <View style={{ marginBottom: 12 }}>
+                            <PrimaryButton
+                                title={simpleT('auto_detect_timezone', language)}
+                                icon="map-marker"
+                                variant="outlined"
+                                onPress={autoDetectTimezone}
+                                style={{ backgroundColor: color.card }}
+                                textStyle={{ color: color.primary }}
+                                iconColor={color.primary}
+                            />
+                        </View>
+
+                        {/* 手动时区选择 */}
+                        <View style={{ paddingHorizontal: 12 }}>
+                            <SelectField 
+                                value={timezone} 
+                                onChange={handleTimezoneChange}
+                                options={getCommonTimezones()}
+                            />
+                        </View>
+                        
+                        <Text style={{ color: color.mutedText, fontSize: 12, marginTop: 4, paddingHorizontal: 12 }}>
+                            {simpleT('current_timezone', language)}: {getTimezoneDisplayName(timezone)}
+                        </Text>
                     </View>
                     <Text style={{ color: color.mutedText, fontSize: 12 }}>{simpleT('save_when_changed', language)}</Text>
 
@@ -325,6 +469,61 @@ export default function SettingsScreen() {
                         </View>
                     )}
                     <Text style={{ color: color.mutedText, fontSize: 12, marginTop: 8 }}>{simpleT('logout_explain', language)}</Text>
+                </View>
+
+                {/* 汇率管理部分 */}
+                <View style={{ marginBottom: 18 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('exchange_rate_management', language)}</Text>
+                    
+                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                        <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
+                        
+                        {/* 当前汇率显示 - 只显示AUD兑换CNY */}
+                        <View style={{ marginBottom: 16 }}>
+                            <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
+                            {exchangeRates.CNY ? (
+                                <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
+                                    1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
+                                </Text>
+                            ) : (
+                                <Text style={{ color: color.mutedText, fontSize: 12, marginBottom: 2 }}>
+                                    {simpleT('no_rate_data', language)}
+                                </Text>
+                            )}
+                        </View>
+
+                        {/* 汇率管理按钮 */}
+                        <View style={{ flexDirection: 'row' }}>
+                            <View style={{ flex: 1, marginRight: 4 }}>
+                                <PrimaryButton
+                                    title={isUpdatingRates ? simpleT('updating_rates', language) : simpleT('update_rates', language)}
+                                    icon="refresh"
+                                    variant="outlined"
+                                    onPress={handleUpdateExchangeRates}
+                                    disabled={isUpdatingRates}
+                                    style={{ backgroundColor: color.card }}
+                                    textStyle={{ color: color.primary }}
+                                    iconColor={color.primary}
+                                />
+                            </View>
+                            
+                            <View style={{ flex: 1, marginLeft: 4 }}>
+                                <PrimaryButton
+                                    title={simpleT('clear_cache', language)}
+                                    icon="cached"
+                                    variant="outlined"
+                                    onPress={handleClearRateCache}
+                                    style={{ backgroundColor: color.card }}
+                                    textStyle={{ color: color.warning }}
+                                    iconColor={color.warning}
+                                />
+                            </View>
+                        </View>
+                        
+                        <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 8 }}>
+                            {simpleT('rate_data_source', language)}: exchangerate-api.com (24小时缓存)
+                        </Text>
+                    </View>
                 </View>
 
                 {/* 数据管理部分 */}
