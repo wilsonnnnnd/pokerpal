@@ -142,22 +142,17 @@ export const getAUDToCNYRate = async (): Promise<number> => {
  */
 export const checkAndUpdateRatesOnAppStart = async (): Promise<void> => {
     try {
-        console.log('Checking exchange rates on app start...');
         
         const cached = await getCachedRates(MAIN_CACHE_KEY);
         
         if (!cached) {
-            console.log('No cached rates found, fetching fresh data...');
             await fetchExchangeRates('AUD');
             return;
         }
         
         const isExpired = !isCacheValid(cached);
         if (isExpired) {
-            console.log('Cached rates expired, fetching fresh data...');
             await fetchExchangeRates('AUD');
-        } else {
-            console.log('Using valid cached exchange rates');
         }
     } catch (error) {
         console.warn('Failed to check/update rates on app start:', error);
@@ -317,8 +312,7 @@ export const clearExchangeRateCache = async (): Promise<void> => {
                 // 忽略删除失败
             }
         }
-        
-        console.log('Exchange rate cache cleared');
+
     } catch (error) {
         console.warn('Failed to clear exchange rate cache:', error);
     }

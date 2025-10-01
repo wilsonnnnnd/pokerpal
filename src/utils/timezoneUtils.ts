@@ -115,8 +115,6 @@ export const updateGlobalTimezone = async (newTimezone: string): Promise<void> =
         } catch (e) {
             console.warn('Failed to update global settings:', e);
         }
-
-        console.log('Timezone updated to:', newTimezone);
     } catch (e) {
         console.error('Failed to update timezone:', e);
         throw e;

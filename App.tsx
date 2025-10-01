@@ -22,6 +22,7 @@ import SettingsScreen from '@/screens/SettingsScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { getDeviceTimezone } from '@/utils/timezoneUtils';
 import { checkAndUpdateRatesOnAppStart } from '@/utils/exchangeRateUtils';
+import { userHasRole } from '@/firebase/getUserProfile';
 
 
 export type RootStackParamList = {
@@ -90,15 +91,6 @@ export default function App() {
       }
     })();
 
-    // 检查并更新汇率数据（App启动时）
-    (async () => {
-      try {
-        await checkAndUpdateRatesOnAppStart();
-      } catch (e) {
-        console.warn('failed to check/update exchange rates on app start', e);
-      }
-    })();
-
     // load app setting object (language/timezone/currency) and attach for sync reads
     (async () => {
       try {
@@ -156,9 +148,30 @@ export default function App() {
     let unsub: (() => void) | undefined;
 
     if (typeof onAuthStateChanged === 'function') {
-      unsub = onAuthStateChanged((user: any) => {
+      unsub = onAuthStateChanged(async (user: any) => {
         // update local auth state
         setAuthUser(user ?? null);
+
+        // 检查并更新汇率数据（仅当用户已登录且为host时）
+        if (user && user.uid) {
+          try {
+            console.log('User logged in, checking if user is host for exchange rate update...');
+            
+            // 检查用户是否为host
+            const isHost = await userHasRole(user.uid, 'host');
+            
+            if (isHost) {
+              console.log('User is host, updating exchange rates...');
+              await checkAndUpdateRatesOnAppStart();
+            } else {
+              console.log('User is not host, skipping exchange rate update');
+            }
+          } catch (e) {
+            console.warn('Failed to check user role or update exchange rates:', e);
+          }
+        } else {
+          console.log('No user logged in, skipping exchange rate update');
+        }
 
         // Simply update auth state and mark initialization done.
         // The navigator rendered in JSX will switch based on `authUser`.

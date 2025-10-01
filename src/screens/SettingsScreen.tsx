@@ -18,6 +18,7 @@ import { simpleT } from '@/i18n/simpleT';
 import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
+import { usePermission } from '@/hooks/usePermission';
 
 type AppSettings = {
     language?: string;
@@ -45,6 +46,9 @@ export default function SettingsScreen() {
         clearRateCache,
         isUpdatingRates
     } = useSettings();
+    
+    // 权限检查 - 只有host用户可以看到汇率管理
+    const { isHost, loading: permissionLoading } = usePermission();
     // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
     const [initialCurrency, setInitialCurrency] = useState<string | null>(null);
@@ -471,60 +475,62 @@ export default function SettingsScreen() {
                     <Text style={{ color: color.mutedText, fontSize: 12, marginTop: 8 }}>{simpleT('logout_explain', language)}</Text>
                 </View>
 
-                {/* 汇率管理部分 */}
-                <View style={{ marginBottom: 18 }}>
-                    <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('exchange_rate_management', language)}</Text>
-                    
-                    <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-                        <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
+                {/* 汇率管理部分 - 只有host用户可见 */}
+                {isHost && (
+                    <View style={{ marginBottom: 18 }}>
+                        <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('exchange_rate_management', language)}</Text>
                         
-                        {/* 当前汇率显示 - 只显示AUD兑换CNY */}
-                        <View style={{ marginBottom: 16 }}>
-                            <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
-                            {exchangeRates.CNY ? (
-                                <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
-                                    1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
-                                </Text>
-                            ) : (
-                                <Text style={{ color: color.mutedText, fontSize: 12, marginBottom: 2 }}>
-                                    {simpleT('no_rate_data', language)}
-                                </Text>
-                            )}
-                        </View>
+                        <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
+                            <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
+                            
+                            {/* 当前汇率显示 - 只显示AUD兑换CNY */}
+                            <View style={{ marginBottom: 16 }}>
+                                <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
+                                {exchangeRates.CNY ? (
+                                    <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
+                                        1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
+                                    </Text>
+                                ) : (
+                                    <Text style={{ color: color.mutedText, fontSize: 12, marginBottom: 2 }}>
+                                        {simpleT('no_rate_data', language)}
+                                    </Text>
+                                )}
+                            </View>
 
-                        {/* 汇率管理按钮 */}
-                        <View style={{ flexDirection: 'row' }}>
-                            <View style={{ flex: 1, marginRight: 4 }}>
-                                <PrimaryButton
-                                    title={isUpdatingRates ? simpleT('updating_rates', language) : simpleT('update_rates', language)}
-                                    icon="refresh"
-                                    variant="outlined"
-                                    onPress={handleUpdateExchangeRates}
-                                    disabled={isUpdatingRates}
-                                    style={{ backgroundColor: color.card }}
-                                    textStyle={{ color: color.primary }}
-                                    iconColor={color.primary}
-                                />
+                            {/* 汇率管理按钮 */}
+                            <View style={{ flexDirection: 'row' }}>
+                                <View style={{ flex: 1, marginRight: 4 }}>
+                                    <PrimaryButton
+                                        title={isUpdatingRates ? simpleT('updating_rates', language) : simpleT('update_rates', language)}
+                                        icon="refresh"
+                                        variant="outlined"
+                                        onPress={handleUpdateExchangeRates}
+                                        disabled={isUpdatingRates}
+                                        style={{ backgroundColor: color.card }}
+                                        textStyle={{ color: color.primary }}
+                                        iconColor={color.primary}
+                                    />
+                                </View>
+                                
+                                <View style={{ flex: 1, marginLeft: 4 }}>
+                                    <PrimaryButton
+                                        title={simpleT('clear_cache', language)}
+                                        icon="cached"
+                                        variant="outlined"
+                                        onPress={handleClearRateCache}
+                                        style={{ backgroundColor: color.card }}
+                                        textStyle={{ color: color.warning }}
+                                        iconColor={color.warning}
+                                    />
+                                </View>
                             </View>
                             
-                            <View style={{ flex: 1, marginLeft: 4 }}>
-                                <PrimaryButton
-                                    title={simpleT('clear_cache', language)}
-                                    icon="cached"
-                                    variant="outlined"
-                                    onPress={handleClearRateCache}
-                                    style={{ backgroundColor: color.card }}
-                                    textStyle={{ color: color.warning }}
-                                    iconColor={color.warning}
-                                />
-                            </View>
+                            <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 8 }}>
+                                {simpleT('rate_data_source', language)}: exchangerate-api.com (24小时缓存)
+                            </Text>
                         </View>
-                        
-                        <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 8 }}>
-                            {simpleT('rate_data_source', language)}: exchangerate-api.com (24小时缓存)
-                        </Text>
                     </View>
-                </View>
+                )}
 
                 {/* 数据管理部分 */}
                 <View style={{ marginBottom: 18 }}>

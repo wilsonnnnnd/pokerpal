@@ -3,7 +3,7 @@ import { GamePlaystyles as styles } from "@/assets/styles";
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import { Player } from "@/types";
-import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch } from "react-native";
+import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch, TextInput } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButton } from "./PrimaryButton";
@@ -12,6 +12,7 @@ import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
 import { getCurrencySymbol } from '@/constants/currency';
 import { simpleT } from '@/i18n/simpleT';
+import { usePermission } from '@/hooks/usePermission';
 
 // small helper to render initials
 function initials(name?: string) {
@@ -33,13 +34,40 @@ export function SettleSummaryModal({
     onCancel: () => void;
     isLoading?: boolean;
 }) {
-    const { currency, formatCurrency, exchangeRates, formatAsRMB, language } = useSettings();
+    const { currency, formatCurrency, exchangeRates, formatAsRMB, language, setExchangeRate } = useSettings();
+    const { isHost } = usePermission();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
     
     // 货币切换状态
     const [showRMB, setShowRMB] = useState(false);
+    // 手动修改汇率状态
+    const [isEditingRate, setIsEditingRate] = useState(false);
+    const [tempRate, setTempRate] = useState('');
     const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? 'AUD';
+    
+    // 处理汇率编辑
+    const handleEditRate = () => {
+        setTempRate((exchangeRates.CNY ?? 4.7).toString());
+        setIsEditingRate(true);
+    };
+    
+    const handleSaveRate = async () => {
+        const newRate = parseFloat(tempRate);
+        if (!isNaN(newRate) && newRate > 0) {
+            try {
+                await setExchangeRate('CNY', newRate);
+                setIsEditingRate(false);
+            } catch (error) {
+                console.error('Failed to update exchange rate:', error);
+            }
+        }
+    };
+    
+    const handleCancelEdit = () => {
+        setIsEditingRate(false);
+        setTempRate('');
+    };
     
     return (
         <Modal
@@ -97,51 +125,145 @@ export function SettleSummaryModal({
                         </View>
                     </View>
 
-                    {/* 货币切换开关 - 始终显示人民币选项 */}
-                    <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: Spacing.md,
-                        paddingHorizontal: Spacing.md,
-                        paddingVertical: Spacing.sm,
-                        backgroundColor: Palette.lightBackground,
-                        borderRadius: Radius.md,
-                        borderWidth: 1,
-                        borderColor: Palette.borderColor,
-                    }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <MaterialCommunityIcons
-                                name="currency-cny"
-                                size={20}
-                                color={Palette.primary}
-                                style={{ marginRight: Spacing.xs }}
-                            />
-                            <Text style={{
-                                fontSize: FontSize.body,
-                                fontWeight: '600',
-                                color: Palette.valueText,
+                    {/* 货币切换开关 - 只有host用户可见 */}
+                    {isHost && (
+                        <View style={{
+                            marginBottom: Spacing.md,
+                            padding: Spacing.md,
+                            backgroundColor: Palette.lightBackground,
+                            borderRadius: Radius.md,
+                            borderWidth: 1,
+                            borderColor: Palette.borderColor,
+                        }}>
+                            {/* 人民币显示开关 */}
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginBottom: Spacing.sm,
                             }}>
-                                {simpleT('show_rmb', language)}
-                            </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <MaterialCommunityIcons
+                                        name="currency-cny"
+                                        size={20}
+                                        color={Palette.primary}
+                                        style={{ marginRight: Spacing.xs }}
+                                    />
+                                    <Text style={{
+                                        fontSize: FontSize.body,
+                                        fontWeight: '600',
+                                        color: Palette.valueText,
+                                    }}>
+                                        {simpleT('show_rmb', language)}
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={showRMB}
+                                    onValueChange={setShowRMB}
+                                    trackColor={{ false: Palette.lightGray, true: Palette.primary + '40' }}
+                                    thumbColor={showRMB ? Palette.primary : Palette.mediumGray}
+                                    ios_backgroundColor={Palette.lightGray}
+                                />
+                            </View>
+                            
+                            {/* 汇率显示和编辑 */}
                             {currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
-                                <Text style={{
-                                    fontSize: FontSize.small,
-                                    color: Palette.mutedText,
-                                    marginLeft: Spacing.xs,
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    paddingTop: Spacing.sm,
+                                    borderTopWidth: 1,
+                                    borderTopColor: Palette.borderColor,
                                 }}>
-                                    (1 {currentCurrency.toUpperCase()} ≈ ¥{exchangeRates.CNY ?? 4.7})
-                                </Text>
+                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                                        <Text style={{
+                                            fontSize: FontSize.small,
+                                            color: Palette.text,
+                                            marginRight: Spacing.xs,
+                                        }}>
+                                            汇率:
+                                        </Text>
+                                        {isEditingRate ? (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                                <Text style={{ fontSize: FontSize.small, color: Palette.text }}>
+                                                    1 {currentCurrency.toUpperCase()} = ¥
+                                                </Text>
+                                                <TextInput
+                                                    style={{
+                                                        borderWidth: 1,
+                                                        borderColor: Palette.primary,
+                                                        borderRadius: Radius.sm,
+                                                        paddingHorizontal: Spacing.xs,
+                                                        paddingVertical: 2,
+                                                        fontSize: FontSize.small,
+                                                        color: Palette.text,
+                                                        backgroundColor: Palette.background,
+                                                        minWidth: 60,
+                                                        marginHorizontal: 4,
+                                                    }}
+                                                    value={tempRate}
+                                                    onChangeText={setTempRate}
+                                                    keyboardType="numeric"
+                                                    autoFocus
+                                                />
+                                                <Text style={{ fontSize: FontSize.small, color: Palette.text }}>
+                                                    CNY
+                                                </Text>
+                                            </View>
+                                        ) : (
+                                            <TouchableOpacity 
+                                                onPress={handleEditRate}
+                                                style={{ flexDirection: 'row', alignItems: 'center' }}
+                                            >
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    color: Palette.primary,
+                                                    fontWeight: '500',
+                                                }}>
+                                                    1 {currentCurrency.toUpperCase()} ≈ ¥{(exchangeRates.CNY ?? 4.7).toFixed(4)} CNY
+                                                </Text>
+                                                <MaterialCommunityIcons
+                                                    name="pencil"
+                                                    size={14}
+                                                    color={Palette.primary}
+                                                    style={{ marginLeft: Spacing.xs }}
+                                                />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    
+                                    {isEditingRate && (
+                                        <View style={{ flexDirection: 'row', marginLeft: Spacing.sm }}>
+                                            <TouchableOpacity
+                                                onPress={handleSaveRate}
+                                                style={{
+                                                    backgroundColor: Palette.success,
+                                                    paddingHorizontal: Spacing.xs,
+                                                    paddingVertical: 4,
+                                                    borderRadius: Radius.sm,
+                                                    marginRight: Spacing.xs,
+                                                }}
+                                            >
+                                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={handleCancelEdit}
+                                                style={{
+                                                    backgroundColor: Palette.error,
+                                                    paddingHorizontal: Spacing.xs,
+                                                    paddingVertical: 4,
+                                                    borderRadius: Radius.sm,
+                                                }}
+                                            >
+                                                <MaterialCommunityIcons name="close" size={16} color="white" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
                             )}
                         </View>
-                        <Switch
-                            value={showRMB}
-                            onValueChange={setShowRMB}
-                            trackColor={{ false: Palette.lightGray, true: Palette.primary + '40' }}
-                            thumbColor={showRMB ? Palette.primary : Palette.mediumGray}
-                            ios_backgroundColor={Palette.lightGray}
-                        />
-                    </View>
+                    )}
 
                     {/* List */}
                     <FlatList
@@ -154,6 +276,9 @@ export function SettleSummaryModal({
                             const chipDiff = chipCount - buyIn;
                             const cashDiff = baseChipAmount === 0 ? 0 : chipDiff / (baseChipAmount / baseCashAmount);
                             const positive = cashDiff >= 0;
+                            
+                            // 只有host用户且开启了RMB显示才转换货币
+                            const shouldShowRMB = isHost && showRMB;
                             
                             return (
                                 <View style={{
@@ -256,10 +381,10 @@ export function SettleSummaryModal({
                                                 fontSize: FontSize.small,
                                                 marginLeft: 4,
                                             }}>
-                                                {positive ? '+' : '-'}{showRMB ? formatAsRMB(Math.abs(cashDiff), currentCurrency) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
+                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(cashDiff), currentCurrency) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
                                             </Text>
                                         </View>
-                                        {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                        {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
                                             <Text style={{
                                                 fontSize: FontSize.small - 2,
                                                 color: Palette.mutedText,
@@ -278,6 +403,9 @@ export function SettleSummaryModal({
                             const totalChipDiff = totalChips - totalBuyIn;
                             const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
                             const positive = totalCashDiff >= 0;
+                            
+                            // 只有host用户且开启了RMB显示才转换货币
+                            const shouldShowRMB = isHost && showRMB;
                             
                             return (
                                 <View style={{
@@ -342,11 +470,11 @@ export function SettleSummaryModal({
                                                     fontSize: FontSize.body,
                                                     marginLeft: 4,
                                                 }}>
-                                                    {positive ? '+' : '-'}{showRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                                    {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
                                                 </Text>
                                             </View>
                                         </View>
-                                        {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                        {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
                                             <Text style={{
                                                 fontSize: FontSize.small - 2,
                                                 color: Palette.mutedText,

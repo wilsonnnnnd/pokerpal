@@ -220,7 +220,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const updateExchangeRates = async (): Promise<void> => {
         try {
             setIsUpdatingRates(true);
-            console.log('Updating exchange rates from API...');
             
             // 获取最新汇率 (以AUD为基础，获取CNY等汇率)
             const latestRates = await fetchCNYRates();
@@ -239,8 +238,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             };
             await setLocal(SETTINGS_KEY, merged).catch(() => {});
             try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
-            
-            console.log('Exchange rates updated successfully:', latestRates);
         } catch (error) {
             console.error('Failed to update exchange rates:', error);
             throw error;
