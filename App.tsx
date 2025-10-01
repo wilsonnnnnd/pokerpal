@@ -155,23 +155,16 @@ export default function App() {
         // 检查并更新汇率数据（仅当用户已登录且为host时）
         if (user && user.uid) {
           try {
-            console.log('User logged in, checking if user is host for exchange rate update...');
-            
             // 检查用户是否为host
             const isHost = await userHasRole(user.uid, 'host');
             
             if (isHost) {
-              console.log('User is host, updating exchange rates...');
               await checkAndUpdateRatesOnAppStart();
-            } else {
-              console.log('User is not host, skipping exchange rate update');
-            }
+            } 
           } catch (e) {
             console.warn('Failed to check user role or update exchange rates:', e);
           }
-        } else {
-          console.log('No user logged in, skipping exchange rate update');
-        }
+        } 
 
         // Simply update auth state and mark initialization done.
         // The navigator rendered in JSX will switch based on `authUser`.

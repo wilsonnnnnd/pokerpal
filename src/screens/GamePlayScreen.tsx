@@ -128,10 +128,10 @@ export default function GamePlayScreen() {
             );
             setHeaderLeft(
                 <TouchableOpacity
-                    onPress={() => setModalState({ type: 'log-viewer' })}
+                    // onPress={() => setModalState({ type: 'log-viewer' })}
                     style={styles.headerButton}
                 >
-                    <MaterialCommunityIcons name="history" size={28} color={color.highLighter} />
+                    {/* <MaterialCommunityIcons name="history" size={28} color={color.highLighter} /> */}
                 </TouchableOpacity>
             );
             return () => clearHeader();
@@ -728,8 +728,6 @@ export default function GamePlayScreen() {
                 {/* 计时器（组件内部自带弹出） */}
                 <CallTimer ref={timerRef} />
 
-                {/* 保险计算器: 已移除 */}
-
                 {/* 添加玩家 */}
                 {modalState?.type === 'add-player' && (
                     <Modal transparent animationType="fade">
@@ -809,13 +807,13 @@ export default function GamePlayScreen() {
                 )}
 
                 {/* 日志查看器 */}
-                {modalState?.type === 'log-viewer' && (
+                {/* {modalState?.type === 'log-viewer' && (
                     <Modal transparent animationType="fade">
                         <View style={styles.overlay}>
                             <LogViewer logs={logs} onClose={() => setModalState(null)} />
                         </View>
                     </Modal>
-                )}
+                )} */}
             </View>
         </>
     );
