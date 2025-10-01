@@ -7,7 +7,7 @@ import Toast from 'react-native-toast-message';
 import { db } from '@/firebase/config';
 import { signInWithCredential, signInAnonymously } from '@/services/localAuth';
 import storage from '@/services/storageService';
-import { doc, setDoc,  } from 'firebase/firestore';
+import { doc, getDoc, setDoc,  } from 'firebase/firestore';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
@@ -33,18 +33,18 @@ export default function LoginScreen() {
             const userRef = doc(db, userDoc, uid);
             // check if user doc exists
             try {
-                const existing = await (await import('firebase/firestore')).getDoc(userRef);
+                const existing = await getDoc(userRef);
                 const now = new Date().toISOString();
                 if (existing.exists()) {
                     // only update the updated timestamp
                     await setDoc(userRef, { updated: now }, { merge: true });
                 } else {
                     const data: any = {
-                        nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
+                        nickname: user.displayName,
                         email: user.email ?? '',
                         photoURL: user.photoURL ?? '',
                         isActive: true,
-                        role: user.isAnonymous ? 'guest' : 'player',
+                        role: 'player',
                         updated: now,
                     };
 
@@ -68,11 +68,11 @@ export default function LoginScreen() {
                 // fallback: if getDoc fails for some reason, attempt to write full profile
                 const now = new Date().toISOString();
                 const data: any = {
-                    nickname: user.displayName ?? (user.isAnonymous ? 'Guest' : ''),
+                    nickname: user.displayName,
                     email: user.email ?? '',
                     photoURL: user.photoURL ?? '',
                     isActive: true,
-                    role: user.isAnonymous ? 'guest' : 'player',
+                    role: 'player',
                     updated: now,
                 };
 

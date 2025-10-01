@@ -41,15 +41,15 @@ interface PlayerActionsProps {
 
 // 头像组件
 const PlayerAvatar = React.memo<PlayerAvatarProps>(({ player, avatarColor, initialLetter }) => (
-    <View 
+    <View
         style={styles.avatar}
         accessible={true}
         accessibilityRole="image"
         accessibilityLabel={player.photoURL ? `${player.nickname}的头像照片` : `${player.nickname}的头像，首字母${initialLetter}`}
     >
         {player.photoURL ? (
-            <Image 
-                source={{ uri: player.photoURL }} 
+            <Image
+                source={{ uri: player.photoURL }}
                 style={styles.avatarImage}
                 accessible={false}
             />
@@ -77,7 +77,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                     <Text style={styles.detailLabel}>总买入</Text>
                 </View>
             </View>
-            
+
             <View style={styles.detailItem}>
                 <View style={styles.iconContainer}>
                     <MaterialCommunityIcons name="format-list-numbered" size={24} color={color.highLighter} />
@@ -88,16 +88,16 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                 </View>
             </View>
         </View>
-        
+
         {/* 结算信息 - 只在玩家结算后显示 */}
         {isSettled && (
             <View style={styles.detailsRow}>
                 <View style={styles.detailItem}>
                     <View style={styles.iconContainer}>
-                        <MaterialCommunityIcons 
-                            name="calculator-variant" 
-                            size={24} 
-                            color={color.highLighter} 
+                        <MaterialCommunityIcons
+                            name="calculator-variant"
+                            size={24}
+                            color={color.highLighter}
                         />
                     </View>
                     <View style={styles.detailTexts}>
@@ -107,22 +107,22 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                         <Text style={styles.detailLabel}>结算筹码</Text>
                     </View>
                 </View>
-                
+
                 <View style={[
-                    styles.detailItem, 
+                    styles.detailItem,
                     { backgroundColor: profit >= 0 ? 'rgba(172, 189, 134, 0.1)' : 'rgba(244, 67, 54, 0.1)' }
                 ]}>
                     <View style={styles.iconContainer}>
-                        <MaterialCommunityIcons 
-                            name={profit >= 0 ? "trending-up" : "trending-down"} 
-                            size={24} 
-                            color={profit >= 0 ? color.success : color.error} 
+                        <MaterialCommunityIcons
+                            name={profit >= 0 ? "trending-up" : "trending-down"}
+                            size={24}
+                            color={profit >= 0 ? color.success : color.error}
                         />
                     </View>
                     <View style={styles.detailTexts}>
                         <Text style={[
-                            styles.detailValue, 
-                            {color: profit >= 0 ? color.success : color.error}
+                            styles.detailValue,
+                            { color: profit >= 0 ? color.success : color.error }
                         ]}>
                             {(profit >= 0 ? '+' : '') + profit}
                         </Text>
@@ -145,7 +145,7 @@ const PlayerActions = React.memo<PlayerActionsProps>(({ player, finalized, onBuy
             iconColor={color.lightText}
             onPress={onBuyIn}
             style={[
-                styles.buyinButton, 
+                styles.buyinButton,
                 !player.isActive && styles.disabledButton
             ]}
             textStyle={styles.buyinText}
@@ -153,7 +153,7 @@ const PlayerActions = React.memo<PlayerActionsProps>(({ player, finalized, onBuy
             variant="filled"
             rounded={false}
         />
-        
+
         <PrimaryButton
             title={player.isActive ? '离开游戏' : '返回游戏'}
             icon={player.isActive ? 'logout' : 'arrow-right'}
@@ -174,19 +174,19 @@ const PlayerActions = React.memo<PlayerActionsProps>(({ player, finalized, onBuy
 PlayerActions.displayName = 'PlayerActions';
 
 // 玩家详情弹窗组件
-const PlayerDetailModal = React.memo<{ 
-    player: Player; 
-    visible: boolean; 
-    onClose: () => void; 
+const PlayerDetailModal = React.memo<{
+    player: Player;
+    visible: boolean;
+    onClose: () => void;
 }>(({ player, visible, onClose }) => {
     const { logs } = useLogger();
-    
+
     const formatDate = (dateStr: string) => {
         try {
             const date = new Date(dateStr);
             return date.toLocaleString('zh-CN', {
                 year: 'numeric',
-                month: '2-digit', 
+                month: '2-digit',
                 day: '2-digit',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -200,16 +200,16 @@ const PlayerDetailModal = React.memo<{
     // 从日志中获取玩家的实际买入时间
     const getBuyInHistory = useMemo(() => {
         // 过滤出该玩家的买入日志
-        const playerBuyInLogs = logs.filter(log => 
-            log.tag === 'Player' && 
-            log.message.includes(player.nickname) && 
+        const playerBuyInLogs = logs.filter(log =>
+            log.tag === 'Player' &&
+            log.message.includes(player.nickname) &&
             log.message.includes('追加买入') &&
             log.message.includes('筹码')
         );
 
         // 提取买入金额和时间
         const additionalBuyIns: Array<{ amount: number; timestamp: Date }> = [];
-        
+
         playerBuyInLogs.forEach(log => {
             // 解析日志消息中的买入金额，格式："🪙 {nickname} 追加买入 {amount} 筹码"
             const amountMatch = log.message.match(/追加买入\s+(\d+)\s+筹码/);
@@ -231,7 +231,7 @@ const PlayerDetailModal = React.memo<{
         // 添加初始买入（基于总买入和追加买入计算）
         const totalAdditional = additionalBuyIns.reduce((sum, buyIn) => sum + buyIn.amount, 0);
         const initialAmount = player.totalBuyInChips - totalAdditional;
-        
+
         if (initialAmount > 0) {
             fullBuyInHistory.push({
                 amount: initialAmount,
@@ -274,8 +274,8 @@ const PlayerDetailModal = React.memo<{
                         <View style={styles.modalHeaderContent}>
                             <View style={styles.modalAvatar}>
                                 {player.photoURL ? (
-                                    <Image 
-                                        source={{ uri: player.photoURL }} 
+                                    <Image
+                                        source={{ uri: player.photoURL }}
                                         style={styles.modalAvatarImage}
                                     />
                                 ) : (
@@ -300,7 +300,7 @@ const PlayerDetailModal = React.memo<{
                             <MaterialCommunityIcons name="close" size={24} color={color.mutedText} />
                         </TouchableOpacity>
                     </View>
-                    
+
                     <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                         {/* 基本信息 */}
                         <View style={styles.modalSection}>
@@ -338,7 +338,7 @@ const PlayerDetailModal = React.memo<{
                                     <Text style={styles.modalStatLabel}>买入次数</Text>
                                 </View>
                             </View>
-                            
+
                             {/* 买入明细 */}
                             {getBuyInHistory.length > 0 && (
                                 <View style={styles.buyInHistory}>
@@ -350,10 +350,10 @@ const PlayerDetailModal = React.memo<{
                                         <View key={index} style={styles.buyInHistoryItem}>
                                             <View style={styles.buyInHistoryLeft}>
                                                 <View style={styles.buyInHistoryTag}>
-                                                    <MaterialCommunityIcons 
-                                                        name={buyIn.isInitial ? "star" : "plus"} 
-                                                        size={12} 
-                                                        color={buyIn.isInitial ? color.warning : color.info} 
+                                                    <MaterialCommunityIcons
+                                                        name={buyIn.isInitial ? "star" : "plus"}
+                                                        size={12}
+                                                        color={buyIn.isInitial ? color.warning : color.info}
                                                     />
                                                     <Text style={styles.buyInHistoryIndex}>
                                                         {buyIn.isInitial ? '初始买入' : `第${index}次追加`}
@@ -394,20 +394,20 @@ const PlayerDetailModal = React.memo<{
                                     {player.settleChipDiff !== undefined && (
                                         <View style={[
                                             styles.modalStatCard,
-                                            { 
-                                                backgroundColor: player.settleChipDiff >= 0 
-                                                    ? 'rgba(172, 189, 134, 0.1)' 
+                                            {
+                                                backgroundColor: player.settleChipDiff >= 0
+                                                    ? 'rgba(172, 189, 134, 0.1)'
                                                     : 'rgba(244, 67, 54, 0.1)',
                                                 borderColor: player.settleChipDiff >= 0 ? color.success : color.error
                                             }
                                         ]}>
-                                            <MaterialCommunityIcons 
-                                                name={player.settleChipDiff >= 0 ? "trending-up" : "trending-down"} 
-                                                size={24} 
-                                                color={player.settleChipDiff >= 0 ? color.success : color.error} 
+                                            <MaterialCommunityIcons
+                                                name={player.settleChipDiff >= 0 ? "trending-up" : "trending-down"}
+                                                size={24}
+                                                color={player.settleChipDiff >= 0 ? color.success : color.error}
                                             />
                                             <Text style={[
-                                                styles.modalStatValue, 
+                                                styles.modalStatValue,
                                                 { color: player.settleChipDiff >= 0 ? color.success : color.error }
                                             ]}>
                                                 {player.settleChipDiff >= 0 ? '+' : ''}{player.settleChipDiff}
@@ -436,7 +436,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
     finalized,
 }) => {
     const [showDetailModal, setShowDetailModal] = useState(false);
-    
+
     // 计算衍生状态
     const playerData = useMemo(() => ({
         avatarColor: generatePlayerAvatar(player.nickname),
@@ -457,7 +457,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
         <Pressable
             onLongPress={handleLongPress}
             delayLongPress={500}
-            style={({pressed}) => [
+            style={({ pressed }) => [
                 styles.touchableWrapper,
                 pressed && styles.cardWrapperPressed
             ]}
@@ -474,7 +474,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                     {/* 卡片头部 - 玩家信息 */}
                     <View style={styles.cardHeader}>
                         <View style={styles.playerInfo}>
-                            <PlayerAvatar 
+                            <PlayerAvatar
                                 player={player}
                                 avatarColor={playerData.avatarColor}
                                 initialLetter={playerData.initialLetter}
@@ -483,7 +483,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                                 <Text style={styles.playerName}>{player.nickname}</Text>
                                 <View style={styles.statusBadge}>
                                     <View style={[
-                                        styles.statusDot, 
+                                        styles.statusDot,
                                         { backgroundColor: player.isActive ? color.success : color.error }
                                     ]} />
                                     <Text style={styles.statusText}>
@@ -492,40 +492,40 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                                 </View>
                             </View>
                         </View>
-                        
+
                         {/* 盈亏徽章 */}
                         {playerData.isSettled && (
                             <View style={[
                                 styles.profitBadge,
                                 { backgroundColor: playerData.profit >= 0 ? color.success : color.error }
                             ]}>
-                                <MaterialCommunityIcons 
-                                    name={playerData.profit >= 0 ? "trending-up" : "trending-down"} 
-                                    size={16} 
-                                    color={color.lightText} 
+                                <MaterialCommunityIcons
+                                    name={playerData.profit >= 0 ? "trending-up" : "trending-down"}
+                                    size={16}
+                                    color={color.lightText}
                                 />
                                 <Text style={styles.profitText}>
                                     {(playerData.profit >= 0 ? '+' : '') + playerData.profit}
                                 </Text>
                             </View>
                         )}
-                        
+
                         {/* 详情图标 */}
                         <TouchableOpacity
                             onPress={handleShowDetail}
                             style={styles.detailIconButton}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons 
-                                name="information-outline" 
-                                size={20} 
-                                color={color.mutedText} 
+                            <MaterialCommunityIcons
+                                name="information-outline"
+                                size={20}
+                                color={color.mutedText}
                             />
                         </TouchableOpacity>
                     </View>
 
                     {/* 详细数据区域 */}
-                    <PlayerDetails 
+                    <PlayerDetails
                         player={player}
                         profit={playerData.profit}
                         isSettled={playerData.isSettled}
@@ -540,7 +540,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                     />
                 </View>
             </View>
-            
+
             {/* 详情弹窗 */}
             <PlayerDetailModal
                 player={player}
@@ -569,9 +569,9 @@ const styles = StyleSheet.create({
         opacity: 0.95,
         transform: [{ scale: 0.98 }],
     },
-    card: { 
-        borderRadius: Radius.lg, 
-        overflow: 'hidden', 
+    card: {
+        borderRadius: Radius.lg,
+        overflow: 'hidden',
         elevation: Elevation.card,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -579,24 +579,24 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         marginHorizontal: Spacing.xs,
     },
-    
+
     // 主要内容容器
     cardContent: {
         backgroundColor: 'rgba(255, 255, 255, 0.9)', // 半透明白色覆盖层
         flex: 1,
     },
-    
+
     // 卡片头部重新设计
-    cardHeader: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        paddingHorizontal: Spacing.lg, 
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.lg,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: 'rgba(0, 0, 0, 0.1)',
     },
-    
+
     // 玩家信息区域
     playerInfo: {
         flexDirection: 'row',
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: color.text,
     },
-    
+
     // 盈亏徽章
     profitBadge: {
         flexDirection: 'row',
@@ -653,13 +653,13 @@ const styles = StyleSheet.create({
         color: color.lightText,
         marginLeft: Spacing.xs,
     },
-    
+
     // 头像样式优化
-    avatar: { 
-        width: 52, 
-        height: 52, 
-        borderRadius: 26, 
-        justifyContent: 'center', 
+    avatar: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 3 },
@@ -669,24 +669,24 @@ const styles = StyleSheet.create({
         borderWidth: 3,
         borderColor: 'rgba(255, 255, 255, 0.8)',
     },
-    avatarFallback: { 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+    avatarFallback: {
+        justifyContent: 'center',
+        alignItems: 'center',
         borderRadius: 26,
     },
-    avatarImage: { 
-        width: '100%', 
-        height: '100%', 
+    avatarImage: {
+        width: '100%',
+        height: '100%',
         borderRadius: 23,
     },
-    avatarText: { 
-        fontSize: FontSize.h2, 
-        fontWeight: 'bold', 
+    avatarText: {
+        fontSize: FontSize.h2,
+        fontWeight: 'bold',
         color: color.lightText,
     },
-    
+
     // 详情区域优化
-    detailsContainer: { 
+    detailsContainer: {
         padding: Spacing.lg,
     },
     detailsRow: {
@@ -739,17 +739,17 @@ const styles = StyleSheet.create({
         color: color.mutedText,
         fontWeight: '500',
     },
-    
+
     // 操作区域优化
-    actions: { 
-        flexDirection: 'row', 
-        padding: Spacing.lg, 
-        borderTopWidth: StyleSheet.hairlineWidth, 
-        borderTopColor: 'rgba(0, 0, 0, 0.1)', 
+    actions: {
+        flexDirection: 'row',
+        padding: Spacing.lg,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: 'rgba(0, 0, 0, 0.1)',
         backgroundColor: 'rgba(255, 255, 255, 0.6)',
         gap: Spacing.md,
     },
-    buyinButton: { 
+    buyinButton: {
         flex: 1,
         backgroundColor: color.success,
         borderRadius: Radius.md,
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
-    leaveButton: { 
+    leaveButton: {
         flex: 1,
         backgroundColor: color.error,
         borderRadius: Radius.md,
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
-    returnButton: { 
+    returnButton: {
         flex: 1,
         backgroundColor: color.info,
         borderRadius: Radius.md,
@@ -782,20 +782,20 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
-    leaveText: { 
-        fontSize: FontSize.body, 
-        fontWeight: '700', 
+    leaveText: {
+        fontSize: FontSize.body,
+        fontWeight: '700',
         color: color.lightText,
     },
-    buyinText: { 
-        fontSize: FontSize.body, 
-        fontWeight: '700', 
+    buyinText: {
+        fontSize: FontSize.body,
+        fontWeight: '700',
         color: color.lightText,
     },
-    disabledButton: { 
+    disabledButton: {
         opacity: 0.5,
     },
-    
+
     // 详情图标按钮
     detailIconButton: {
         padding: Spacing.sm,
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: color.borderColor,
     },
-    
+
     // 弹窗样式
     modalOverlay: {
         flex: 1,
@@ -906,6 +906,7 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         padding: Spacing.lg,
+        backgroundColor: color.lightBackground,
     },
     modalSection: {
         marginBottom: Spacing.lg,

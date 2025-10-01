@@ -34,7 +34,7 @@ export function SettleSummaryModal({
     onCancel: () => void;
     isLoading?: boolean;
 }) {
-    const { currency, formatCurrency, exchangeRates, formatAsRMB, language, setExchangeRate } = useSettings();
+    const { currency, formatCurrency, exchangeRates, formatAsRMB, language, setExchangeRate, updateExchangeRates, isUpdatingRates } = useSettings();
     const { isHost } = usePermission();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
@@ -45,6 +45,17 @@ export function SettleSummaryModal({
     const [isEditingRate, setIsEditingRate] = useState(false);
     const [tempRate, setTempRate] = useState('');
     const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? 'AUD';
+    
+    // 处理汇率更新
+    const handleUpdateRates = async () => {
+        try {
+            await updateExchangeRates();
+            // 可以添加一个成功提示
+        } catch (error) {
+            console.error('Failed to update exchange rates:', error);
+            // 可以添加一个错误提示
+        }
+    };
     
     // 处理汇率编辑
     const handleEditRate = () => {
@@ -166,8 +177,8 @@ export function SettleSummaryModal({
                                 />
                             </View>
                             
-                            {/* 汇率显示和编辑 */}
-                            {currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                            {/* 汇率显示和编辑 - 只在显示RMB时出现 */}
+                            {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
                                 <View style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
@@ -233,33 +244,53 @@ export function SettleSummaryModal({
                                         )}
                                     </View>
                                     
-                                    {isEditingRate && (
-                                        <View style={{ flexDirection: 'row', marginLeft: Spacing.sm }}>
-                                            <TouchableOpacity
-                                                onPress={handleSaveRate}
-                                                style={{
-                                                    backgroundColor: Palette.success,
-                                                    paddingHorizontal: Spacing.xs,
-                                                    paddingVertical: 4,
-                                                    borderRadius: Radius.sm,
-                                                    marginRight: Spacing.xs,
-                                                }}
-                                            >
-                                                <MaterialCommunityIcons name="check" size={16} color="white" />
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                                onPress={handleCancelEdit}
-                                                style={{
-                                                    backgroundColor: Palette.error,
-                                                    paddingHorizontal: Spacing.xs,
-                                                    paddingVertical: 4,
-                                                    borderRadius: Radius.sm,
-                                                }}
-                                            >
-                                                <MaterialCommunityIcons name="close" size={16} color="white" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
+                                    <View style={{ flexDirection: 'row', marginLeft: Spacing.sm }}>
+                                        <TouchableOpacity
+                                            onPress={handleUpdateRates}
+                                            disabled={isUpdatingRates}
+                                            style={{
+                                                backgroundColor: isUpdatingRates ? Palette.lightGray : Palette.primary,
+                                                paddingHorizontal: Spacing.xs,
+                                                paddingVertical: 4,
+                                                borderRadius: Radius.sm,
+                                                marginRight: Spacing.xs,
+                                                opacity: isUpdatingRates ? 0.6 : 1,
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons 
+                                                name={isUpdatingRates ? "loading" : "refresh"} 
+                                                size={16} 
+                                                color="white" 
+                                            />
+                                        </TouchableOpacity>
+                                        {isEditingRate && (
+                                            <>
+                                                <TouchableOpacity
+                                                    onPress={handleSaveRate}
+                                                    style={{
+                                                        backgroundColor: Palette.success,
+                                                        paddingHorizontal: Spacing.xs,
+                                                        paddingVertical: 4,
+                                                        borderRadius: Radius.sm,
+                                                        marginRight: Spacing.xs,
+                                                    }}
+                                                >
+                                                    <MaterialCommunityIcons name="check" size={16} color="white" />
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={handleCancelEdit}
+                                                    style={{
+                                                        backgroundColor: Palette.error,
+                                                        paddingHorizontal: Spacing.xs,
+                                                        paddingVertical: 4,
+                                                        borderRadius: Radius.sm,
+                                                    }}
+                                                >
+                                                    <MaterialCommunityIcons name="close" size={16} color="white" />
+                                                </TouchableOpacity>
+                                            </>
+                                        )}
+                                    </View>
                                 </View>
                             )}
                         </View>
