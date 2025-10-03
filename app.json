@@ -11,7 +11,7 @@
     "splash": {
       "image": "./src/assets/Loading_PokerPal.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#fcf5e7"
     },
     "ios": {
       "supportsTablet": true,
@@ -24,7 +24,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/PokerPal.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#fcf5e7"
       },
       "package": "com.wilsonnnnd.pokerpal.dev",
       "permissions": [
