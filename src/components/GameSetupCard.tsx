@@ -29,6 +29,7 @@ import { getCurrencySymbol } from '@/constants/currency';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 import { useLogger } from '@/utils/useLogger';
+import { GameSetUpStyles } from '@/assets/styles';
 // settings key removed from namingVar; no currency usage here
 
 
@@ -271,44 +272,44 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardAvoid}
+            style={GameSetUpStyles.keyboardAvoid}
         >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <ScrollView contentContainerStyle={styles.scrollContainer}>
-                    <View style={styles.card}>
+                <ScrollView contentContainerStyle={GameSetUpStyles.scrollContainer}>
+                    <View style={GameSetUpStyles.card}>
                         {/* Header Section with Gradient */}
                         <LinearGradient
                             colors={[color.primary, color.highLighter]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
-                            style={styles.headerGradient}
+                            style={GameSetUpStyles.headerGradient}
                         >
-                            <View style={styles.iconContainer}>
+                            <View style={GameSetUpStyles.iconContainer}>
                                 <MaterialCommunityIcons 
                                     name="cards-playing-outline" 
                                     size={32} 
                                     color={color.lightText} 
                                 />
                             </View>
-                            <Text style={styles.title}>游戏设置</Text>
-                            <Text style={styles.subtitle}>配置你的德州扑克游戏</Text>
+                            <Text style={GameSetUpStyles.title}>游戏设置</Text>
+                            <Text style={GameSetUpStyles.subtitle}>配置你的德州扑克游戏</Text>
                         </LinearGradient>
 
                         {/* Form Section */}
-                        <View style={styles.formSection}>
+                        <View style={GameSetUpStyles.formSection}>
                             {/* Blind Settings */}
-                            <View style={styles.sectionContainer}>
-                                <View style={styles.sectionHeader}>
+                            <View style={GameSetUpStyles.sectionContainer}>
+                                <View style={GameSetUpStyles.sectionHeader}>
                                     <MaterialCommunityIcons 
                                         name="scale-balance" 
                                         size={20} 
                                         color={color.primary} 
                                     />
-                                    <Text style={styles.sectionTitle}>盲注设置</Text>
+                                    <Text style={GameSetUpStyles.sectionTitle}>盲注设置</Text>
                                 </View>
                                 
-                                <View style={styles.inputRow}>
-                                    <View style={styles.halfWidth}>
+                                <View style={GameSetUpStyles.inputRow}>
+                                    <View style={GameSetUpStyles.halfWidth}>
                                         <InputField
                                             label="小盲注"
                                             fieldName="smallBlind"
@@ -322,7 +323,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                             inputRef={smallBlindRef}
                                         />
                                     </View>
-                                    <View style={styles.halfWidth}>
+                                    <View style={GameSetUpStyles.halfWidth}>
                                         <InputField
                                             label="大盲注"
                                             fieldName="bigBlind"
@@ -340,14 +341,14 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             </View>
 
                             {/* Buy-in Settings */}
-                            <View style={styles.sectionContainer}>
-                                <View style={styles.sectionHeader}>
+                            <View style={GameSetUpStyles.sectionContainer}>
+                                <View style={GameSetUpStyles.sectionHeader}>
                                     <MaterialCommunityIcons 
                                         name="wallet-outline" 
                                         size={20} 
                                         color={color.primary} 
                                     />
-                                    <Text style={styles.sectionTitle}>买入设置</Text>
+                                    <Text style={GameSetUpStyles.sectionTitle}>买入设置</Text>
                                 </View>
 
                                 <InputField
@@ -379,8 +380,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                         </View>
 
                         {/* Action Buttons */}
-                        <View style={styles.buttonSection}>
-                            <View style={styles.buttonGroup}>
+                        <View style={GameSetUpStyles.buttonSection}>
+                            <View style={GameSetUpStyles.buttonGroup}>
                                 {onCancel && (
                                     <PrimaryButton
                                         title="取消"
@@ -389,7 +390,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                         iconColor={color.mutedText}
                                         onPress={onCancel}
                                         variant="outlined"
-                                        style={styles.cancelButton}
+                                        style={GameSetUpStyles.cancelButton}
                                     />
                                 )}
                                 <PrimaryButton
@@ -397,7 +398,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                     icon="play-circle"
                                     iconPosition="right"
                                     onPress={handleStartGame}
-                                    style={styles.confirmButton}
+                                    style={GameSetUpStyles.confirmButton}
                                 />
                             </View>
                         </View>
@@ -408,119 +409,3 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     );
 };
 
-const styles = StyleSheet.create({
-    keyboardAvoid: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    scrollContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingVertical: Spacing.xl,
-    },
-    card: {
-        marginHorizontal: Spacing.xl,
-        borderRadius: Radius.lg,
-        backgroundColor: color.lightBackground,
-        shadowColor: color.shadowLight,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
-        overflow: 'hidden',
-    },
-    headerGradient: {
-        paddingVertical: Spacing.xl,
-        paddingHorizontal: Spacing.lg,
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-    },
-    iconContainer: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: Spacing.md,
-    },
-    title: {
-        fontSize: FontSize.h1,
-        fontWeight: '800',
-        color: color.lightText,
-        textAlign: 'center',
-        marginBottom: Spacing.xs,
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
-    },
-    subtitle: {
-        fontSize: FontSize.body,
-        color: 'rgba(255, 255, 255, 0.9)',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    formSection: {
-        padding: Spacing.lg,
-    },
-    sectionContainer: {
-        marginBottom: Spacing.xs,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-        paddingVertical: Spacing.sm,
-        paddingHorizontal: Spacing.md,
-        backgroundColor: color.lightGray,
-        borderRadius: Radius.sm,
-    },
-    sectionTitle: {
-        fontSize: FontSize.h3,
-        fontWeight: '700',
-        color: color.title,
-        marginLeft: Spacing.sm,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginHorizontal: -Spacing.xs,
-    },
-    halfWidth: {
-        flex: 1,
-        marginHorizontal: Spacing.xs,
-    },
-    buttonSection: {
-        padding: Spacing.lg,
-        backgroundColor: color.lightGray,
-        borderTopWidth: 1,
-        borderTopColor: color.borderColor,
-    },
-    buttonGroup: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    cancelButton: {
-        borderColor: color.mutedText,
-        backgroundColor: 'transparent',
-        flex: 1,
-        marginRight: Spacing.md,
-    },
-    confirmButton: {
-        backgroundColor: color.success,
-        flex: 2,
-        shadowColor: color.shadowDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
-    },
-    // Legacy styles for backward compatibility
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.xl,
-    },
-});

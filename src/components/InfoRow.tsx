@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette } from '@/constants';
+import { InfoRowStyles } from '@/assets/styles';
 
 type InfoRowProps = {
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
@@ -31,51 +32,20 @@ export const InfoRow: React.FC<InfoRowProps> = ({
     iconContainerStyle,
 }) => {
     return (
-        <View style={[styles.row, style]}>
-            <View style={[styles.iconContainer, iconContainerStyle]}>
+        <View style={[InfoRowStyles.row, style]}>
+            <View style={[InfoRowStyles.iconContainer, iconContainerStyle]}>
                 <MaterialCommunityIcons name={icon} size={iconSize} color={iconColor} />
             </View>
-            <View style={styles.textContainer}>
+            <View style={InfoRowStyles.textContainer}>
                 {label && (
-                    <Text style={[styles.label, { color: labelColor }, labelStyle]}>
+                    <Text style={[InfoRowStyles.label, { color: labelColor }, labelStyle]}>
                         {label}
                     </Text>
                 )}
-                <Text style={[styles.text, { color: textColor }, textStyle]}>
+                <Text style={[InfoRowStyles.text, { color: textColor }, textStyle]}>
                     {text}
                 </Text>
             </View>
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 6,
-        paddingHorizontal: 12,
-    },
-    iconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: Palette.lightBackground,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    textContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    text: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    label: {
-        fontSize: 12,
-        fontWeight: '400',
-        marginBottom: 2,
-    },
-});

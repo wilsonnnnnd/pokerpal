@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { GamePlaystyles as styles } from "@/assets/styles";
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
@@ -6,11 +6,9 @@ import { Player } from "@/types";
 import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch, TextInput } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { PrimaryButton } from "./PrimaryButton";
 import { useGameStore } from "@/stores/useGameStore";
 import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
-import { getCurrencySymbol } from '@/constants/currency';
 import { simpleT } from '@/i18n/simpleT';
 import { usePermission } from '@/hooks/usePermission';
 

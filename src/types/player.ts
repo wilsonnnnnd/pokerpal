@@ -33,3 +33,20 @@ export type PlayerState = {
     areAllPlayersFinalized: () => boolean;
     resetPlayers: () => void;
 };
+
+export interface AddPlayerCardProps {
+    onConfirm: () => void;
+    onCancel: () => void;
+}
+
+export const AddPlayerTab = {
+    SCAN: 'scan',
+    SELECT: 'select',
+    MANUAL: 'manual'
+};
+
+export type BuyInProps = {
+    player: Player;
+    onSubmit: (amount: number) => void;
+    onCancel: () => void;
+};

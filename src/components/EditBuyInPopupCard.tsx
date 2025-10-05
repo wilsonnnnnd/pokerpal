@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Animated, Keyboard
 import { Player } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
+import { ExitBuyInStyles } from '@/assets/styles';
 
 interface Props {
     player: Player;
@@ -40,21 +41,21 @@ export const EditBuyInPopupCard: React.FC<Props> = ({ player, onConfirm, onCance
     };
 
     return (
-        <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+        <Animated.View style={[ExitBuyInStyles.container, { opacity: fadeAnim }]}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <View style={styles.card}>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>编辑总买入</Text>
+                <View style={ExitBuyInStyles.card}>
+                    <View style={ExitBuyInStyles.header}>
+                        <Text style={ExitBuyInStyles.title}>编辑总买入</Text>
                         <TouchableOpacity onPress={onCancel}>
                             <MaterialCommunityIcons name="close" size={22} color="#95a5a6" />
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.label}>当前玩家：{player.nickname}</Text>
+                    <Text style={ExitBuyInStyles.label}>当前玩家：{player.nickname}</Text>
 
-                    <View style={styles.inputContainer}>
+                    <View style={ExitBuyInStyles.inputContainer}>
                         <TextInput
-                            style={[styles.input, isFocused && styles.inputFocused]}
+                            style={[ExitBuyInStyles.input, isFocused && ExitBuyInStyles.inputFocused]}
                             value={amount}
                             onChangeText={setAmount}
                             keyboardType="number-pad"
@@ -64,8 +65,8 @@ export const EditBuyInPopupCard: React.FC<Props> = ({ player, onConfirm, onCance
                         />
                     </View>
 
-                    <TouchableOpacity style={styles.button} onPress={handleConfirm}>
-                        <Text style={styles.buttonText}>确认修改</Text>
+                    <TouchableOpacity style={ExitBuyInStyles.button} onPress={handleConfirm}>
+                        <Text style={ExitBuyInStyles.buttonText}>确认修改</Text>
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
@@ -73,59 +74,3 @@ export const EditBuyInPopupCard: React.FC<Props> = ({ player, onConfirm, onCance
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-    },
-    card: {
-        backgroundColor: color.lightBackground,
-        borderRadius: 16,
-        padding: 20,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: color.valueText,
-    },
-    label: {
-        fontSize: 14,
-        color: color.valueLabel,
-        marginBottom: 12,
-    },
-    inputContainer: {
-        marginBottom: 16,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: color.borderColor || color.mediumGray,
-        borderRadius: 8,
-        padding: 10,
-        fontSize: 16,
-        color: color.valueText,
-        backgroundColor: color.lightGray,
-    },
-    inputFocused: {
-        borderColor: color.highLighter,
-        backgroundColor: color.lightBackground,
-    },
-    button: {
-        backgroundColor: color.success,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: color.lightText,
-    },
-});

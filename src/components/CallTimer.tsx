@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { logError } from '@/utils/useLogger';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
+import { CallTimerStyles } from '@/assets/styles';
 
 /**
  * 德州扑克Call Timer组件的引用接口
@@ -355,11 +356,11 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 colors={['#FFFFFF', '#F8FAFB']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
-                style={styles.timerContainer}
+                style={CallTimerStyles.timerContainer}
             >
                 {/* 计时器圆环和时间显示 */}
-                <View style={styles.timerDisplay}>
-                    <View style={styles.timerRing}>
+                <View style={CallTimerStyles.timerDisplay}>
+                    <View style={CallTimerStyles.timerRing}>
                         <Svg height={120} width={120}>
                             <Circle
                                 stroke="rgba(0, 0, 0, 0.08)"
@@ -383,25 +384,25 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                                 origin="60, 60"
                             />
                         </Svg>
-                        <View style={styles.timeDisplayCenter}>
+                        <View style={CallTimerStyles.timeDisplayCenter}>
                             <TouchableOpacity onPress={() => setEditingTime(true)}>
-                                <Text style={[styles.timeText, { color: getTimeColor() }]}>
+                                <Text style={[CallTimerStyles.timeText, { color: getTimeColor() }]}>
                                     {formatTime(secondsLeft)}
                                 </Text>
                             </TouchableOpacity>
-                            <Text style={styles.timeUnit}>秒</Text>
+                            <Text style={CallTimerStyles.timeUnit}>秒</Text>
                         </View>
                     </View>
                 </View>
 
                 {/* 预设时间按钮 */}
-                <View style={styles.presetContainer}>
+                <View style={CallTimerStyles.presetContainer}>
                     {presetTimes.map((time) => (
                         <TouchableOpacity
                             key={time}
                             style={[
-                                styles.presetButton,
-                                initialDuration === time && styles.activePresetButton
+                                CallTimerStyles.presetButton,
+                                initialDuration === time && CallTimerStyles.activePresetButton
                             ]}
                             onPress={() => setPresetTime(time)}
                         >
@@ -409,12 +410,12 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                                 colors={initialDuration === time 
                                     ? [color.primary, color.highLighter]
                                     : ['#FFFFFF', '#F5F5F5']}
-                                style={styles.presetButtonGradient}
+                                style={CallTimerStyles.presetButtonGradient}
                             >
                                 <Text
                                     style={[
-                                        styles.presetButtonText,
-                                        initialDuration === time && styles.activePresetButtonText
+                                        CallTimerStyles.presetButtonText,
+                                        initialDuration === time && CallTimerStyles.activePresetButtonText
                                     ]}
                                 >
                                     {time}s
@@ -425,9 +426,9 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 </View>
 
                 {/* 控制按钮 */}
-                <View style={styles.controlButtons}>
+                <View style={CallTimerStyles.controlButtons}>
                     <TouchableOpacity
-                        style={styles.controlButtonWrapper}
+                        style={CallTimerStyles.controlButtonWrapper}
                         onPress={() => {
                             const newRunning = !running;
                             setRunning(newRunning);
@@ -441,21 +442,21 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             colors={running 
                                 ? [color.warning, '#FFA726']
                                 : [color.success, '#66BB6A']}
-                            style={styles.controlButton}
+                            style={CallTimerStyles.controlButton}
                         >
                             <Ionicons
                                 name={running ? "pause" : "play"}
                                 size={24}
                                 color={color.lightText}
                             />
-                            <Text style={styles.controlButtonText}>
+                            <Text style={CallTimerStyles.controlButtonText}>
                                 {running ? '暂停' : '继续'}
                             </Text>
                         </LinearGradient>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.controlButtonWrapper}
+                        style={CallTimerStyles.controlButtonWrapper}
                         onPress={() => {
                             setSecondsLeft(initialDuration);
                             setRunning(true);
@@ -463,33 +464,33 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     >
                         <LinearGradient
                             colors={[color.strongGray, '#757575']}
-                            style={styles.controlButton}
+                            style={CallTimerStyles.controlButton}
                         >
                             <Ionicons name="refresh" size={24} color={color.lightText} />
-                            <Text style={styles.controlButtonText}>重置</Text>
+                            <Text style={CallTimerStyles.controlButtonText}>重置</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
 
                 {/* 设置按钮 */}
-                <View style={styles.settingsContainer}>
+                <View style={CallTimerStyles.settingsContainer}>
                     <TouchableOpacity
-                        style={styles.settingButton}
+                        style={CallTimerStyles.settingButton}
                         onPress={() => addSeconds(5)}
                     >
-                        <View style={styles.settingButtonInner}>
+                        <View style={CallTimerStyles.settingButtonInner}>
                             <Ionicons name="add-circle-outline" size={20} color={color.primary} />
-                            <Text style={styles.settingButtonText}>+5秒</Text>
+                            <Text style={CallTimerStyles.settingButtonText}>+5秒</Text>
                         </View>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.settingButton}
+                        style={CallTimerStyles.settingButton}
                         onPress={() => addSeconds(15)}
                     >
-                        <View style={styles.settingButtonInner}>
+                        <View style={CallTimerStyles.settingButtonInner}>
                             <Ionicons name="add-circle-outline" size={20} color={color.primary} />
-                            <Text style={styles.settingButtonText}>+15秒</Text>
+                            <Text style={CallTimerStyles.settingButtonText}>+15秒</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -498,10 +499,10 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 渲染编辑时间UI
         const renderTimeEdit = () => (
-            <View style={styles.timeInputContainer}>
-                <Text style={styles.timeInputLabel}>设置时间（秒）</Text>
+            <View style={CallTimerStyles.timeInputContainer}>
+                <Text style={CallTimerStyles.timeInputLabel}>设置时间（秒）</Text>
                 <TextInput
-                    style={styles.timeInput}
+                    style={CallTimerStyles.timeInput}
                     value={timeInput}
                     onChangeText={handleTimeInputChange}
                     keyboardType="number-pad"
@@ -509,18 +510,18 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     autoFocus
                     placeholder="输入秒数"
                 />
-                <View style={styles.timeInputButtons}>
+                <View style={CallTimerStyles.timeInputButtons}>
                     <TouchableOpacity
-                        style={[styles.timeInputButton, styles.cancelButton]}
+                        style={[CallTimerStyles.timeInputButton, CallTimerStyles.cancelButton]}
                         onPress={() => setEditingTime(false)}
                     >
-                        <Text style={styles.cancelButtonText}>取消</Text>
+                        <Text style={CallTimerStyles.cancelButtonText}>取消</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.timeInputButton, styles.confirmButton]}
+                        style={[CallTimerStyles.timeInputButton, CallTimerStyles.confirmButton]}
                         onPress={confirmTimeInput}
                     >
-                        <Text style={styles.confirmButtonText}>确定</Text>
+                        <Text style={CallTimerStyles.confirmButtonText}>确定</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -528,9 +529,9 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
 
         // 渲染加载UI
         const renderLoading = () => (
-            <View style={styles.loadingContainer}>
+            <View style={CallTimerStyles.loadingContainer}>
                 <ActivityIndicator size="large" color={color.success} />
-                <Text style={styles.loadingText}>加载音效中...</Text>
+                <Text style={CallTimerStyles.loadingText}>加载音效中...</Text>
             </View>
         );
 
@@ -554,14 +555,14 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                 animationType="fade"
                 onRequestClose={handleClose}
             >
-                <View style={styles.modalOverlay}>
+                <View style={CallTimerStyles.modalOverlay}>
                     <View style={[
-                        styles.modalContent, 
-                        editingTime && styles.timeEditModalContent
+                        CallTimerStyles.modalContent, 
+                        editingTime && CallTimerStyles.timeEditModalContent
                     ]}>
                         {!editingTime && !isLoadingSound && (
-                            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                                <View style={styles.closeButtonCircle}>
+                            <TouchableOpacity style={CallTimerStyles.closeButton} onPress={handleClose}>
+                                <View style={CallTimerStyles.closeButtonCircle}>
                                     <Ionicons name="close" size={20} color={color.mutedText} />
                                 </View>
                             </TouchableOpacity>
@@ -574,248 +575,5 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         );
     }
 );
-
-const styles = StyleSheet.create({
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        backgroundColor: 'transparent',
-        borderRadius: Radius.xl,
-        alignItems: 'center',
-        elevation: 8,
-        width: '85%',
-        maxWidth: 340,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        overflow: 'hidden',
-    },
-    timeEditModalContent: {
-        backgroundColor: color.lightBackground,
-        padding: Spacing.lg,
-    },
-    closeButton: {
-        position: 'absolute',
-        top: Spacing.md,
-        right: Spacing.md,
-        zIndex: 10,
-    },
-    closeButtonCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-
-    // 计时器样式
-    timerContainer: {
-        width: '100%',
-        alignItems: 'center',
-        paddingVertical: Spacing.xl,
-        paddingHorizontal: Spacing.lg,
-    },
-    timerDisplay: {
-        alignItems: 'center',
-        marginBottom: Spacing.xl,
-    },
-    timerRing: {
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timeDisplayCenter: {
-        position: 'absolute',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timeText: {
-        fontSize: 36,
-        fontWeight: '800',
-        textAlign: 'center',
-        marginBottom: 2,
-    },
-    timeUnit: {
-        fontSize: FontSize.small,
-        color: color.mutedText,
-        fontWeight: '500',
-    },
-    presetContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        marginBottom: Spacing.lg,
-        paddingHorizontal: Spacing.sm,
-    },
-    presetButton: {
-        margin: Spacing.xs,
-        borderRadius: Radius.md,
-        overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-    },
-    presetButtonGradient: {
-        paddingVertical: Spacing.sm,
-        paddingHorizontal: Spacing.md,
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 50,
-    },
-    activePresetButton: {
-        elevation: 4,
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
-    },
-    presetButtonText: {
-        color: color.text,
-        fontWeight: '600',
-        fontSize: FontSize.body,
-    },
-    activePresetButtonText: {
-        color: color.lightText,
-        fontWeight: '700',
-    },
-    controlButtons: {
-        flexDirection: 'row',
-        width: '100%',
-        marginBottom: Spacing.lg,
-        paddingHorizontal: Spacing.sm,
-    },
-    controlButtonWrapper: {
-        flex: 1,
-        marginHorizontal: Spacing.xs,
-        borderRadius: Radius.md,
-        overflow: 'hidden',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-    },
-    controlButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        minHeight: 48,
-    },
-    controlButtonText: {
-        color: color.lightText,
-        fontWeight: '700',
-        marginLeft: Spacing.xs,
-        fontSize: FontSize.body,
-    },
-    settingsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        paddingHorizontal: Spacing.lg,
-    },
-    settingButton: {
-        marginHorizontal: Spacing.sm,
-        borderRadius: Radius.md,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    settingButtonInner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: Spacing.sm,
-        paddingHorizontal: Spacing.md,
-    },
-    settingButtonText: {
-        marginLeft: Spacing.xs,
-        color: color.text,
-        fontWeight: '600',
-        fontSize: FontSize.small,
-    },
-
-    // 时间编辑样式
-    timeInputContainer: {
-        width: '100%',
-        padding: Spacing.xl,
-    },
-    timeInputLabel: {
-        fontSize: FontSize.h3,
-        fontWeight: '700',
-        marginBottom: Spacing.lg,
-        textAlign: 'center',
-        color: color.title,
-    },
-    timeInput: {
-        borderWidth: 2,
-        borderColor: color.primary,
-        borderRadius: Radius.md,
-        padding: Spacing.md,
-        fontSize: FontSize.h3,
-        textAlign: 'center',
-        marginBottom: Spacing.lg,
-        backgroundColor: color.lightBackground,
-        fontWeight: '600',
-    },
-    timeInputButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    timeInputButton: {
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.xl,
-        borderRadius: Radius.md,
-        flex: 1,
-        marginHorizontal: Spacing.xs,
-        alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-    },
-    cancelButton: {
-        backgroundColor: color.lightGray,
-    },
-    cancelButtonText: {
-        color: color.text,
-        fontWeight: '600',
-    },
-    confirmButton: {
-        backgroundColor: color.success,
-    },
-    confirmButtonText: {
-        color: color.lightText,
-        fontWeight: '700',
-    },
-
-    // 加载样式
-    loadingContainer: {
-        padding: Spacing.xl,
-        alignItems: 'center',
-        backgroundColor: color.lightBackground,
-        borderRadius: Radius.xl,
-    },
-    loadingText: {
-        marginTop: Spacing.md,
-        fontSize: FontSize.body,
-        color: color.text,
-        fontWeight: '500',
-    },
-});
 
 export default CallTimer;

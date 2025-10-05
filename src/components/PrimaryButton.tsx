@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PrimaryButtonProps } from '@/types';
 import { Palette as color } from '@/constants';
 import { Button, Spacing, FontSize, Radius } from '@/constants/designTokens';
+import { ButtonStyles } from '@/assets/styles';
 
 export const PrimaryButton = ({
     title,
@@ -32,12 +33,12 @@ export const PrimaryButton = ({
     const getVariantStyle = () => {
         switch (variant) {
             case 'outlined':
-                return styles.outlinedButton;
+                return ButtonStyles.outlinedButton;
             case 'text':
-                return styles.textButton;
+                return ButtonStyles.textButton;
             case 'filled':
             default:
-                return styles.filledButton;
+                return ButtonStyles.filledButton;
         }
     };
 
@@ -45,34 +46,34 @@ export const PrimaryButton = ({
         switch (variant) {
             case 'outlined':
             case 'text':
-                return styles.darkText;
+                return ButtonStyles.darkText;
             case 'filled':
             default:
-                return styles.lightText;
+                return ButtonStyles.lightText;
         }
     };
 
     const getSizeStyle = () => {
         switch (size) {
             case 'small':
-                return styles.smallButton;
+                return ButtonStyles.smallButton;
             case 'large':
-                return styles.largeButton;
+                return ButtonStyles.largeButton;
             case 'medium':
             default:
-                return styles.mediumButton;
+                return ButtonStyles.mediumButton;
         }
     };
 
     const getSizeTextStyle = () => {
         switch (size) {
             case 'small':
-                return styles.smallText;
+                return ButtonStyles.smallText;
             case 'large':
-                return styles.largeText;
+                return ButtonStyles.largeText;
             case 'medium':
             default:
-                return styles.mediumText;
+                return ButtonStyles.mediumText;
         }
     };
 
@@ -85,7 +86,7 @@ export const PrimaryButton = ({
                 size={iconSize || (size === 'small' ? 14 : size === 'large' ? 22 : 18)}
                 color={iconColor}
                 style={[
-                    iconPosition === 'left' ? styles.iconLeft : styles.iconRight
+                    iconPosition === 'left' ? ButtonStyles.iconLeft : ButtonStyles.iconRight
                 ]}
             />
         );
@@ -107,13 +108,13 @@ export const PrimaryButton = ({
     return (
         <Pressable
             style={({pressed}) => [
-                styles.button,
+                ButtonStyles.button,
                 getVariantStyle(),
                 getSizeStyle(),
-                rounded && styles.rounded,
-                fullWidth && styles.fullWidth,
-                disabled && styles.disabledButton,
-                pressed && !disabled && styles.buttonPressed,
+                rounded && ButtonStyles.rounded,
+                fullWidth && ButtonStyles.fullWidth,
+                disabled && ButtonStyles.disabledButton,
+                pressed && !disabled && ButtonStyles.buttonPressed,
                 style
             ]}
             onPress={onPress}
@@ -125,16 +126,16 @@ export const PrimaryButton = ({
             }}
         >
             {loading ? (
-                    <ActivityIndicator size="small" color={loadingColor || (variant === 'filled' ? color.lightText : color.primary)} style={styles.loader} />
+                    <ActivityIndicator size="small" color={loadingColor || (variant === 'filled' ? color.lightText : color.primary)} style={ButtonStyles.loader} />
             ) : (
-                <View style={styles.contentContainer}>
+                <View style={ButtonStyles.contentContainer}>
                     {iconPosition === 'left' && renderIcon()}
                     <Text
                         style={[
-                            styles.buttonText,
+                            ButtonStyles.buttonText,
                             getVariantTextStyle(),
                             getSizeTextStyle(),
-                            disabled && styles.disabledText,
+                            disabled && ButtonStyles.disabledText,
                             textStyle
                         ]}
                     >
@@ -146,105 +147,3 @@ export const PrimaryButton = ({
         </Pressable>
     );
 };
-
-const styles = StyleSheet.create({
-    button: {
-        borderRadius: Button.radius,
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'row',
-        overflow: 'hidden', // 确保涟漪效果不会超出按钮边界
-    },
-    contentContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    buttonText: {
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    iconLeft: {
-        marginRight: 8,
-    },
-    iconRight: {
-        marginLeft: 8,
-    },
-    // 按压效果
-    buttonPressed: {
-        opacity: 0.85,
-        transform: [{scale: 0.98}]
-    },
-    // 变体样式
-    filledButton: {
-    backgroundColor: color.primary,
-    borderWidth: 0,
-    shadowColor: color.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    outlinedButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: color.primary,
-    },
-    textButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        paddingHorizontal: 8,
-    },
-    // 尺寸样式
-    smallButton: {
-        paddingVertical: Math.max(6, Button.paddingVertical - 8),
-        paddingHorizontal: Spacing.md,
-        minHeight: 32,
-    },
-    mediumButton: {
-        paddingVertical: Math.max(8, Button.paddingVertical - 4),
-        paddingHorizontal: Spacing.lg,
-        minHeight: 40,
-    },
-    largeButton: {
-        paddingVertical: Button.paddingVertical,
-        paddingHorizontal: Spacing.xl,
-        minHeight: 48,
-    },
-    // 文字尺寸
-    smallText: {
-        fontSize: FontSize.small,
-    },
-    mediumText: {
-        fontSize: FontSize.body,
-    },
-    largeText: {
-        fontSize: FontSize.h3,
-    },
-    // 文字颜色
-    lightText: { color: color.lightText },
-    darkText: { color: color.primary },
-    // 禁用状态
-    disabledButton: {
-    backgroundColor: color.lightGray,
-    borderColor: color.mediumGray,
-        opacity: 0.7,
-        shadowOpacity: 0,
-        elevation: 0,
-    },
-    disabledText: {
-    color: color.mutedText,
-    },
-    // 圆角样式
-    rounded: {
-        borderRadius: Radius.round,
-    },
-    // 满宽样式
-    fullWidth: {
-        width: '100%',
-    },
-    // 加载状态
-    loader: {
-        marginRight: 0,
-    }
-});
