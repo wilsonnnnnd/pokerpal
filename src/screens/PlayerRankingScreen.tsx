@@ -17,6 +17,8 @@ import { Palette as color } from '@/constants';
 import { userDoc } from '@/constants/namingVar';
 import Toast from 'react-native-toast-message';
 import { GamePlayerRankstyles as styles } from '@/assets/styles';
+import { usePaginatedPageState } from '@/hooks/usePageState';
+import { PageStateView } from '@/components/PageState';
 
 // ===== 常量：服务端可排序字段（必须与 Firestore 索引一致）=====
 const SORT_TYPES = {
@@ -135,29 +137,25 @@ const EmptyListComponent = React.memo(({ keyword }: { keyword: string }) => (
 ));
 
 export default function PlayerRankingScreen() {
+    const pageState = usePaginatedPageState();
     const [players, setPlayers] = useState<AggregatedPlayer[]>([]);
     const [keyword, setKeyword] = useState('');
     const [sortBy, setSortBy] = useState<typeof SORT_TYPES[keyof typeof SORT_TYPES]>(SORT_TYPES.TOTAL_PROFIT);
 
-    const [refreshing, setRefreshing] = useState(false);
-    const [loading, setLoading] = useState(true);
-
     // 分页核心
     const PAGE_SIZE = 20;
     const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-    const [hasMore, setHasMore] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
 
     // 从 Firestore 拉一页
     const fetchPage = useCallback(async (reset = false) => {
         try {
             if (reset) {
-                setLoading(true);
-                setHasMore(true);
+                pageState.setLoading(true);
+                pageState.setHasNextPage(true);
                 setLastDoc(null);
             } else {
-                if (!hasMore || loadingMore) return;
-                setLoadingMore(true);
+                if (!pageState.hasNextPage || pageState.isLoadingMore) return;
+                pageState.setIsLoadingMore(true);
             }
 
             // ✅ 只使用一次 orderBy(sortBy, 'desc')
@@ -189,38 +187,40 @@ export default function PlayerRankingScreen() {
             }
 
             setLastDoc(docs[docs.length - 1] ?? null);
-            setHasMore(docs.length === PAGE_SIZE);
+            pageState.setHasNextPage(docs.length === PAGE_SIZE);
+            pageState.setError(null);
         } catch (err) {
             console.error(err);
+            pageState.setError('加载失败，请检查网络连接或稍后重试');
             Toast.show({
                 type: 'error',
                 text1: '加载失败',
                 text2: '请检查网络连接或稍后重试。',
             });
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
-            setRefreshing(false);
+            pageState.setLoading(false);
+            pageState.setIsLoadingMore(false);
+            pageState.setRefreshing(false);
         }
-    }, [sortBy, lastDoc, hasMore, loadingMore]);
+    }, [sortBy, lastDoc, pageState]);
 
     // 首次 & 排序变化：重新拉首屏
     useEffect(() => {
         fetchPage(true);
-    }, [sortBy]);
+    }, [sortBy, fetchPage]);
 
     // 下拉刷新
     const onRefresh = useCallback(() => {
-        setRefreshing(true);
+        pageState.setRefreshing(true);
         fetchPage(true);
-    }, [fetchPage]);
+    }, [fetchPage, pageState]);
 
     // 触底加载
     const onEndReached = useCallback(() => {
-        if (!loading && !refreshing && hasMore && !loadingMore) {
+        if (!pageState.loading && !pageState.refreshing && pageState.hasNextPage && !pageState.isLoadingMore) {
             fetchPage(false);
         }
-    }, [loading, refreshing, hasMore, loadingMore, fetchPage]);
+    }, [pageState, fetchPage]);
 
     const clearKeyword = useCallback(() => setKeyword(''), []);
 
@@ -255,7 +255,7 @@ export default function PlayerRankingScreen() {
     const renderEmptyComponent = useCallback(() => <EmptyListComponent keyword={keyword} />, [keyword]);
 
     const ListFooter = useMemo(() => {
-        if (loadingMore) {
+        if (pageState.isLoadingMore) {
             return (
                 <View style={{ paddingVertical: 16, alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={color.primary} />
@@ -263,7 +263,7 @@ export default function PlayerRankingScreen() {
                 </View>
             );
         }
-            if (!hasMore && players.length > 0) {
+            if (!pageState.hasNextPage && players.length > 0) {
             return (
                 <View style={{ paddingVertical: 12, alignItems: 'center' }}>
                     <Text style={{ color: color.weakGray }}>没有更多了</Text>
@@ -271,86 +271,91 @@ export default function PlayerRankingScreen() {
             );
         }
         return null;
-    }, [loadingMore, hasMore, players.length]);
+    }, [pageState.isLoadingMore, pageState.hasNextPage, players.length]);
 
-    if (loading && !refreshing) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={color.primary} />
-                <Text style={styles.loadingText}>加载排行榜数据...</Text>
-            </View>
-        );
-    }
+    // 处理重试
+    const handleRetry = useCallback(() => {
+        fetchPage(true);
+    }, [fetchPage]);
 
     return (
-        <View style={styles.container}>
-            {/* 搜索栏 */}
-                <View style={styles.header}>
-                <View style={styles.searchContainer}>
-                    <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
-                    <TextInput
-                        placeholder="搜索玩家昵称..."
-                        value={keyword}
-                        onChangeText={setKeyword}
-                        style={styles.searchInput}
-                        placeholderTextColor={color.weakGray}
-                    />
-                    {keyword.length > 0 && (
-                        <TouchableOpacity onPress={clearKeyword}>
-                            <MaterialCommunityIcons name="close-circle" size={16} color={color.weakGray} />
+        <PageStateView
+            loading={pageState.loading && !pageState.refreshing}
+            error={pageState.error}
+            isEmpty={!pageState.loading && !pageState.error && players.length === 0}
+            emptyTitle="暂无玩家数据"
+            emptySubtitle="完成游戏后玩家数据将在此显示"
+            onRetry={handleRetry}
+        >
+            <View style={styles.container}>
+                {/* 搜索栏 */}
+                    <View style={styles.header}>
+                    <View style={styles.searchContainer}>
+                        <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
+                        <TextInput
+                            placeholder="搜索玩家昵称..."
+                            value={keyword}
+                            onChangeText={setKeyword}
+                            style={styles.searchInput}
+                            placeholderTextColor={color.weakGray}
+                        />
+                        {keyword.length > 0 && (
+                            <TouchableOpacity onPress={clearKeyword}>
+                                <MaterialCommunityIcons name="close-circle" size={16} color={color.weakGray} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+
+                {/* 排序按钮 */}
+                <View style={styles.sortContainer}>
+                    <View style={styles.sortButtonsContainer}>
+                        <TouchableOpacity
+                            style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
+                            onPress={handleSortByTotalProfit}
+                        >
+                            <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
+                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
+                                累计收益
+                            </Text>
                         </TouchableOpacity>
-                    )}
+
+                        <TouchableOpacity
+                            style={[styles.sortButton, sortBy === SORT_TYPES.ROI && styles.sortButtonActive]}
+                            onPress={handleSortByRoi}
+                        >
+                            <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
+                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
+                                平均 ROI
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.sortButton, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonActive]}
+                            onPress={handleSortByAppearances}
+                        >
+                            <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
+                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
+                                参与场次
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
+                {/* 列表 */}
+                    <FlatList data={filteredPlayers}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    contentContainerStyle={styles.list}
+                    refreshControl={
+                        <RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} />
+                    }
+                    ListEmptyComponent={renderEmptyComponent}
+                    onEndReachedThreshold={0.5}
+                    onEndReached={onEndReached}
+                    ListFooterComponent={ListFooter}
+                />
             </View>
-
-            {/* 排序按钮 */}
-            <View style={styles.sortContainer}>
-                <View style={styles.sortButtonsContainer}>
-                    <TouchableOpacity
-                        style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
-                        onPress={handleSortByTotalProfit}
-                    >
-                        <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
-                        <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
-                            累计收益
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.sortButton, sortBy === SORT_TYPES.ROI && styles.sortButtonActive]}
-                        onPress={handleSortByRoi}
-                    >
-                        <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
-                        <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
-                            平均 ROI
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.sortButton, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonActive]}
-                        onPress={handleSortByAppearances}
-                    >
-                        <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
-                        <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
-                            参与场次
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* 列表 */}
-                <FlatList data={filteredPlayers}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                contentContainerStyle={styles.list}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.primary]} />
-                }
-                ListEmptyComponent={renderEmptyComponent}
-                onEndReachedThreshold={0.5}
-                onEndReached={onEndReached}
-                ListFooterComponent={ListFooter}
-            />
-        </View>
+        </PageStateView>
     );
 }

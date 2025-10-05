@@ -35,6 +35,8 @@ import { RequireHost } from '@/hooks/RequireHost';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { GameCard } from '@/components/GameCard';
 import { getHosterId } from '@/utils/hostInfo';
+import { usePaginatedPageState } from '@/hooks/usePageState';
+import { PageStateView } from '@/components/PageState';
 
 // ---- 导航类型 ----
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -52,15 +54,14 @@ const PAGE_SIZE = 20;
 export default function GameHistoryScreen() {
     const navigation = useNavigation<HomeScreenNav>();
     const { isHost, loading: permLoading } = usePermission();
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+    
+    // 使用统一的分页状态管理
+    const pageState = usePaginatedPageState();
     const [items, setItems] = useState<GameHistoryItem[]>([]);
 
-    // 分页
+    // 分页相关refs
     const nextCursorRef = useRef<QueryDocumentSnapshot | null>(null);
     const reachedEndRef = useRef<boolean>(false);
-
-    // 防重复拉取同一 gameId
     const fetchedSetRef = useRef<Set<string>>(new Set());
 
 
@@ -281,13 +282,14 @@ export default function GameHistoryScreen() {
 
         (async () => {
             try {
-                setLoading(true);
+                pageState.setLoading(true);
                 // 重置分页状态
                 reachedEndRef.current = false;
                 nextCursorRef.current = null;
                 fetchedSetRef.current.clear();
                 await fetchPage('initial');
             } catch (e) {
+                pageState.setError('加载游戏历史失败，请检查网络或稍后重试');
                 Toast.show({
                     type: 'error',
                     text1: '加载游戏历史失败',
@@ -296,34 +298,38 @@ export default function GameHistoryScreen() {
                     visibilityTime: 2000,
                 });
             } finally {
-                setLoading(false);
+                pageState.setLoading(false);
             }
         })();
-    }, [fetchPage]);
+    }, [fetchPage, permLoading, isHost, navigation, pageState]);
 
     // —— 下拉刷新 ——
     const onRefresh = useCallback(async () => {
         try {
-            setRefreshing(true);
+            pageState.setRefreshing(true);
+            pageState.setError(null);
             reachedEndRef.current = false;
             nextCursorRef.current = null;
             fetchedSetRef.current.clear();
             await fetchPage('refresh');
         } finally {
-            setRefreshing(false);
+            pageState.setRefreshing(false);
         }
-    }, [fetchPage]);
+    }, [fetchPage, pageState]);
 
     // —— 触底加载更多 ——
     const onEndReached = useCallback(async () => {
-        if (loading || refreshing) return;
+        if (pageState.loading || pageState.refreshing) return;
         if (reachedEndRef.current) return;
         try {
+            pageState.setIsLoadingMore(true);
             await fetchPage('append');
         } catch {
             // 忽略
+        } finally {
+            pageState.setIsLoadingMore(false);
         }
-    }, [fetchPage, loading, refreshing]);
+    }, [fetchPage, pageState]);
 
     // —— 赢家/输家 ——  
     const pickTop = (game: GameHistoryItem) => {
@@ -342,61 +348,37 @@ export default function GameHistoryScreen() {
         />
     );
 
-    if (loading) {
-        return (
-            <LinearGradient
-                colors={[color.background, color.lightBackground]}
-                style={styles.loadingContainer}
-            >
-                <View style={styles.loadingContent}>
-                    <ActivityIndicator size="large" color={color.primary} />
-                    <Text style={styles.loadingText}>加载游戏历史...</Text>
-                    <Text style={styles.loadingSubText}>正在获取您的游戏记录</Text>
-                </View>
-            </LinearGradient>
-        );
-    }
+    // 处理重试
+    const handleRetry = useCallback(() => {
+        pageState.setError(null);
+        (async () => {
+            try {
+                pageState.setLoading(true);
+                reachedEndRef.current = false;
+                nextCursorRef.current = null;
+                fetchedSetRef.current.clear();
+                await fetchPage('initial');
+            } catch (e) {
+                pageState.setError('加载失败，请重试');
+            } finally {
+                pageState.setLoading(false);
+            }
+        })();
+    }, [fetchPage, pageState]);
 
-    // 整页受限于 Host 权限
     return (
-        <RequireHost
-            loadingFallback={(
-                <LinearGradient
-                    colors={[color.background, color.lightBackground]}
-                    style={styles.loadingContainer}
-                >
-                    <View style={styles.loadingContent}>
-                        <ActivityIndicator size="large" color={color.primary} />
-                        <Text style={styles.loadingText}>正在检查权限...</Text>
-                        <Text style={styles.loadingSubText}>请稍候</Text>
-                    </View>
-                </LinearGradient>
-            )}
-            denyFallback={(
-                <LinearGradient
-                    colors={[color.background, color.lightBackground]}
-                    style={styles.emptyContainer}
-                >
-                    <View style={styles.emptyIconContainer}>
-                        <MaterialCommunityIcons name="shield-lock" size={64} color={color.mutedText} />
-                    </View>
-                    <Text style={styles.emptyText}>权限受限</Text>
-                    <Text style={styles.emptySubText}>此功能仅对房主开放，请使用房主账号登录</Text>
-                    <TouchableOpacity 
-                        style={styles.emptyAction}
-                        onPress={() => navigation.navigate('Home')}
-                        activeOpacity={0.7}
-                    >
-                        <LinearGradient
-                            colors={[color.mutedText, color.strongGray]}
-                            style={styles.emptyActionGradient}
-                        >
-                            <MaterialCommunityIcons name="home" size={20} color={color.lightText} />
-                            <Text style={styles.emptyActionText}>返回首页</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </LinearGradient>
-            )}
+        <PageStateView
+            loading={pageState.loading}
+            error={pageState.error}
+            permLoading={permLoading}
+            isHost={isHost}
+            isEmpty={!pageState.loading && !pageState.error && items.length === 0}
+            emptyTitle="暂无游戏记录"
+            emptySubtitle="开始一局新游戏，创造精彩回忆！"
+            emptyActionText="开始新游戏"
+            onEmptyAction={() => navigation.navigate('Home')}
+            onRetry={handleRetry}
+            onNavigateHome={() => navigation.navigate('Home')}
         >
             <LinearGradient
                 colors={[color.background, color.lightBackground]}
@@ -419,10 +401,10 @@ export default function GameHistoryScreen() {
                                 style={styles.headerButton}
                                 onPress={onRefresh}
                                 activeOpacity={0.7}
-                                disabled={refreshing}
+                                disabled={pageState.refreshing}
                             >
                                 <MaterialCommunityIcons 
-                                    name={refreshing ? "loading" : "refresh"} 
+                                    name={pageState.refreshing ? "loading" : "refresh"} 
                                     size={20} 
                                     color={color.lightText} 
                                 />
@@ -452,7 +434,7 @@ export default function GameHistoryScreen() {
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.list}
                     renderItem={renderGameCard}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.primary]} tintColor={color.primary} />}
+                    refreshControl={<RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} tintColor={color.primary} />}
                     onEndReachedThreshold={0.3}
                     onEndReached={onEndReached}
                     showsVerticalScrollIndicator={false}
@@ -468,33 +450,8 @@ export default function GameHistoryScreen() {
                             </View>
                         ) : null
                     }
-                    ListEmptyComponent={
-                        <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.8)', 'rgba(248, 250, 251, 0.8)']}
-                            style={styles.emptyContainer}
-                        >
-                            <View style={styles.emptyIconContainer}>
-                                <MaterialCommunityIcons name="cards-variant" size={64} color={color.mutedText} />
-                            </View>
-                            <Text style={styles.emptyText}>暂无游戏记录</Text>
-                            <Text style={styles.emptySubText}>开始一局新游戏，创造精彩回忆！</Text>
-                            <TouchableOpacity 
-                                style={styles.emptyAction}
-                                onPress={() => navigation.navigate('Home')}
-                                activeOpacity={0.7}
-                            >
-                                <LinearGradient
-                                    colors={[color.primary, color.highLighter]}
-                                    style={styles.emptyActionGradient}
-                                >
-                                    <MaterialCommunityIcons name="plus" size={20} color={color.lightText} />
-                                    <Text style={styles.emptyActionText}>开始新游戏</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </LinearGradient>
-                    }
                 />
             </LinearGradient>
-        </RequireHost>
+        </PageStateView>
     );
 }
