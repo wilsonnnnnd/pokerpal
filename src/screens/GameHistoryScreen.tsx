@@ -63,6 +63,9 @@ export default function GameHistoryScreen() {
     const nextCursorRef = useRef<QueryDocumentSnapshot | null>(null);
     const reachedEndRef = useRef<boolean>(false);
     const fetchedSetRef = useRef<Set<string>>(new Set());
+    const initializedRef = useRef<boolean>(false); // 防止重复初始化
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null); // 防抖计时器
+    const endReachedDebounceRef = useRef<NodeJS.Timeout | null>(null); // 触底加载防抖
 
 
     // 批量读取主集合 /games/{gameId}（只针对 top-level gameDoc 路径），
@@ -269,7 +272,7 @@ export default function GameHistoryScreen() {
                 reachedEndRef.current = true;
             }
         },
-        [buildGameHistoryItem, getHosterId]
+        [buildGameHistoryItem]
     );
 
     // —— 首屏加载 ——
@@ -280,56 +283,107 @@ export default function GameHistoryScreen() {
             return;
         }
 
-        (async () => {
-            try {
-                pageState.setLoading(true);
-                // 重置分页状态
-                reachedEndRef.current = false;
-                nextCursorRef.current = null;
-                fetchedSetRef.current.clear();
-                await fetchPage('initial');
-            } catch (e) {
-                pageState.setError('加载游戏历史失败，请检查网络或稍后重试');
-                Toast.show({
-                    type: 'error',
-                    text1: '加载游戏历史失败',
-                    text2: '请检查网络或稍后重试',
-                    position: 'bottom',
-                    visibilityTime: 2000,
-                });
-            } finally {
-                pageState.setLoading(false);
+        if (permLoading || isHost === false || initializedRef.current) {
+            return;
+        }
+
+        // 立即设置加载状态，避免先显示空状态
+        pageState.setLoading(true);
+        initializedRef.current = true;
+
+        // 使用防抖延迟执行，避免快速连续触发
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(() => {
+            (async () => {
+                try {
+                    // 重置分页状态
+                    reachedEndRef.current = false;
+                    nextCursorRef.current = null;
+                    fetchedSetRef.current.clear();
+                    await fetchPage('initial');
+                } catch (e) {
+                    pageState.setError('加载游戏历史失败，请检查网络或稍后重试');
+                    Toast.show({
+                        type: 'error',
+                        text1: '加载游戏历史失败',
+                        text2: '请检查网络或稍后重试',
+                        position: 'bottom',
+                        visibilityTime: 2000,
+                    });
+                } finally {
+                    pageState.setLoading(false);
+                }
+            })();
+        }, 100); // 100ms 防抖延迟
+
+        // 清理函数
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+                debounceTimeoutRef.current = null;
             }
-        })();
-    }, [fetchPage, permLoading, isHost, navigation, pageState]);
+        };
+    }, [permLoading, isHost, navigation]); // 移除 fetchPage 和 pageState 依赖
+
+    // 组件卸载时清理所有计时器
+    useEffect(() => {
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+            if (endReachedDebounceRef.current) {
+                clearTimeout(endReachedDebounceRef.current);
+            }
+        };
+    }, []);
 
     // —— 下拉刷新 ——
     const onRefresh = useCallback(async () => {
+        // 防抖：如果已有刷新在进行，则忽略
+        if (pageState.refreshing || pageState.loading) {
+            return;
+        }
+
         try {
             pageState.setRefreshing(true);
             pageState.setError(null);
             reachedEndRef.current = false;
             nextCursorRef.current = null;
             fetchedSetRef.current.clear();
+            
+            // 添加小延迟确保 UI 状态正确更新
+            await new Promise(resolve => setTimeout(resolve, 50));
             await fetchPage('refresh');
         } finally {
             pageState.setRefreshing(false);
         }
-    }, [fetchPage, pageState]);
+    }, []); // 移除所有依赖
 
     // —— 触底加载更多 ——
     const onEndReached = useCallback(async () => {
-        if (pageState.loading || pageState.refreshing) return;
-        if (reachedEndRef.current) return;
-        try {
-            pageState.setIsLoadingMore(true);
-            await fetchPage('append');
-        } catch {
-            // 忽略
-        } finally {
-            pageState.setIsLoadingMore(false);
+        // 防抖：避免快速连续触发
+        if (endReachedDebounceRef.current) {
+            clearTimeout(endReachedDebounceRef.current);
         }
-    }, [fetchPage, pageState]);
+
+        endReachedDebounceRef.current = setTimeout(async () => {
+            if (pageState.loading || pageState.refreshing) return;
+            if (reachedEndRef.current) return;
+            if (pageState.isLoadingMore) return; // 防止重复加载
+            
+            try {
+                pageState.setIsLoadingMore(true);
+                await fetchPage('append');
+            } catch {
+                // 忽略
+            } finally {
+                pageState.setIsLoadingMore(false);
+            }
+        }, 200); // 200ms 防抖延迟
+    }, []); // 移除所有依赖
 
     // —— 赢家/输家 ——  
     const pickTop = (game: GameHistoryItem) => {
@@ -350,21 +404,30 @@ export default function GameHistoryScreen() {
 
     // 处理重试
     const handleRetry = useCallback(() => {
+        // 防抖：避免快速连续点击
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
         pageState.setError(null);
-        (async () => {
-            try {
-                pageState.setLoading(true);
-                reachedEndRef.current = false;
-                nextCursorRef.current = null;
-                fetchedSetRef.current.clear();
-                await fetchPage('initial');
-            } catch (e) {
-                pageState.setError('加载失败，请重试');
-            } finally {
-                pageState.setLoading(false);
-            }
-        })();
-    }, [fetchPage, pageState]);
+        pageState.setLoading(true); // 立即显示加载状态
+        initializedRef.current = false; // 重置初始化状态
+
+        debounceTimeoutRef.current = setTimeout(() => {
+            (async () => {
+                try {
+                    reachedEndRef.current = false;
+                    nextCursorRef.current = null;
+                    fetchedSetRef.current.clear();
+                    await fetchPage('initial');
+                } catch (e) {
+                    pageState.setError('加载失败，请重试');
+                } finally {
+                    pageState.setLoading(false);
+                }
+            })();
+        }, 100);
+    }, []); // 移除所有依赖
 
     return (
         <PageStateView
@@ -372,7 +435,7 @@ export default function GameHistoryScreen() {
             error={pageState.error}
             permLoading={permLoading}
             isHost={isHost}
-            isEmpty={!pageState.loading && !pageState.error && items.length === 0}
+            isEmpty={!pageState.loading && !pageState.error && !permLoading && isHost !== null && items.length === 0 && initializedRef.current}
             emptyTitle="暂无游戏记录"
             emptySubtitle="开始一局新游戏，创造精彩回忆！"
             emptyActionText="开始新游戏"

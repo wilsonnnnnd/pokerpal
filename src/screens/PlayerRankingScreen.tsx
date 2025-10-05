@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
     View,
     Text,
@@ -145,28 +145,54 @@ export default function PlayerRankingScreen() {
     // 分页核心
     const PAGE_SIZE = 20;
     const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+    const initializedRef = useRef<{ [key: string]: boolean }>({}); // 防止重复初始化，按 sortBy 区分
+    const isLoadingRef = useRef<boolean>(false); // 防止重复加载
+    const hasNextPageRef = useRef<boolean>(true); // 用 ref 确保状态同步
 
     // 从 Firestore 拉一页
     const fetchPage = useCallback(async (reset = false) => {
+        // 防止重复加载
+        if (isLoadingRef.current) {
+            console.log(`[PlayerRanking] Fetch already in progress, skipping`);
+            return;
+        }
+        
         try {
+            isLoadingRef.current = true;
+            console.log(`[PlayerRanking] Starting fetch - reset: ${reset}, currentSortBy: ${sortBy}`);
+            
+            const currentSortBy = sortBy; // 捕获当前 sortBy
+            const currentLastDoc = reset ? null : lastDoc;
+            
             if (reset) {
                 pageState.setLoading(true);
                 pageState.setHasNextPage(true);
+                hasNextPageRef.current = true; // 同步更新 ref
                 setLastDoc(null);
             } else {
-                if (!pageState.hasNextPage || pageState.isLoadingMore) return;
+                if (!hasNextPageRef.current) {
+                    console.log(`[PlayerRanking] No more pages (ref), stopping fetch`);
+                    return;
+                }
+                if (pageState.isLoadingMore) {
+                    console.log(`[PlayerRanking] Already loading more, skipping`);
+                    return;
+                }
                 pageState.setIsLoadingMore(true);
             }
 
-            // ✅ 只使用一次 orderBy(sortBy, 'desc')
+            // ✅ 只使用一次 orderBy(currentSortBy, 'desc')
             const baseRef = collection(db, userDoc);
-            let q = query(baseRef, orderBy(sortBy, 'desc'), limit(PAGE_SIZE));
-            if (!reset && lastDoc) {
-                q = query(baseRef, orderBy(sortBy, 'desc'), startAfter(lastDoc), limit(PAGE_SIZE));
+            let q = query(baseRef, orderBy(currentSortBy, 'desc'), limit(PAGE_SIZE));
+            if (!reset && currentLastDoc) {
+                console.log(`[PlayerRanking] Using cursor for pagination`);
+                q = query(baseRef, orderBy(currentSortBy, 'desc'), startAfter(currentLastDoc), limit(PAGE_SIZE));
             }
 
             const snap = await getDocs(q);
             const docs = snap.docs;
+
+            console.log(`[PlayerRanking] Fetched ${docs.length} documents from Firestore`);
 
             const page: AggregatedPlayer[] = docs.map((d) => {
                 const data: any = d.data() ?? {};
@@ -180,17 +206,35 @@ export default function PlayerRankingScreen() {
                 };
             });
 
+            console.log(`[PlayerRanking] Fetched ${page.length} players for ${reset ? 'reset' : 'append'}`);
+            console.log(`[PlayerRanking] Player IDs:`, page.map(p => p.id));
+
             if (reset) {
                 setPlayers(page);
             } else {
-                setPlayers(prev => [...prev, ...page]);
+                // 使用 Map 去重，防止重复的玩家数据
+                setPlayers(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const newPlayers = page.filter(p => !existingIds.has(p.id));
+                    console.log(`[PlayerRanking] Adding ${newPlayers.length} new players (filtered ${page.length - newPlayers.length} duplicates)`);
+                    return [...prev, ...newPlayers];
+                });
             }
 
-            setLastDoc(docs[docs.length - 1] ?? null);
-            pageState.setHasNextPage(docs.length === PAGE_SIZE);
+            // 更新 lastDoc 和分页状态
+            const newLastDoc = docs.length > 0 ? docs[docs.length - 1] : null;
+            setLastDoc(newLastDoc);
+            
+            // 如果返回的文档数量少于 PAGE_SIZE，说明没有更多数据了
+            const hasMore = docs.length === PAGE_SIZE;
+            pageState.setHasNextPage(hasMore);
+            hasNextPageRef.current = hasMore; // 同步更新 ref
+            
+            console.log(`[PlayerRanking] Updated lastDoc: ${newLastDoc?.id || 'null'}, hasNextPage: ${hasMore}`);
+            
             pageState.setError(null);
         } catch (err) {
-            console.error(err);
+            console.error('[PlayerRanking] Fetch error:', err);
             pageState.setError('加载失败，请检查网络连接或稍后重试');
             Toast.show({
                 type: 'error',
@@ -201,40 +245,117 @@ export default function PlayerRankingScreen() {
             pageState.setLoading(false);
             pageState.setIsLoadingMore(false);
             pageState.setRefreshing(false);
+            isLoadingRef.current = false;
+            console.log(`[PlayerRanking] Fetch completed`);
         }
-    }, [sortBy, lastDoc, pageState]);
+    }, []); // 移除所有依赖，在函数内部捕获当前状态
 
     // 首次 & 排序变化：重新拉首屏
     useEffect(() => {
-        fetchPage(true);
-    }, [sortBy, fetchPage]);
+        console.log(`[PlayerRanking] useEffect triggered for sortBy: ${sortBy}`);
+        
+        if (initializedRef.current[sortBy]) {
+            console.log(`[PlayerRanking] Already initialized for sortBy: ${sortBy}, skipping`);
+            return; // 避免重复初始化同一个 sortBy
+        }
+        
+        console.log(`[PlayerRanking] Initializing for sortBy: ${sortBy}`);
+        initializedRef.current[sortBy] = true;
+        
+        // 使用 setTimeout 避免状态更新冲突
+        const timeoutId = setTimeout(() => {
+            console.log(`[PlayerRanking] Fetching data for sortBy: ${sortBy}`);
+            fetchPage(true);
+        }, 0);
+
+        return () => {
+            console.log(`[PlayerRanking] Cleanup for sortBy: ${sortBy}`);
+            clearTimeout(timeoutId);
+        };
+    }, [sortBy]); // 移除 fetchPage 依赖
 
     // 下拉刷新
     const onRefresh = useCallback(() => {
+        console.log(`[PlayerRanking] onRefresh triggered`);
         pageState.setRefreshing(true);
+        pageState.setError(null);
+        pageState.setHasNextPage(true);
+        hasNextPageRef.current = true; // 重置 ref
+        setLastDoc(null);
+        isLoadingRef.current = false; // 重置加载状态
         fetchPage(true);
-    }, [fetchPage, pageState]);
+    }, []); // 移除 fetchPage 和 pageState 依赖
 
     // 触底加载
     const onEndReached = useCallback(() => {
-        if (!pageState.loading && !pageState.refreshing && pageState.hasNextPage && !pageState.isLoadingMore) {
-            fetchPage(false);
+        console.log(`[PlayerRanking] onEndReached triggered`);
+        console.log(`[PlayerRanking] State - loading: ${pageState.loading}, refreshing: ${pageState.refreshing}, hasNextPage: ${pageState.hasNextPage}, hasNextPageRef: ${hasNextPageRef.current}, isLoadingMore: ${pageState.isLoadingMore}, isLoadingRef: ${isLoadingRef.current}`);
+        
+        if (pageState.loading || pageState.refreshing || !hasNextPageRef.current || pageState.isLoadingMore || isLoadingRef.current) {
+            console.log(`[PlayerRanking] onEndReached skipped due to state conditions`);
+            return;
         }
-    }, [pageState, fetchPage]);
+        
+        console.log(`[PlayerRanking] onEndReached calling fetchPage(false)`);
+        fetchPage(false);
+    }, []); // 移除所有依赖
 
     const clearKeyword = useCallback(() => setKeyword(''), []);
 
     // 切换排序（服务端字段）
-    const handleSortByTotalProfit = useCallback(() => setSortBy(SORT_TYPES.TOTAL_PROFIT), []);
-    const handleSortByRoi = useCallback(() => setSortBy(SORT_TYPES.ROI), []);
-    const handleSortByAppearances = useCallback(() => setSortBy(SORT_TYPES.APPEARANCES), []);
+    const handleSortByTotalProfit = useCallback(() => {
+        if (sortBy !== SORT_TYPES.TOTAL_PROFIT) {
+            console.log(`[PlayerRanking] Switching to TOTAL_PROFIT sort`);
+            // 重置玩家列表和分页状态
+            setPlayers([]);
+            setLastDoc(null);
+            pageState.setHasNextPage(true);
+            hasNextPageRef.current = true; // 重置 ref
+            isLoadingRef.current = false; // 重置加载状态
+            initializedRef.current = {}; // 重置初始化状态
+            setSortBy(SORT_TYPES.TOTAL_PROFIT);
+        }
+    }, [sortBy, pageState]);
+    
+    const handleSortByRoi = useCallback(() => {
+        if (sortBy !== SORT_TYPES.ROI) {
+            console.log(`[PlayerRanking] Switching to ROI sort`);
+            // 重置玩家列表和分页状态
+            setPlayers([]);
+            setLastDoc(null);
+            pageState.setHasNextPage(true);
+            hasNextPageRef.current = true; // 重置 ref
+            isLoadingRef.current = false; // 重置加载状态
+            initializedRef.current = {}; // 重置初始化状态
+            setSortBy(SORT_TYPES.ROI);
+        }
+    }, [sortBy, pageState]);
+    
+    const handleSortByAppearances = useCallback(() => {
+        if (sortBy !== SORT_TYPES.APPEARANCES) {
+            console.log(`[PlayerRanking] Switching to APPEARANCES sort`);
+            // 重置玩家列表和分页状态
+            setPlayers([]);
+            setLastDoc(null);
+            pageState.setHasNextPage(true);
+            hasNextPageRef.current = true; // 重置 ref
+            isLoadingRef.current = false; // 重置加载状态
+            initializedRef.current = {}; // 重置初始化状态
+            setSortBy(SORT_TYPES.APPEARANCES);
+        }
+    }, [sortBy, pageState]);
 
     // 本地搜索 +（为了 UI 一致）本地再排序一次（与服务端一致的 key）
     const filteredPlayers = useMemo(() => {
         const kw = keyword.trim().toLowerCase();
         const list = kw ? players.filter(p => (p.nickname || '').toLowerCase().includes(kw)) : players;
 
-        return list.slice().sort((a, b) => {
+        // 去重，防止重复的玩家数据
+        const uniqueList = list.filter((player, index, arr) => 
+            arr.findIndex(p => p.id === player.id) === index
+        );
+
+        const sorted = uniqueList.slice().sort((a, b) => {
             if (sortBy === SORT_TYPES.TOTAL_PROFIT) return (b.totalProfit || 0) - (a.totalProfit || 0);
             if (sortBy === SORT_TYPES.ROI) {
                 // 已将 averageROI 统一为 weighted ratio (totalProfit / totalBuyInCash)
@@ -245,9 +366,15 @@ export default function PlayerRankingScreen() {
             if (sortBy === SORT_TYPES.APPEARANCES) return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);
             return 0;
         });
+
+        console.log(`[PlayerRanking] Filtered ${sorted.length} unique players from ${list.length} total`);
+        return sorted;
     }, [players, keyword, sortBy]);
 
-    const keyExtractor = useCallback((item: AggregatedPlayer) => item.id, []);
+    const keyExtractor = useCallback((item: AggregatedPlayer, index: number) => {
+        // 使用 id + index 确保唯一性，防止重复 key
+        return `${item.id}_${index}`;
+    }, []);
     const renderItem = useCallback(({ item, index }: { item: AggregatedPlayer; index: number }) => (
         <PlayerItem item={item} index={index} />
     ), []);
@@ -275,8 +402,15 @@ export default function PlayerRankingScreen() {
 
     // 处理重试
     const handleRetry = useCallback(() => {
+        console.log(`[PlayerRanking] handleRetry triggered`);
+        initializedRef.current = {}; // 重置初始化状态
+        setLastDoc(null);
+        isLoadingRef.current = false; // 重置加载状态
+        pageState.setHasNextPage(true);
+        hasNextPageRef.current = true; // 重置 ref
+        pageState.setError(null);
         fetchPage(true);
-    }, [fetchPage]);
+    }, []); // 移除 fetchPage 依赖
 
     return (
         <PageStateView
@@ -351,7 +485,7 @@ export default function PlayerRankingScreen() {
                         <RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} />
                     }
                     ListEmptyComponent={renderEmptyComponent}
-                    onEndReachedThreshold={0.5}
+                    onEndReachedThreshold={0.1}
                     onEndReached={onEndReached}
                     ListFooterComponent={ListFooter}
                 />

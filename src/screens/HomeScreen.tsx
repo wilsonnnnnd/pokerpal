@@ -213,7 +213,7 @@ const HomeScreen = () => {
                                         key: 'localHistory',
                                         title: '本地历史',
                                         icon: 'database',
-                                        onPress: () => navigation.navigate('Database'),
+                                        onPress: () => navigation.navigate('LocalHistory'),
                                         visible: true,
                                     },
                                     {

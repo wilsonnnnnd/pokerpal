@@ -41,7 +41,7 @@ export default function LocalhistoryScreen() {
 		pageState.setRefreshing(true);
 		await load();
 		pageState.setRefreshing(false);
-	}, [pageState]);
+	}, []); // 移除 pageState 依赖
 
 	const renderItem = ({ item, index }: { item: any; index: number }) => {
 		// 适配本地数据格式：item.__history 包含实际的历史记录数据
