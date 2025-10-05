@@ -151,7 +151,7 @@ export async function updateGameOnServer(gameId: string, patch: Parameters<typeo
 /** 结算/结束游戏 */
 export async function finalizeGameOnServer(gameId: string) {
 	// 只写 finalized/status/updated，不触碰 created
-	await updateGameOnServer(gameId, { finalized: true, status: 'finalized' });
+	await updateGameOnServer(gameId, { finalized: true, status: 'finalized', token: null });
 	await registerHostGameRecord(gameId);
 
 }

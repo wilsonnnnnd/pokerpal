@@ -11,6 +11,7 @@ import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
 import { simpleT } from '@/i18n/simpleT';
 import { usePermission } from '@/hooks/usePermission';
+import { getCurrencyToCNYRate } from '@/utils/exchangeRateUtils';
 
 // small helper to render initials
 function initials(name?: string) {
@@ -48,6 +49,9 @@ export function SettleSummaryModal({
     const handleUpdateRates = async () => {
         try {
             await updateExchangeRates();
+            // 更新成功后，重新获取当前货币的汇率
+            const newRate = await getCurrencyToCNYRate(currentCurrency);
+            setCurrentExchangeRate(newRate);
             // 可以添加一个成功提示
         } catch (error) {
             console.error('Failed to update exchange rates:', error);
@@ -55,17 +59,63 @@ export function SettleSummaryModal({
         }
     };
     
-    // 处理汇率编辑
-    const handleEditRate = () => {
-        setTempRate((exchangeRates.CNY ?? 4.7).toString());
-        setIsEditingRate(true);
+    // 检查汇率数据是否有效
+    const isExchangeRateValid = (rate: number | undefined): boolean => {
+        return rate !== undefined && rate !== null && !isNaN(rate) && rate > 0;
     };
+    
+    // 处理汇率编辑
+    const handleEditRate = async () => {
+        try {
+            // 使用 exchangeRateUtils 中的方法获取当前货币对CNY的汇率
+            const currentRate = await getCurrencyToCNYRate(currentCurrency);
+            setTempRate(currentRate.toString());
+            setIsEditingRate(true);
+        } catch (error) {
+            console.error('Failed to get current exchange rate:', error);
+            // 如果获取失败，使用默认值
+            setTempRate('1');
+            setIsEditingRate(true);
+        }
+    };
+    
+    // 获取当前货币对CNY的汇率（使用异步方法）
+    const [currentExchangeRate, setCurrentExchangeRate] = useState<number>(1);
+    
+    // 初始化时获取汇率
+    React.useEffect(() => {
+        const loadExchangeRate = async () => {
+            try {
+                const rate = await getCurrencyToCNYRate(currentCurrency);
+                setCurrentExchangeRate(rate);
+            } catch (error) {
+                console.error('Failed to load exchange rate:', error);
+                setCurrentExchangeRate(1);
+            }
+        };
+        
+        loadExchangeRate();
+    }, [currentCurrency, exchangeRates]); // 当货币或汇率变化时重新获取
     
     const handleSaveRate = async () => {
         const newRate = parseFloat(tempRate);
         if (!isNaN(newRate) && newRate > 0) {
             try {
+                const curr = currentCurrency.toUpperCase();
+                
+                if (curr === 'CNY' || curr === 'CN') {
+                    // CNY 不需要设置汇率
+                    setIsEditingRate(false);
+                    return;
+                }
+                
+                // 注意：目前只支持直接修改AUD基础的汇率结构
+                // 对于其他货币，这里设置的是对CNY的直接汇率覆盖
+                // 更完整的实现需要重新计算整个汇率结构
                 await setExchangeRate('CNY', newRate);
+                
+                // 更新本地显示的汇率
+                setCurrentExchangeRate(newRate);
                 setIsEditingRate(false);
             } catch (error) {
                 console.error('Failed to update exchange rate:', error);
@@ -221,24 +271,41 @@ export function SettleSummaryModal({
                                                 </Text>
                                             </View>
                                         ) : (
-                                            <TouchableOpacity 
-                                                onPress={handleEditRate}
-                                                style={{ flexDirection: 'row', alignItems: 'center' }}
-                                            >
-                                                <Text style={{
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                                <TouchableOpacity 
+                                                    onPress={handleEditRate}
+                                                    style={{ flexDirection: 'row', alignItems: 'center' }}
+                                                >
+                                                    <Text style={{
+                                                        fontSize: FontSize.small,
+                                                        color: Palette.primary,
+                                                        fontWeight: '500',
+                                                    }}>
+                                                                                                        <Text style={{
                                                     fontSize: FontSize.small,
                                                     color: Palette.primary,
                                                     fontWeight: '500',
                                                 }}>
-                                                    1 {currentCurrency.toUpperCase()} ≈ ¥{(exchangeRates.CNY ?? 4.7).toFixed(4)} CNY
+                                                    1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)} CNY
                                                 </Text>
-                                                <MaterialCommunityIcons
-                                                    name="pencil"
-                                                    size={14}
-                                                    color={Palette.primary}
-                                                    style={{ marginLeft: Spacing.xs }}
-                                                />
-                                            </TouchableOpacity>
+                                                    </Text>
+                                                    <MaterialCommunityIcons
+                                                        name="pencil"
+                                                        size={14}
+                                                        color={Palette.primary}
+                                                        style={{ marginLeft: Spacing.xs }}
+                                                    />
+                                                </TouchableOpacity>
+                                                {/* 显示汇率数据来源状态 */}
+                                                {!isExchangeRateValid(exchangeRates.CNY) && (
+                                                    <MaterialCommunityIcons
+                                                        name="alert-circle-outline"
+                                                        size={12}
+                                                        color={Palette.warning}
+                                                        style={{ marginLeft: Spacing.xs }}
+                                                    />
+                                                )}
+                                            </View>
                                         )}
                                     </View>
                                     

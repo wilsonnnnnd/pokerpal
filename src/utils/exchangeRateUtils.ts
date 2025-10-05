@@ -233,11 +233,14 @@ const setCachedRates = async (cacheKey: string, data: CachedRates): Promise<void
 
 /**
  * 获取默认汇率（备用方案）
+ * 
+ * 注意：这些是硬编码的默认汇率，仅在 API 和缓存都不可用时使用
+ * 建议定期更新这些数值以反映真实汇率水平
  */
 const getDefaultRates = (baseCurrency: string): Record<string, number> => {
     const defaultRates: Record<string, Record<string, number>> = {
         AUD: {
-            CNY: 4.7,   // 1 AUD = 4.7 CNY (更接近实际汇率)
+            CNY: 4.8,   // 1 AUD = 4.8 CNY (可根据实际汇率调整)
             USD: 0.67,  // 1 AUD = 0.67 USD
             EUR: 0.62,  // 1 AUD = 0.62 EUR
             GBP: 0.53,  // 1 AUD = 0.53 GBP
@@ -247,7 +250,7 @@ const getDefaultRates = (baseCurrency: string): Record<string, number> => {
             SGD: 0.90,  // 1 AUD = 0.90 SGD
         },
         CNY: {
-            AUD: 0.2,   // 1 CNY = 0.2 AUD
+            AUD: 0.21,  // 1 CNY = 0.21 AUD (与上面的 AUD->CNY 保持一致)
             USD: 0.14,  // 1 CNY = 0.14 USD
             EUR: 0.13,  // 1 CNY = 0.13 EUR
             GBP: 0.11,  // 1 CNY = 0.11 GBP
