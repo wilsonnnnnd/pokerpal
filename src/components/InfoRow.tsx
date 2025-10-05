@@ -3,20 +3,8 @@ import { View, Text, StyleSheet, TextStyle, ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette } from '@/constants';
 import { InfoRowStyles } from '@/assets/styles';
+import { InfoRowProps } from '@/types';
 
-type InfoRowProps = {
-    icon: keyof typeof MaterialCommunityIcons.glyphMap;
-    text: string;
-    label?: string;  // 新增label属性
-    textColor?: string;
-    labelColor?: string; // 新增label颜色属性
-    iconColor?: string;  // 更改color为iconColor使命名更明确
-    iconSize?: number;
-    textStyle?: TextStyle;
-    labelStyle?: TextStyle; // 新增label样式属性
-    style?: ViewStyle;
-    iconContainerStyle?: ViewStyle; // 新增icon容器样式
-};
 
 export const InfoRow: React.FC<InfoRowProps> = ({
     icon,

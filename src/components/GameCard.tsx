@@ -4,20 +4,38 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { GameHistorystyles as styles } from '@/assets/styles';
-import { getPlayerRanking, formatDateTime } from '@/services/gameHistoryService';
+import { GameHistoryItem } from '@/types';
 
-interface LocalGameCardProps {
-    item: any;
+interface GameCardProps {
+    item: GameHistoryItem;
     index: number;
-    onPress: (item: any) => void;
+    onPress: (item: GameHistoryItem) => void;
 }
 
-export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPress }) => {
-    const h = item.__history;
-    if (!h) return null;
+export const GameCard: React.FC<GameCardProps> = ({ item, index, onPress }) => {
+    // 获取最大赢家和输家
+    const pickTop = (game: GameHistoryItem) => {
+        const players = game.players ?? [];
+        if (players.length === 0) return { winner: null, loser: null };
+        const sorted = [...players].sort((a, b) => b.settleCashDiff - a.settleCashDiff);
+        return { winner: sorted[0], loser: sorted[sorted.length - 1] };
+    };
 
-    const players = h.players || [];
-    const { winner, loser } = getPlayerRanking(players);
+    const { winner, loser } = pickTop(item);
+
+    // 格式化时间
+    const formatDateTime = (dateStr: string) => {
+        if (!dateStr) return { day: '--', month: '--', year: '--', time: '--:--' };
+        const d = new Date(dateStr);
+        return {
+            day: String(d.getDate()).padStart(2, '0'),
+            month: String(d.getMonth() + 1).padStart(2, '0'),
+            year: String(d.getFullYear()),
+            time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+        };
+    };
+
+    const { day, month, year, time } = formatDateTime(item.created);
 
     // 动画值
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,8 +79,6 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
         onPress(item);
     };
 
-    const { day, month, year, time } = formatDateTime(h.created);
-
     return (
         <Animated.View
             style={[
@@ -84,9 +100,9 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                     end={{ x: 1, y: 1 }}
                     style={styles.cardGradient}
                 >
-                    {/* 左侧日期区域 - 本地数据标识 */}
+                    {/* 左侧日期区域 - 云端数据标识 */}
                     <LinearGradient
-                        colors={[color.primary, color.primary]} // 使用蓝色系区分本地数据
+                        colors={[color.primary, color.primary]} // 使用蓝色系
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
                         style={styles.dateContainer}
@@ -97,7 +113,7 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                             <Text style={styles.monthYearText}>{month}/{year.slice(2)}</Text>
                         </View>
                         <View style={styles.timeContainer}>
-                            <MaterialCommunityIcons name="database" size={12} color="rgba(255, 255, 255, 0.8)" />
+                            <MaterialCommunityIcons name="cloud" size={12} color="rgba(255, 255, 255, 0.8)" />
                             <Text style={styles.timeText}>{time}</Text>
                         </View>
                     </LinearGradient>
@@ -107,11 +123,11 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                         <View style={styles.cardHeader}>
                             <View style={styles.blindsContainer}>
                                 <MaterialCommunityIcons name="poker-chip" size={18} color={color.primary} />
-                                <Text style={styles.blindsText}>{h.smallBlind}/{h.bigBlind}</Text>
+                                <Text style={styles.blindsText}>{item.smallBlind}/{item.bigBlind}</Text>
                             </View>
-                            <View style={[styles.playerBadge, { backgroundColor: 'rgba(164, 200, 225, 0.1)' }]}>
-                                <MaterialCommunityIcons name="account-group" size={16} color={color.info} />
-                                <Text style={[styles.playerCountText, { color: color.info }]}>{h.players.length}</Text>
+                            <View style={styles.playerBadge}>
+                                <MaterialCommunityIcons name="account-group" size={16} color={color.success} />
+                                <Text style={styles.playerCountText}>{item.playerCount ?? item.players?.length ?? 0}</Text>
                             </View>
                         </View>
 
@@ -120,7 +136,7 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                             <View style={styles.statCard}>
                                 <MaterialCommunityIcons name="bank" size={16} color={color.info} />
                                 <View style={styles.statTexts}>
-                                    <Text style={styles.statValue}>${Number(h.totalBuyInCash).toFixed(0)}</Text>
+                                    <Text style={styles.statValue}>${Number(item.totalBuyInCash).toFixed(0)}</Text>
                                     <Text style={styles.statLabel}>买入</Text>
                                 </View>
                             </View>
@@ -130,7 +146,7 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                             <View style={styles.statCard}>
                                 <MaterialCommunityIcons name="calculator-variant" size={16} color={color.warning} />
                                 <View style={styles.statTexts}>
-                                    <Text style={styles.statValue}>${Number(h.totalEndingCash).toFixed(0)}</Text>
+                                    <Text style={styles.statValue}>${Number(item.totalEndingCash).toFixed(0)}</Text>
                                     <Text style={styles.statLabel}>结算</Text>
                                 </View>
                             </View>
@@ -139,18 +155,18 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
 
                             <View style={styles.statCard}>
                                 <MaterialCommunityIcons
-                                    name={h.totalDiffCash >= 0 ? 'trending-up' : 'trending-down'}
+                                    name={item.totalDiffCash >= 0 ? 'trending-up' : 'trending-down'}
                                     size={16}
-                                    color={h.totalDiffCash >= 0 ? color.success : color.error}
+                                    color={item.totalDiffCash >= 0 ? color.success : color.error}
                                 />
                                 <View style={styles.statTexts}>
                                     <Text
                                         style={[
                                             styles.statValue,
-                                            { color: h.totalDiffCash >= 0 ? color.success : color.error },
+                                            { color: item.totalDiffCash >= 0 ? color.success : color.error },
                                         ]}
                                     >
-                                        {h.totalDiffCash >= 0 ? '+' : ''}${Math.abs(Number(h.totalDiffCash)).toFixed(0)}
+                                        {item.totalDiffCash >= 0 ? '+' : ''}${Math.abs(Number(item.totalDiffCash)).toFixed(0)}
                                     </Text>
                                     <Text style={styles.statLabel}>差额</Text>
                                 </View>
@@ -186,11 +202,11 @@ export const LocalGameCard: React.FC<LocalGameCardProps> = ({ item, index, onPre
                             </View>
                         )}
 
-                        {/* 右侧箭头 + 本地标识 */}
+                        {/* 右侧箭头 + 云端标识 */}
                         <View style={styles.cardFooter}>
                             <View style={styles.localBadge}>
-                                <MaterialCommunityIcons name="hard-hat" size={14} color={color.info} />
-                                <Text style={styles.localBadgeText}>本地</Text>
+                                <MaterialCommunityIcons name="cloud" size={14} color={color.info} />
+                                <Text style={styles.localBadgeText}>云端</Text>
                             </View>
                             <MaterialCommunityIcons name="chevron-right" size={20} color={color.mutedText} />
                         </View>

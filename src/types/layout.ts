@@ -39,3 +39,23 @@ export interface MsgPopUpProps {
     onCancel?: () => void;
 }
 
+export type GradientCardProps = {
+    children: React.ReactNode;
+    index?: number; // 用于选择渐变色（默认第一个）
+    style?: StyleProp<ViewStyle>;
+};
+
+
+export type InfoRowProps = {
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    text: string;
+    label?: string;  // 新增label属性
+    textColor?: string;
+    labelColor?: string; // 新增label颜色属性
+    iconColor?: string;  // 更改color为iconColor使命名更明确
+    iconSize?: number;
+    textStyle?: TextStyle;
+    labelStyle?: TextStyle; // 新增label样式属性
+    style?: ViewStyle;
+    iconContainerStyle?: ViewStyle; // 新增icon容器样式
+};

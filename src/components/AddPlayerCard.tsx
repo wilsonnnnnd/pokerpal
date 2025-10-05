@@ -27,18 +27,8 @@ import { Ionicons } from '@expo/vector-icons';
 import usePermission from '@/hooks/usePermission';
 import { AddPlayerCardProps, AddPlayerTab } from '@/types';
 import { AddPlayerCardStyles } from '@/assets/styles';
+import { fetchUsersByEmail } from '@/firebase/fetchUser';
 
-const fetchUsersByEmail = async () => {
-    const querySnapshot = await getDocs(collection(db, userByEmailDoc));
-    const users = querySnapshot.docs.map((doc) => ({
-        email: doc.id,
-        uid: doc.data().uid || '',
-        nickname: doc.data().nickname,
-        photoURL: doc.data().photoURL,
-        ...doc.data(),
-    }));
-    return users;
-};
 
 export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps) => {
     const [activeTab, setActiveTab] = useState(AddPlayerTab.MANUAL);

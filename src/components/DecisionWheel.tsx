@@ -7,12 +7,8 @@ import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import * as Haptics from 'expo-haptics';
 import { DecisionWheelStyles } from '@/assets/styles';
+import { DecisionWheelProps, OPTIONS } from '@/types';
 
-const OPTIONS = ['CALL', 'FOLD'];
-
-interface DecisionWheelProps {
-    onClose: () => void;
-}
 
 export default function DecisionWheel({ onClose }: DecisionWheelProps) {
     const rotateAnim = useRef(new Animated.Value(0)).current;

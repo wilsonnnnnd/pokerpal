@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,7 +14,6 @@ import { useGameStore } from '@/stores/useGameStore';
 import { PrimaryButton } from './PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
-import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import * as yup from 'yup';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
@@ -30,19 +28,22 @@ import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 import { useLogger } from '@/utils/useLogger';
 import { GameSetUpStyles } from '@/assets/styles';
-// settings key removed from namingVar; no currency usage here
+import { GameSetupCardProps } from '@/types';
 
 
-interface GameSetupCardProps {
-    onConfirm: () => void;
-    onCancel?: () => void;
-}
 
 export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const setGame = useGameStore((state) => state.setGame);
     const setToken = useGameStore((state) => state.setToken);
     const { clearLogs } = useLogger();
     const { isHost } = usePermission();
+    
+    // 创建refs用于存储输入框引用
+    const smallBlindRef = useRef<TextInput | null>(null);
+    const bigBlindRef = useRef<TextInput | null>(null);
+    const defaultBuyInRef = useRef<TextInput | null>(null);
+    const baseCashAmountRef = useRef<TextInput | null>(null);
+
     // 使用对象来管理表单状态
     const [formValues, setFormValues] = useState({
         smallBlind: '',
@@ -82,12 +83,6 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             }
         })();
     }, []);
-
-    // 创建refs用于存储输入框引用
-    const smallBlindRef = useRef<TextInput | null>(null);
-    const bigBlindRef = useRef<TextInput | null>(null);
-    const defaultBuyInRef = useRef<TextInput | null>(null);
-    const baseCashAmountRef = useRef<TextInput | null>(null);
 
     // 游戏设置验证模式
     const gameSchema = yup.object().shape({
@@ -285,10 +280,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             style={GameSetUpStyles.headerGradient}
                         >
                             <View style={GameSetUpStyles.iconContainer}>
-                                <MaterialCommunityIcons 
-                                    name="cards-playing-outline" 
-                                    size={32} 
-                                    color={color.lightText} 
+                                <MaterialCommunityIcons
+                                    name="cards-playing-outline"
+                                    size={32}
+                                    color={color.lightText}
                                 />
                             </View>
                             <Text style={GameSetUpStyles.title}>游戏设置</Text>
@@ -300,14 +295,14 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             {/* Blind Settings */}
                             <View style={GameSetUpStyles.sectionContainer}>
                                 <View style={GameSetUpStyles.sectionHeader}>
-                                    <MaterialCommunityIcons 
-                                        name="scale-balance" 
-                                        size={20} 
-                                        color={color.primary} 
+                                    <MaterialCommunityIcons
+                                        name="scale-balance"
+                                        size={20}
+                                        color={color.primary}
                                     />
                                     <Text style={GameSetUpStyles.sectionTitle}>盲注设置</Text>
                                 </View>
-                                
+
                                 <View style={GameSetUpStyles.inputRow}>
                                     <View style={GameSetUpStyles.halfWidth}>
                                         <InputField
@@ -343,10 +338,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             {/* Buy-in Settings */}
                             <View style={GameSetUpStyles.sectionContainer}>
                                 <View style={GameSetUpStyles.sectionHeader}>
-                                    <MaterialCommunityIcons 
-                                        name="wallet-outline" 
-                                        size={20} 
-                                        color={color.primary} 
+                                    <MaterialCommunityIcons
+                                        name="wallet-outline"
+                                        size={20}
+                                        color={color.primary}
                                     />
                                     <Text style={GameSetUpStyles.sectionTitle}>买入设置</Text>
                                 </View>

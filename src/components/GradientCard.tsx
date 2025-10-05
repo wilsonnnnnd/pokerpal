@@ -3,12 +3,8 @@ import { ViewStyle, StyleProp } from 'react-native';
 
 import { Gradients } from '@/constants';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GradientCardProps } from '@/types';
 
-type GradientCardProps = {
-    children: React.ReactNode;
-    index?: number; // 用于选择渐变色（默认第一个）
-    style?: StyleProp<ViewStyle>;
-};
 
 export const GradientCard = ({ children, index = 0, style }: GradientCardProps) => {
     const [from, to] = Gradients[index % Gradients.length];

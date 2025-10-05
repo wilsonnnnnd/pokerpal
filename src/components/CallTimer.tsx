@@ -20,49 +20,12 @@ import { logError } from '@/utils/useLogger';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { CallTimerStyles } from '@/assets/styles';
+import { CallTimerHandle, CallTimerProps } from '@/types';
 
-/**
- * 德州扑克Call Timer组件的引用接口
- */
-export interface CallTimerHandle {
-    show: (initialSeconds?: number) => void;
-    hide: () => void;
-    reset: (newDuration?: number) => void;
-    pause: () => void;
-    resume: () => void;
-}
-
-/**
- * 德州扑克Call Timer组件属性
- */
-export interface CallTimerProps {
-    /** 默认计时时间(秒) */
-    defaultDuration?: number;
-    /** 警告阈值(秒) */
-    warningThreshold?: number;
-    /** 紧急阈值(秒) */
-    criticalThreshold?: number;
-    /** 时间结束回调函数 */
-    onTimeUp?: () => void;
-    /** 计时器关闭回调函数 */
-    onClose?: () => void;
-    /** 预设时间列表(秒) */
-    presetTimes?: number[];
-    /** 是否启用声音 */
-    soundEnabled?: boolean;
-    /** 是否启用振动 */
-    vibrationEnabled?: boolean;
-}
-
-// 常量
 const RADIUS = 40;
 const STROKE_WIDTH = 8;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-/**
- * 德州扑克Call Timer组件
- * 简化版本，移除模式选择功能
- */
 const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
     ({
         defaultDuration = 30,

@@ -5,17 +5,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import { Palette as color } from '@/constants';
-import { Player } from '@/types';
+import { BuyInProps, Player } from '@/types';
 import { PrimaryButton } from './PrimaryButton';
 import { SettleChipsStyles } from '@/assets/styles';
 
-type Props = {
-    player: Player;
-    onConfirm: (chipCount: number) => void;
-    onCancel: () => void;
-};
 
-export const SettleChipPopupCard: React.FC<Props> = ({ player, onConfirm, onCancel }) => {
+export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCancel }) => {
     const [chipInput, setChipInput] = useState('');
     const [error, setError] = useState('');
 
@@ -26,7 +21,7 @@ export const SettleChipPopupCard: React.FC<Props> = ({ player, onConfirm, onCanc
             return;
         }
         setError('');
-        onConfirm(value);
+        onSubmit(value);
     };
 
     const handleInputChange = (text: string) => {

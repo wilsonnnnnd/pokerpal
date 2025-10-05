@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Animated, KeyboardAvoidingView, Platform } from 'react-native';
-import { Player } from '@/types';
+import { BuyInProps, Player } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { ExitBuyInStyles } from '@/assets/styles';
 
-interface Props {
-    player: Player;
-    onConfirm: (buyInAmount: number) => void; // Add this line
-    onCancel: () => void;
-}
 
-export const EditBuyInPopupCard: React.FC<Props> = ({ player, onConfirm, onCancel }) => {
+export const EditBuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCancel }) => {
     const [amount, setAmount] = useState(player.totalBuyInChips.toString());
     const [isFocused, setIsFocused] = useState(false);
     const fadeAnim = useState(new Animated.Value(0))[0];
@@ -36,7 +31,7 @@ export const EditBuyInPopupCard: React.FC<Props> = ({ player, onConfirm, onCance
             useNativeDriver: true,
         }).start(() => {
             // Pass the number value directly rather than an updated player object
-            onConfirm(value);
+            onSubmit(value);
         });
     };
 

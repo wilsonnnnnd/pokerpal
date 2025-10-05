@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, Pressable, Modal, TouchableOpacity, Scro
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientCard } from './GradientCard';
-import { Player } from '@/types';
+import { Player, PlayerActionsProps, PlayerAvatarProps, PlayerCardProps, PlayerDetailsProps } from '@/types';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
@@ -11,36 +11,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { useLogger } from '@/utils/useLogger';
 import { PlayerCardStyles } from '@/assets/styles';
 
-// 类型定义
-interface PlayerCardProps {
-    player: Player;
-    index: number;
-    onBuyIn: (player: Player) => void;
-    onToggle: (player: Player) => void;
-    onLongPress: (player: Player) => void;
-    finalized: boolean;
-}
 
-interface PlayerAvatarProps {
-    player: Player;
-    avatarColor: string;
-    initialLetter: string;
-}
-
-interface PlayerDetailsProps {
-    player: Player;
-    profit: number;
-    isSettled: boolean;
-}
-
-interface PlayerActionsProps {
-    player: Player;
-    finalized: boolean;
-    onBuyIn: () => void;
-    onToggle: () => void;
-}
-
-// 头像组件
 const PlayerAvatar = React.memo<PlayerAvatarProps>(({ player, avatarColor, initialLetter }) => (
     <View
         style={PlayerCardStyles.avatar}

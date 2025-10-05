@@ -6,7 +6,7 @@ import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { GameHistorystyles as styles, DatabaseStyles } from '@/assets/styles';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LocalGameCard } from '@/components/LocalGameCard';
+import { GameCard } from '@/components/GameCard';
 import gameHistoryService from '@/services/gameHistoryService';
 
 export default function LocalhistoryScreen() {
@@ -41,18 +41,21 @@ export default function LocalhistoryScreen() {
 		setRefreshing(false);
 	}, []);
 
-	const renderItem = ({ item, index }: { item: any; index: number }) => (
-		<LocalGameCard
-			item={item}
-			index={index}
-			onPress={(selectedItem) => {
-				const h = selectedItem.__history;
-				if (h) {
-					(nav as any).navigate('GameDetail', { game: h, isLocal: true });
-				}
-			}}
-		/>
-	);
+	const renderItem = ({ item, index }: { item: any; index: number }) => {
+		// 适配本地数据格式：item.__history 包含实际的历史记录数据
+		const historyData = item.__history;
+		if (!historyData) return null;
+
+		return (
+			<GameCard
+				item={historyData}
+				index={index}
+				onPress={(selectedItem) => {
+					(nav as any).navigate('GameDetail', { game: selectedItem, isLocal: true });
+				}}
+			/>
+		);
+	};
 
 	if (loading) return (
 		<LinearGradient

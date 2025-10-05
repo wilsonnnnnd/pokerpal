@@ -50,3 +50,30 @@ export type BuyInProps = {
     onSubmit: (amount: number) => void;
     onCancel: () => void;
 };
+export interface PlayerCardProps {
+    player: Player;
+    index: number;
+    onBuyIn: (player: Player) => void;
+    onToggle: (player: Player) => void;
+    onLongPress: (player: Player) => void;
+    finalized: boolean;
+}
+
+export interface PlayerAvatarProps {
+    player: Player;
+    avatarColor: string;
+    initialLetter: string;
+}
+
+export interface PlayerDetailsProps {
+    player: Player;
+    profit: number;
+    isSettled: boolean;
+}
+
+export interface PlayerActionsProps {
+    player: Player;
+    finalized: boolean;
+    onBuyIn: () => void;
+    onToggle: () => void;
+}

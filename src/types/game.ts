@@ -127,3 +127,8 @@ export type GameState = {
   finalizeGame: () => void;
   resetGame: () => void;
 };
+
+export interface GameSetupCardProps {
+    onConfirm: () => void;
+    onCancel?: () => void;
+}
