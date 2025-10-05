@@ -19,6 +19,7 @@ import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
 import { usePermission } from '@/hooks/usePermission';
+import { getLastUpdateTime } from '@/utils/exchangeRateUtils';
 
 type AppSettings = {
     language?: string;
@@ -42,7 +43,6 @@ export default function SettingsScreen() {
         currency,
         exchangeRates,
         updateExchangeRates,
-        getLastRateUpdate,
         clearRateCache,
         isUpdatingRates
     } = useSettings();
@@ -54,6 +54,9 @@ export default function SettingsScreen() {
     const [initialCurrency, setInitialCurrency] = useState<string | null>(null);
     const initialSetRef = React.useRef(false);
     const initialCurrencySetRef = React.useRef(false);
+    
+    // 汇率详细信息状态
+    const [lastRateUpdate, setLastRateUpdate] = useState<string | null>(null);
 
     // MessagePopUp state
     const [popup, setPopup] = useState<{
@@ -76,13 +79,23 @@ export default function SettingsScreen() {
                 // language/timezone/currency are loaded by SettingsProvider; just load persisted user for debug
                 const pu = await getLocal(CURRENT_USER_KEY);
                 setPersistedUser(pu);
+                
+                // 加载汇率更新时间
+                if (isHost) {
+                    try {
+                        const updateTime = await getLastUpdateTime('AUD');
+                        setLastRateUpdate(updateTime);
+                    } catch (e) {
+                        console.warn('Failed to get last rate update time:', e);
+                    }
+                }
             } catch (e) {
                 console.warn('load settings', e);
             } finally {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [isHost]);
 
     // set initialLanguage & initialCurrency once when provider has loaded persisted values
     useEffect(() => {
@@ -285,7 +298,10 @@ export default function SettingsScreen() {
         try {
             await updateExchangeRates();
             
-            const lastUpdate = await getLastRateUpdate();
+            // 直接使用 exchangeRateUtils 获取更新时间
+            const lastUpdate = await getLastUpdateTime('AUD');
+            setLastRateUpdate(lastUpdate);
+            
             setPopup({
                 visible: true,
                 title: simpleT('rates_updated', language),
@@ -315,6 +331,9 @@ export default function SettingsScreen() {
             onConfirm: async () => {
                 try {
                     await clearRateCache();
+                    // 清除缓存后，重置更新时间显示
+                    setLastRateUpdate(null);
+                    
                     setPopup({
                         visible: true,
                         title: simpleT('cache_cleared', language),
@@ -483,13 +502,20 @@ export default function SettingsScreen() {
                         <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
                             <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
                             
-                            {/* 当前汇率显示 - 只显示AUD兑换CNY */}
+                            {/* 当前汇率显示 - 显示AUD兑换CNY和更新时间 */}
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
                                 {exchangeRates.CNY ? (
-                                    <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
-                                        1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
-                                    </Text>
+                                    <View>
+                                        <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
+                                            1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
+                                        </Text>
+                                        {lastRateUpdate && (
+                                            <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 2 }}>
+                                                {simpleT('last_update', language)}: {lastRateUpdate}
+                                            </Text>
+                                        )}
+                                    </View>
                                 ) : (
                                     <Text style={{ color: color.mutedText, fontSize: 12, marginBottom: 2 }}>
                                         {simpleT('no_rate_data', language)}
