@@ -9,7 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LocalGameCard } from '@/components/LocalGameCard';
 import gameHistoryService from '@/services/gameHistoryService';
 
-export default function DatabaseScreen() {
+export default function LocalhistoryScreen() {
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [items, setItems] = useState<any[]>([]);

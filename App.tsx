@@ -15,7 +15,7 @@ import HomeScreen from '@/screens/HomeScreen';
 import GamePlayScreen from '@/screens/GamePlayScreen';
 import GameHistoryScreen from '@/screens/GameHistoryScreen';
 import GameDetailScreen from '@/screens/GameDetailScreen';
-import DatabaseScreen from '@/screens/DatabaseScreen';
+import LocalhistoryScreen from '@/screens/LocalHistoryScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
@@ -34,7 +34,7 @@ export type RootStackParamList = {
   GameHistory: undefined;
   GameDetail: { game: any };
   GamePlayerRank: undefined;
-  Database: undefined;
+  LocalHistory: undefined;
   Settings: undefined;
 };
 
@@ -55,7 +55,7 @@ function MainNavigator() {
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
       <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
-      <Stack.Screen name="Database" component={DatabaseScreen} />
+      <Stack.Screen name="LocalHistory" component={LocalhistoryScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
