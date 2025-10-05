@@ -178,14 +178,6 @@ expo build:ios
 eas build --platform ios
 ```
 
-## 🤝 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
 ### 代码风格
 - 使用 TypeScript 严格模式
 - 遵循 ESLint 配置
@@ -203,12 +195,5 @@ eas build --platform ios
 - [Firebase](https://firebase.google.com/) - 后端即服务平台
 - [Zustand](https://github.com/pmndrs/zustand) - 轻量级状态管理库
 
-## 📞 联系方式
-
-如有问题或建议，请通过以下方式联系：
-- GitHub Issues: [项目 Issues](https://github.com/wilsonnnnnd/pokerpal/issues)
-- Email: your-email@example.com
-
----
 
 **PokerPal** - 让扑克游戏管理更简单 🎯
