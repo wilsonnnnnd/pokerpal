@@ -1,4 +1,5 @@
 import localDb from './localDb';
+import { formatPlayerSnapshot, formatGameNumbers } from '@/utils/formatSnapshot';
 
 // 检查本地数据库是否可用
 export const hasLocalDb = Boolean((localDb as any) && typeof (localDb as any).execSql === 'function');
@@ -92,31 +93,34 @@ function toHistoryItem(action: any): GameHistoryItem | null {
             }
         }
         
+        // Use format helpers for per-player normalization
+        const formattedPlayers = payload.players.map((p: any) => formatPlayerSnapshot(p, (baseCashAmount && baseChipAmount) ? (baseCashAmount / baseChipAmount) : undefined));
+        const gameNums = formatGameNumbers({ baseCashAmount, baseChipAmount });
+
         return {
             id: String(action.id),
             smallBlind: Number(payload.smallBlind ?? 0),
             bigBlind: Number(payload.bigBlind ?? 0),
             created: payload.created ?? action.createdAt ?? new Date().toISOString(),
             updated: payload.updated ?? payload.created ?? action.createdAt ?? new Date().toISOString(),
-            baseCashAmount: baseCashAmount,
-            baseChipAmount: baseChipAmount,
-            totalBuyInCash: totalBuyInCash,
-            totalEndingCash: totalEndingCash,
-            totalDiffCash: totalDiffCash,
-            totalBuyInChips: totalBuyInChips,
-            totalEndingChips: totalEndingChips,
-            players: payload.players.map((p: any) => ({
-                playerId: String(p.playerId ?? p.id ?? ''),
-                nickname: String(p.nickname ?? p.displayName ?? 'Unknown'),
-                totalBuyInCash: Number(p.totalBuyInCash) || 0,
-                settleCashAmount: Number(p.settleCashAmount) || 0,
-                settleCashDiff: Number(p.settleCashDiff) || 0,
-                buyInCount: Number(p.buyInCount) || 0,
+            baseCashAmount: gameNums.baseCashAmount,
+            baseChipAmount: gameNums.baseChipAmount,
+            totalBuyInCash: Number((formattedPlayers.reduce((s: number, p: any) => s + (p.totalBuyInCash || 0), 0)).toFixed(2)),
+            totalEndingCash: Number((formattedPlayers.reduce((s: number, p: any) => s + (p.settleCashAmount || 0), 0)).toFixed(2)),
+            totalDiffCash: Number((formattedPlayers.reduce((s: number, p: any) => s + (p.settleCashDiff || 0), 0)).toFixed(2)),
+            totalBuyInChips: Math.round(formattedPlayers.reduce((s: number, p: any) => s + (p.totalBuyInChips || 0), 0)),
+            totalEndingChips: Math.round(formattedPlayers.reduce((s: number, p: any) => s + (p.settleChipCount || 0), 0)),
+            players: formattedPlayers.map((p: any) => ({
+                playerId: String(p.playerId ?? ''),
+                nickname: p.nickname,
+                totalBuyInCash: p.totalBuyInCash,
+                settleCashAmount: p.settleCashAmount,
+                settleCashDiff: p.settleCashDiff,
+                buyInCount: p.buyInCount,
                 photoUrl: p.photoUrl ?? null,
-                settleROI: Number(p.settleROI) || 0,
-                // 添加筹码相关字段
-                totalBuyInChips: Number(p.totalBuyInChips) || 0,
-                settleChipCount: Number(p.settleChipCount) || 0,
+                settleROI: p.settleROI,
+                totalBuyInChips: p.totalBuyInChips,
+                settleChipCount: p.settleChipCount,
             })),
             __rawAction: action,
         };

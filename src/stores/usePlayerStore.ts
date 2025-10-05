@@ -62,11 +62,11 @@ export const usePlayerStore = create<PlayerState>()(
                                 if (p.id !== id) return p;
 
                                 const settleChipDiff = settleChipCount - p.totalBuyInChips;
-                                const settleCashAmount = settleChipCount * rate;
-                                const settleCashDiff = settleChipDiff * rate;
+                                const settleCashAmount = Number((settleChipCount * rate).toFixed(2));
+                                const settleCashDiff = Number((settleChipDiff * rate).toFixed(2));
 
                                 const denom = (p.totalBuyInChips * rate) || 0;
-                                const settleROI = denom ? settleCashDiff / denom : 0;
+                                const settleROI = denom ? Number((settleCashDiff / denom).toFixed(6)) : 0;
 
                                 return {
                                     ...p,

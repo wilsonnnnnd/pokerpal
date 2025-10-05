@@ -13,6 +13,7 @@ import { BatchBuilder } from './batchBuilder'
 import { gameDoc, playerDoc, userDoc } from '@/constants/namingVar'
 import { Player } from '@/types'
 import { preparePlayerGraphBatch } from './preparePlayerGraphBatch'
+import { formatPlayerSnapshot, formatGameNumbers } from '@/utils/formatSnapshot'
 
 export type GraphPoint = {
     gameId: string
@@ -93,21 +94,18 @@ export function queuePlayerGameWrite(
 ) {
     const playerRef = doc(db, gameDoc, gameId, playerDoc, player.id)
     // normalize numeric fields to consistent precision
-    const totalBuyInCash = Number(((player.totalBuyInChips || 0) * rate).toFixed(2));
-    const settleCashAmount = typeof player.settleCashAmount === 'number' ? Number((player.settleCashAmount).toFixed(2)) : null;
-    const settleCashDiff = typeof player.settleCashDiff === 'number' ? Number((player.settleCashDiff).toFixed(2)) : null;
-    const settleROI = typeof player.settleROI === 'number' ? Number((player.settleROI).toFixed(6)) : null;
+    const formatted = formatPlayerSnapshot(player, rate);
 
     bb.set(playerRef, {
         playerId: player.id,
         nickname: player.nickname,
         buyInCount: (player.buyInChipsList || []).length,
-        totalBuyInCash,
-        settleCashAmount,
-        settleCashDiff,
-        settleROI,
+        totalBuyInCash: formatted.totalBuyInCash,
+        settleCashAmount: formatted.settleCashAmount,
+        settleCashDiff: formatted.settleCashDiff,
+        settleROI: formatted.settleROI,
     })
-    return { playerRef, totalBuyInCash }
+    return { playerRef, totalBuyInCash: formatted.totalBuyInCash }
 }
 
 export function hasValidEmail(email?: string | null) {
@@ -184,15 +182,17 @@ export async function ensureUserGameHistory(
     const gameHistoryRef = doc(db, userDoc, player.id, gameDoc, gameId)
     const snap = await getDoc(gameHistoryRef)
     if (!snap.exists()) {
+        const formatted = formatPlayerSnapshot(player);
+        const gameNums = formatGameNumbers({ baseCashAmount: totalBuyInCash });
         bb.set(gameHistoryRef, {
             gameId,
             created: new Date().toISOString(),
-            settleCashAmount: typeof player.settleCashAmount === 'number' ? Number((player.settleCashAmount).toFixed(2)) : null,
-            settleCashDiff: typeof player.settleCashDiff === 'number' ? Number((player.settleCashDiff).toFixed(2)) : null,
-            settleROI: (typeof player.settleROI === 'number') ? Number(player.settleROI.toFixed(6)) : null,
-            totalBuyInChips: player.totalBuyInChips,
+            settleCashAmount: formatted.settleCashAmount ?? null,
+            settleCashDiff: formatted.settleCashDiff ?? null,
+            settleROI: formatted.settleROI ?? null,
+            totalBuyInChips: formatted.totalBuyInChips,
             totalBuyInCash: typeof totalBuyInCash === 'number' ? Number((totalBuyInCash).toFixed(2)) : totalBuyInCash,
-            result: (player.settleCashDiff ?? 0) > 0 ? 'win' : (player.settleCashDiff ?? 0) < 0 ? 'lose' : 'even',
+            result: (formatted.settleCashDiff ?? 0) > 0 ? 'win' : (formatted.settleCashDiff ?? 0) < 0 ? 'lose' : 'even',
             finalizedAt: new Date().toISOString(),
         })
     }
