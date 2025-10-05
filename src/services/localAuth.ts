@@ -53,7 +53,7 @@ export function onAuthStateChanged(arg1: any, cb?: (u: User | null) => void) {
 
 export async function signInAnonymously() {
     const uid = uuidv4();
-    currentUser = { uid, displayName: 'Guest', isAnonymous: true };
+    currentUser = { uid, displayName: 'Guest', isAnonymous: true  };
     notify();
     try {
         await storage.setLocal(CURRENT_USER_KEY, currentUser);

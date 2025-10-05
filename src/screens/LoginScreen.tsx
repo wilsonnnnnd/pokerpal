@@ -7,7 +7,7 @@ import Toast from 'react-native-toast-message';
 import { db } from '@/firebase/config';
 import { signInWithCredential, signInAnonymously } from '@/services/localAuth';
 import storage from '@/services/storageService';
-import { doc, getDoc, setDoc,  } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
@@ -128,12 +128,12 @@ export default function LoginScreen() {
             // Pass profile data to Firestore profile updater
             await saveUserProfile({ uid: u.uid, email: googleCredential.email ?? u.email, displayName: googleCredential.displayName ?? u.displayName, photoURL: googleCredential.photoURL ?? u.photoURL, isAnonymous: u.isAnonymous });
 
-                // localAuth now persists the current user; verify persistence for debugging
-                try {
-                    const persisted = await storage.getLocal(CURRENT_USER_KEY);
-                } catch (e) {
-                    console.warn('Login: failed to read persisted user', e);
-                }
+            // localAuth now persists the current user; verify persistence for debugging
+            try {
+                const persisted = await storage.getLocal(CURRENT_USER_KEY);
+            } catch (e) {
+                console.warn('Login: failed to read persisted user', e);
+            }
 
             Toast.show({ type: 'success', text1: '登录成功', text2: `欢迎 ${u.displayName ?? '玩家'}` });
             // Let App's auth subscription switch the navigator. As a fallback try navigate.
@@ -164,16 +164,14 @@ export default function LoginScreen() {
         setLoading(true);
         try {
             const cred = await signInAnonymously();
-            const u = cred.user;
-            await saveUserProfile({ uid: u.uid, isAnonymous: u.isAnonymous });
-
             // Persist current user locally
-                // localAuth persists the anonymous user; verify persistence
-                try {
-                    const persisted = await storage.getLocal(CURRENT_USER_KEY);
-                } catch (e) {
-                    console.warn('Login: failed to read persisted guest user', e);
-                }
+            // localAuth persists the anonymous user; verify persistence
+            try {
+                const persisted = await storage.getLocal(CURRENT_USER_KEY);
+
+            } catch (e) {
+                console.warn('Login: failed to read persisted guest user', e);
+            }
 
             Toast.show({ type: 'success', text1: '已以访客身份登录' });
             // Let App's auth subscription switch the navigator. As a fallback try navigate.
@@ -199,7 +197,7 @@ export default function LoginScreen() {
             style={styles.container}
         >
             <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-            
+
             {/* Hero Section */}
             <View style={styles.heroSection}>
                 <View style={styles.logoContainer}>
@@ -215,9 +213,9 @@ export default function LoginScreen() {
             <View style={styles.actionsSection}>
                 <View style={styles.loginCard}>
                     {/* Google Login Button */}
-                    <TouchableOpacity 
-                        style={[styles.primaryButton, styles.googleBtn]} 
-                        onPress={onGoogleSignIn} 
+                    <TouchableOpacity
+                        style={[styles.primaryButton, styles.googleBtn]}
+                        onPress={onGoogleSignIn}
                         disabled={loading}
                         activeOpacity={0.8}
                     >
@@ -231,10 +229,10 @@ export default function LoginScreen() {
                                 <ActivityIndicator color={color.lightText} size="small" />
                             ) : (
                                 <>
-                                    <MaterialCommunityIcons 
-                                        name="google" 
-                                        size={20} 
-                                        color={color.lightText} 
+                                    <MaterialCommunityIcons
+                                        name="google"
+                                        size={20}
+                                        color={color.lightText}
                                         style={styles.buttonIcon}
                                     />
                                     <Text style={styles.primaryButtonText}>使用 Google 登录</Text>
@@ -244,16 +242,16 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     {/* Guest Login Button */}
-                    <TouchableOpacity 
-                        style={[styles.secondaryButton, styles.guestBtn]} 
-                        onPress={onGuest} 
+                    <TouchableOpacity
+                        style={[styles.secondaryButton, styles.guestBtn]}
+                        onPress={onGuest}
                         disabled={loading}
                         activeOpacity={0.8}
                     >
-                        <MaterialCommunityIcons 
-                            name="account-outline" 
-                            size={20} 
-                            color={color.primary} 
+                        <MaterialCommunityIcons
+                            name="account-outline"
+                            size={20}
+                            color={color.primary}
                             style={styles.buttonIcon}
                         />
                         <Text style={styles.secondaryButtonText}>以访客身份继续</Text>
@@ -262,10 +260,10 @@ export default function LoginScreen() {
 
                 {/* Info Note */}
                 <View style={styles.noteSection}>
-                    <MaterialCommunityIcons 
-                        name="information-outline" 
-                        size={16} 
-                        color={color.mutedText} 
+                    <MaterialCommunityIcons
+                        name="information-outline"
+                        size={16}
+                        color={color.mutedText}
                         style={styles.infoIcon}
                     />
                     <Text style={styles.note}>
@@ -278,8 +276,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { 
-        flex: 1, 
+    container: {
+        flex: 1,
         paddingTop: 60,
     },
     heroSection: {
@@ -303,14 +301,14 @@ const styles = StyleSheet.create({
         elevation: 5,
         marginBottom: Spacing.lg,
     },
-    logo: { 
-        width: 120, 
-        height: 120, 
+    logo: {
+        width: 120,
+        height: 120,
         resizeMode: 'contain',
     },
-    title: { 
+    title: {
         fontSize: FontSize.h1,
-        fontWeight: '800', 
+        fontWeight: '800',
         color: color.title,
         textAlign: 'center',
         marginBottom: Spacing.sm,

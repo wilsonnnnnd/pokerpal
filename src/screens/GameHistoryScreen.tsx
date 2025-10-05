@@ -1,6 +1,6 @@
 // src/screens/GameHistoryScreen.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Animated } from 'react-native';
+import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl, Animated, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
@@ -23,6 +23,7 @@ import { db } from '@/firebase/config';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color, Palette } from '@/constants';
+import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import Toast from 'react-native-toast-message';
 
 import { GameHistorystyles as styles } from '@/assets/styles';
@@ -416,9 +417,9 @@ const GameCard: React.FC<GameCardProps> = ({ item, index, onPress, pickTop }) =>
                     end={{ x: 1, y: 1 }}
                     style={styles.cardGradient}
                 >
-                    {/* 左侧日期区域 - 优化设计 */}
+                    {/* 左侧日期区域 - 与云端数据统一风格 */}
                     <LinearGradient
-                        colors={[color.primary, color.highLighter]}
+                        colors={[color.primary, color.primary]} // 使用统一的蓝色系
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
                         style={styles.dateContainer}
@@ -429,7 +430,7 @@ const GameCard: React.FC<GameCardProps> = ({ item, index, onPress, pickTop }) =>
                             <Text style={styles.monthYearText}>{month}/{year.slice(2)}</Text>
                         </View>
                         <View style={styles.timeContainer}>
-                            <MaterialCommunityIcons name="clock-outline" size={12} color="rgba(255, 255, 255, 0.8)" />
+                            <MaterialCommunityIcons name="cloud" size={12} color="rgba(255, 255, 255, 0.8)" />
                             <Text style={styles.timeText}>{time}</Text>
                         </View>
                     </LinearGradient>
@@ -518,8 +519,12 @@ const GameCard: React.FC<GameCardProps> = ({ item, index, onPress, pickTop }) =>
                             </View>
                         )}
 
-                        {/* 右侧箭头 */}
+                        {/* 右侧箭头 + 云端标识 */}
                         <View style={styles.cardFooter}>
+                            <View style={styles.localBadge}>
+                                <MaterialCommunityIcons name="cloud" size={14} color={color.info} />
+                                <Text style={styles.localBadgeText}>云端</Text>
+                            </View>
                             <MaterialCommunityIcons name="chevron-right" size={20} color={color.mutedText} />
                         </View>
                     </View>
@@ -599,12 +604,57 @@ const GameCard: React.FC<GameCardProps> = ({ item, index, onPress, pickTop }) =>
                 colors={[color.background, color.lightBackground]}
                 style={styles.container}
             >
+                {/* 页面头部 */}
+                <LinearGradient
+                    colors={[color.primary, color.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.header}
+                >
+                    <View style={styles.headerContent}>
+                        <View style={styles.headerLeft}>
+                            <MaterialCommunityIcons name="history" size={24} color={color.lightText} />
+                            <Text style={styles.headerTitle}>游戏历史</Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                            <TouchableOpacity
+                                style={styles.headerButton}
+                                onPress={onRefresh}
+                                activeOpacity={0.7}
+                                disabled={refreshing}
+                            >
+                                <MaterialCommunityIcons 
+                                    name={refreshing ? "loading" : "refresh"} 
+                                    size={20} 
+                                    color={color.lightText} 
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    
+                    {/* 统计信息 */}
+                    <View style={styles.statsRow}>
+                        <View style={styles.statChip}>
+                            <MaterialCommunityIcons name="cards-variant" size={16} color="rgba(255, 255, 255, 0.8)" />
+                            <Text style={styles.statChipText}>{items.length} 场游戏</Text>
+                        </View>
+                        {items.length > 0 && (
+                            <View style={[styles.statChip, { marginLeft: Spacing.sm }]}>
+                                <MaterialCommunityIcons name="currency-usd" size={16} color="rgba(255, 255, 255, 0.8)" />
+                                <Text style={styles.statChipText}>
+                                    总流水 ${Math.abs(items.reduce((sum, item) => sum + item.totalBuyInCash, 0)).toFixed(0)}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </LinearGradient>
+
                 <FlatList
                     data={items}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.list}
                     renderItem={renderGameCard}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[color.primary]} tintColor={color.primary} />}
                     onEndReachedThreshold={0.3}
                     onEndReached={onEndReached}
                     showsVerticalScrollIndicator={false}

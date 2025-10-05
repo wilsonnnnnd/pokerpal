@@ -754,6 +754,63 @@ export const GameHistorystyles = StyleSheet.create({
     container: {
         ...styles.container,
     },
+    
+    // 页面头部样式
+    header: {
+        paddingTop: Spacing.xl, // 状态栏高度
+        paddingBottom: Spacing.lg,
+        paddingHorizontal: Spacing.lg,
+    },
+    headerContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: Spacing.md,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: FontSize.h2,
+        fontWeight: '700',
+        color: color.lightText,
+        marginLeft: Spacing.sm,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    
+    // 统计信息样式
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.xs,
+        borderRadius: Radius.md,
+    },
+    statChipText: {
+        fontSize: FontSize.small,
+        color: 'rgba(255, 255, 255, 0.9)',
+        fontWeight: '600',
+        marginLeft: Spacing.xs,
+    },
+    
+    // 列表和内容样式
     list: {
         padding: Spacing.lg,
         paddingBottom: Spacing.xl,
@@ -1079,6 +1136,47 @@ export const GameHistorystyles = StyleSheet.create({
         color: color.info,
         fontWeight: '600',
         marginLeft: 2,
+    },
+});
+
+// DatabaseScreen 专用样式 (继承 GameHistorystyles)
+export const DatabaseStyles = StyleSheet.create({
+    ...GameHistorystyles,
+    
+    // 重写头部样式以区分本地数据库
+    headerTitle: {
+        ...GameHistorystyles.headerTitle,
+        // 可以在这里添加特殊的样式差异
+    },
+    
+    // 错误处理相关样式
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+        padding: Spacing.md,
+        borderRadius: Radius.md,
+        marginTop: Spacing.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(244, 67, 54, 0.3)',
+    },
+    errorText: {
+        flex: 1,
+        fontSize: FontSize.small,
+        color: color.error,
+        marginLeft: Spacing.sm,
+        marginRight: Spacing.sm,
+    },
+    errorButton: {
+        backgroundColor: color.error,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.xs,
+        borderRadius: Radius.sm,
+    },
+    errorButtonText: {
+        fontSize: FontSize.small,
+        color: color.lightText,
+        fontWeight: '600',
     },
 });
 
