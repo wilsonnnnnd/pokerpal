@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { GamePlaystyles as styles } from "@/assets/styles";
+import { modalStyles, GamePlaystyles as styles } from "@/assets/styles";
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import { Player } from "@/types";
-import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch, TextInput } from "react-native";
+import { FlatList, Modal, View, Text, TouchableOpacity, Image, Switch, TextInput, Dimensions } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useGameStore } from "@/stores/useGameStore";
@@ -37,6 +37,10 @@ export function SettleSummaryModal({
     const { isHost } = usePermission();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
+    
+    // 获取屏幕尺寸
+    const { height: screenHeight } = Dimensions.get('window');
+    const maxModalHeight = screenHeight * 0.9; // 最大高度为屏幕高度的90%
     
     // 货币切换状态
     const [showRMB, setShowRMB] = useState(false);
@@ -133,28 +137,13 @@ export function SettleSummaryModal({
             transparent
             animationType="fade"
         >
-            <View style={styles.overlay}>
+            <View style={modalStyles.overlay}>
                 <LinearGradient
                     colors={['#FFFFFF', '#FFFFFF']}
-                    style={[styles.summaryModal, {
-                        borderRadius: Radius.lg,
-                        elevation: Elevation.overlay,
-                        shadowColor: Palette.shadowDark,
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 16,
-                    }]}
+                    style={modalStyles.modal}
                 >
                     {/* Header */}
-                    <View style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: Spacing.lg,
-                        paddingBottom: Spacing.md,
-                        borderBottomWidth: 1,
-                        borderBottomColor: Palette.mediumGray,
-                    }}>
+                    <View style={modalStyles.header}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <MaterialCommunityIcons
                                 name="chart-line"
@@ -162,18 +151,9 @@ export function SettleSummaryModal({
                                 color={Palette.primary}
                                 style={{ marginRight: Spacing.sm }}
                             />
-                            <Text style={[styles.summaryTitle, {
-                                fontSize: FontSize.h2,
-                                fontWeight: '700',
-                                color: Palette.valueText,
-                            }]}>{simpleT('settlement_summary', language)}</Text>
+                            <Text style={modalStyles.headerTitle}>{simpleT('settlement_summary', language)}</Text>
                         </View>
-                        <View style={{
-                            backgroundColor: Palette.info + '20',
-                            paddingHorizontal: Spacing.sm,
-                            paddingVertical: Spacing.xs,
-                            borderRadius: Radius.sm,
-                        }}>
+                        <View style={modalStyles.playersBadge}>
                             <Text style={{
                                 color: Palette.info,
                                 fontSize: FontSize.small,
@@ -186,33 +166,17 @@ export function SettleSummaryModal({
 
                     {/* 货币切换开关 - 只有host用户可见 */}
                     {isHost && (
-                        <View style={{
-                            marginBottom: Spacing.md,
-                            padding: Spacing.md,
-                            backgroundColor: Palette.lightBackground,
-                            borderRadius: Radius.md,
-                            borderWidth: 1,
-                            borderColor: Palette.borderColor,
-                        }}>
+                        <View style={modalStyles.currencySection}>
                             {/* 人民币显示开关 */}
-                            <View style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                marginBottom: Spacing.sm,
-                            }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={modalStyles.currencySwitch}>
+                                <View style={modalStyles.currencyLabel}>
                                     <MaterialCommunityIcons
                                         name="currency-cny"
-                                        size={20}
+                                        size={16} // 减少图标大小从20到16
                                         color={Palette.primary}
                                         style={{ marginRight: Spacing.xs }}
                                     />
-                                    <Text style={{
-                                        fontSize: FontSize.body,
-                                        fontWeight: '600',
-                                        color: Palette.valueText,
-                                    }}>
+                                    <Text style={modalStyles.currencyLabelText}>
                                         {simpleT('show_rmb', language)}
                                     </Text>
                                 </View>
@@ -222,30 +186,20 @@ export function SettleSummaryModal({
                                     trackColor={{ false: Palette.lightGray, true: Palette.primary + '40' }}
                                     thumbColor={showRMB ? Palette.primary : Palette.mediumGray}
                                     ios_backgroundColor={Palette.lightGray}
+                                    style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }} // 缩小开关大小
                                 />
                             </View>
                             
                             {/* 汇率显示和编辑 - 只在显示RMB时出现 */}
                             {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    paddingTop: Spacing.sm,
-                                    borderTopWidth: 1,
-                                    borderTopColor: Palette.borderColor,
-                                }}>
+                                <View style={modalStyles.exchangeRateSection}>
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                        <Text style={{
-                                            fontSize: FontSize.small,
-                                            color: Palette.text,
-                                            marginRight: Spacing.xs,
-                                        }}>
+                                        <Text style={modalStyles.exchangeRateLabel}>
                                             汇率:
                                         </Text>
                                         {isEditingRate ? (
                                             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                                <Text style={{ fontSize: FontSize.small, color: Palette.text }}>
+                                                <Text style={{ fontSize: FontSize.small - 1, color: Palette.text }}>
                                                     1 {currentCurrency.toUpperCase()} = ¥
                                                 </Text>
                                                 <TextInput
@@ -254,19 +208,19 @@ export function SettleSummaryModal({
                                                         borderColor: Palette.primary,
                                                         borderRadius: Radius.sm,
                                                         paddingHorizontal: Spacing.xs,
-                                                        paddingVertical: 2,
-                                                        fontSize: FontSize.small,
+                                                        paddingVertical: 1, // 减少padding
+                                                        fontSize: FontSize.small - 1, // 更小字体
                                                         color: Palette.text,
                                                         backgroundColor: Palette.background,
-                                                        minWidth: 60,
-                                                        marginHorizontal: 4,
+                                                        minWidth: 50, // 减少最小宽度
+                                                        marginHorizontal: 3,
                                                     }}
                                                     value={tempRate}
                                                     onChangeText={setTempRate}
                                                     keyboardType="numeric"
                                                     autoFocus
                                                 />
-                                                <Text style={{ fontSize: FontSize.small, color: Palette.text }}>
+                                                <Text style={{ fontSize: FontSize.small - 1, color: Palette.text }}>
                                                     CNY
                                                 </Text>
                                             </View>
@@ -277,21 +231,15 @@ export function SettleSummaryModal({
                                                     style={{ flexDirection: 'row', alignItems: 'center' }}
                                                 >
                                                     <Text style={{
-                                                        fontSize: FontSize.small,
+                                                        fontSize: FontSize.small - 1, // 更小字体
                                                         color: Palette.primary,
                                                         fontWeight: '500',
                                                     }}>
-                                                                                                        <Text style={{
-                                                    fontSize: FontSize.small,
-                                                    color: Palette.primary,
-                                                    fontWeight: '500',
-                                                }}>
-                                                    1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)} CNY
-                                                </Text>
+                                                        1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)} CNY
                                                     </Text>
                                                     <MaterialCommunityIcons
                                                         name="pencil"
-                                                        size={14}
+                                                        size={12} // 减少图标大小从14到12
                                                         color={Palette.primary}
                                                         style={{ marginLeft: Spacing.xs }}
                                                     />
@@ -300,7 +248,7 @@ export function SettleSummaryModal({
                                                 {!isExchangeRateValid(exchangeRates.CNY) && (
                                                     <MaterialCommunityIcons
                                                         name="alert-circle-outline"
-                                                        size={12}
+                                                        size={10} // 减少图标大小从12到10
                                                         color={Palette.warning}
                                                         style={{ marginLeft: Spacing.xs }}
                                                     />
@@ -309,14 +257,14 @@ export function SettleSummaryModal({
                                         )}
                                     </View>
                                     
-                                    <View style={{ flexDirection: 'row', marginLeft: Spacing.sm }}>
+                                    <View style={{ flexDirection: 'row', marginLeft: Spacing.xs }}> {/* 减少margin */}
                                         <TouchableOpacity
                                             onPress={handleUpdateRates}
                                             disabled={isUpdatingRates}
                                             style={{
                                                 backgroundColor: isUpdatingRates ? Palette.lightGray : Palette.primary,
-                                                paddingHorizontal: Spacing.xs,
-                                                paddingVertical: 4,
+                                                paddingHorizontal: Spacing.xs - 2, // 减少padding
+                                                paddingVertical: 3, // 减少padding
                                                 borderRadius: Radius.sm,
                                                 marginRight: Spacing.xs,
                                                 opacity: isUpdatingRates ? 0.6 : 1,
@@ -324,7 +272,7 @@ export function SettleSummaryModal({
                                         >
                                             <MaterialCommunityIcons 
                                                 name={isUpdatingRates ? "loading" : "refresh"} 
-                                                size={16} 
+                                                size={14} // 减少图标大小从16到14
                                                 color="white" 
                                             />
                                         </TouchableOpacity>
@@ -334,24 +282,24 @@ export function SettleSummaryModal({
                                                     onPress={handleSaveRate}
                                                     style={{
                                                         backgroundColor: Palette.success,
-                                                        paddingHorizontal: Spacing.xs,
-                                                        paddingVertical: 4,
+                                                        paddingHorizontal: Spacing.xs - 2, // 减少padding
+                                                        paddingVertical: 3, // 减少padding
                                                         borderRadius: Radius.sm,
                                                         marginRight: Spacing.xs,
                                                     }}
                                                 >
-                                                    <MaterialCommunityIcons name="check" size={16} color="white" />
+                                                    <MaterialCommunityIcons name="check" size={14} color="white" /> {/* 减少图标大小 */}
                                                 </TouchableOpacity>
                                                 <TouchableOpacity
                                                     onPress={handleCancelEdit}
                                                     style={{
                                                         backgroundColor: Palette.error,
-                                                        paddingHorizontal: Spacing.xs,
-                                                        paddingVertical: 4,
+                                                        paddingHorizontal: Spacing.xs - 2, // 减少padding
+                                                        paddingVertical: 3, // 减少padding
                                                         borderRadius: Radius.sm,
                                                     }}
                                                 >
-                                                    <MaterialCommunityIcons name="close" size={16} color="white" />
+                                                    <MaterialCommunityIcons name="close" size={14} color="white" /> {/* 减少图标大小 */}
                                                 </TouchableOpacity>
                                             </>
                                         )}
@@ -366,6 +314,8 @@ export function SettleSummaryModal({
                         data={players}
                         keyExtractor={(item) => item.id}
                         contentContainerStyle={{ paddingVertical: Spacing.xs }}
+                        style={modalStyles.flatListContainer}
+                        showsVerticalScrollIndicator={true}
                         renderItem={({ item }) => {
                             const chipCount = item.settleChipCount ?? 0;
                             const buyIn = item.totalBuyInChips ?? 0;
@@ -377,20 +327,7 @@ export function SettleSummaryModal({
                             const shouldShowRMB = isHost && showRMB;
                             
                             return (
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    paddingVertical: Spacing.md,
-                                    paddingHorizontal: Spacing.md,
-                                    marginVertical: Spacing.xs,
-                                    backgroundColor: Palette.lightGray,
-                                    borderRadius: Radius.md,
-                                    elevation: 1,
-                                    shadowColor: Palette.shadowLight,
-                                    shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 2,
-                                }}>
+                                <View style={modalStyles.playerItem}>
                                     {/* 玩家信息 */}
                                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                                         {item.photoURL ? (
@@ -493,106 +430,70 @@ export function SettleSummaryModal({
                                 </View>
                             );
                         }}
-                        ListFooterComponent={() => {
-                            const totalChips = players.reduce((s, p) => s + (p.settleChipCount ?? 0), 0);
-                            const totalBuyIn = players.reduce((s, p) => s + (p.totalBuyInChips ?? 0), 0);
-                            const totalChipDiff = totalChips - totalBuyIn;
-                            const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
-                            const positive = totalCashDiff >= 0;
-                            
-                            // 只有host用户且开启了RMB显示才转换货币
-                            const shouldShowRMB = isHost && showRMB;
-                            
-                            return (
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    paddingVertical: Spacing.lg,
-                                    paddingHorizontal: Spacing.md,
-                                    marginTop: Spacing.md,
-                                    borderTopWidth: 2,
-                                    borderTopColor: Palette.mediumGray,
-                                    backgroundColor: Palette.lightGray,
-                                    borderRadius: Radius.md,
-                                }}>
-                                    {/* 合计信息 */}
-                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                        <MaterialCommunityIcons
-                                            name="calculator"
-                                            size={24}
-                                            color={Palette.primary}
-                                            style={{ marginRight: Spacing.sm }}
-                                        />
-                                        <View>
-                                            <Text style={{
-                                                fontWeight: '700',
-                                                fontSize: FontSize.h3,
-                                                color: Palette.valueText,
-                                            }}>
-                                                {simpleT('total', language)}
-                                            </Text>
-                                            <Text style={{
-                                                fontSize: FontSize.small,
-                                                color: Palette.text,
-                                                marginTop: 2,
-                                            }}>
-                                                {simpleT('difference', language)}: {totalBuyIn - totalChips}
-                                            </Text>
-                                        </View>
-                                    </View>
-
-                                    {/* 总盈亏 */}
-                                    <View style={{ alignItems: 'flex-end' }}>
-                                        <View style={{
-                                            paddingVertical: Spacing.sm,
-                                            paddingHorizontal: Spacing.md,
-                                            borderRadius: Radius.sm,
-                                            backgroundColor: positive ? Palette.success : Palette.error,
-                                            elevation: 2,
-                                            shadowColor: Palette.shadowDark,
-                                            shadowOffset: { width: 0, height: 1 },
-                                            shadowOpacity: 0.2,
-                                            shadowRadius: 2,
-                                        }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <MaterialCommunityIcons
-                                                    name={positive ? "trending-up" : "trending-down"}
-                                                    size={18}
-                                                    color="white"
-                                                />
-                                                <Text style={{
-                                                    color: 'white',
-                                                    fontWeight: '700',
-                                                    fontSize: FontSize.body,
-                                                    marginLeft: 4,
-                                                }}>
-                                                    {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
-                                            <Text style={{
-                                                fontSize: FontSize.small - 2,
-                                                color: Palette.mutedText,
-                                                marginTop: 4,
-                                                textAlign: 'right',
-                                            }}>
-                                                {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </View>
-                            );
-                        }}
                     />
 
+                    {/* 合计信息 - 移动到按钮上方 */}
+                    {(() => {
+                        const totalChips = players.reduce((s, p) => s + (p.settleChipCount ?? 0), 0);
+                        const totalBuyIn = players.reduce((s, p) => s + (p.totalBuyInChips ?? 0), 0);
+                        const totalChipDiff = totalChips - totalBuyIn;
+                        const totalCashDiff = baseChipAmount === 0 ? 0 : totalChipDiff / (baseChipAmount / baseCashAmount);
+                        const positive = totalCashDiff >= 0;
+                        const shouldShowRMB = isHost && showRMB;
+                        
+                        return (
+                            <View style={modalStyles.summarySection}>
+                                {/* 合计信息 */}
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                                    <MaterialCommunityIcons
+                                        name="calculator"
+                                        size={20} // 减少图标大小
+                                        color={Palette.primary}
+                                        style={{ marginRight: Spacing.xs }}
+                                    />
+                                    <View>
+                                        <Text style={modalStyles.summaryText}>
+                                            {simpleT('total', language)}
+                                        </Text>
+                                        <Text style={modalStyles.summarySubText}>
+                                            {simpleT('difference', language)}: {totalBuyIn - totalChips}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* 总盈亏 */}
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <View style={[modalStyles.totalAmountContainer, {
+                                        backgroundColor: positive ? Palette.success : Palette.error,
+                                    }]}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <MaterialCommunityIcons
+                                                name={positive ? "trending-up" : "trending-down"}
+                                                size={14} // 减少图标大小
+                                                color="white"
+                                            />
+                                            <Text style={modalStyles.totalAmountText}>
+                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                        <Text style={{
+                                            fontSize: FontSize.small - 2,
+                                            color: Palette.mutedText,
+                                            marginTop: 2,
+                                            textAlign: 'right',
+                                        }}>
+                                            {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
+                        );
+                    })()}
+
                     {/* Actions */}
-                    <View style={[styles.summaryButtonRow, {
-                        marginTop: Spacing.xl,
-                        paddingTop: Spacing.lg,
-                        borderTopWidth: 1,
-                        borderTopColor: Palette.mediumGray,
-                    }]}>
+                    <View style={modalStyles.buttonsContainer}>
                         <TouchableOpacity
                             style={{
                                 flex: 1,

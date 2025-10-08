@@ -1,6 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { Palette as color, Palette } from '@/constants';
 import Tokens, { Spacing, Radius, FontSize, Elevation, Shadow, Button } from '@/constants/designTokens';
+
+const { height: screenHeight } = Dimensions.get('window');
+const maxModalHeight = screenHeight * 0.9;
 
 
 const styles = StyleSheet.create({
@@ -3253,13 +3256,13 @@ export const ButtonStyles = StyleSheet.create({
     // 按压效果
     buttonPressed: {
         opacity: 0.85,
-        transform: [{scale: 0.98}]
+        transform: [{ scale: 0.98 }]
     },
     // 变体样式
     filledButton: {
-    backgroundColor: color.primary,
-    borderWidth: 0,
-    shadowColor: color.primary,
+        backgroundColor: color.primary,
+        borderWidth: 0,
+        shadowColor: color.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -3306,14 +3309,14 @@ export const ButtonStyles = StyleSheet.create({
     darkText: { color: color.primary },
     // 禁用状态
     disabledButton: {
-    backgroundColor: color.lightGray,
-    borderColor: color.mediumGray,
+        backgroundColor: color.lightGray,
+        borderColor: color.mediumGray,
         opacity: 0.7,
         shadowOpacity: 0,
         elevation: 0,
     },
     disabledText: {
-    color: color.mutedText,
+        color: color.mutedText,
     },
     // 圆角样式
     rounded: {
@@ -3487,6 +3490,148 @@ export const SettleChipsStyles = StyleSheet.create({
         fontWeight: '600',
         color: color.lightText,
         marginLeft: Spacing.xs,
+    },
+});
+
+
+// SettleSummaryModal 专用样式
+export const modalStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        backgroundColor: color.overlayDark,
+    },
+    modal: {
+        backgroundColor: color.lightBackground,
+        marginHorizontal: Spacing.lg,
+        borderRadius: Radius.lg,
+        padding: Spacing.lg,
+        elevation: Elevation.overlay,
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        maxHeight: maxModalHeight,
+        flex: 0, // 防止过度拉伸
+    },
+    header: {
+        flexDirection: 'row' as const,
+        justifyContent: 'space-between' as const,
+        alignItems: 'center' as const,
+        marginBottom: Spacing.lg,
+        paddingBottom: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: color.mediumGray,
+    },
+    headerTitle: {
+        fontSize: FontSize.h2,
+        fontWeight: '700' as const,
+        color: color.valueText,
+    },
+    playersBadge: {
+        backgroundColor: color.info + '20',
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.xs,
+        borderRadius: Radius.sm,
+    },
+    currencySection: {
+        marginBottom: Spacing.md,
+        padding: Spacing.sm, // 减少padding从md到sm
+        backgroundColor: color.lightBackground,
+        borderRadius: Radius.md,
+        borderWidth: 1,
+        borderColor: color.borderColor || color.mediumGray,
+    },
+    currencySwitch: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        marginBottom: Spacing.xs, // 减少margin从sm到xs
+    },
+    currencyLabel: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+    },
+    currencyLabelText: {
+        fontSize: FontSize.small, // 减少字体大小从body到small
+        fontWeight: '500' as const, // 减少字重从600到500
+        color: color.valueText,
+    },
+    exchangeRateSection: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        paddingTop: Spacing.xs, // 减少padding从sm到xs
+        borderTopWidth: 1,
+        borderTopColor: color.borderColor || color.mediumGray,
+    },
+    exchangeRateLabel: {
+        fontSize: FontSize.small - 1, // 更小的字体
+        color: color.text,
+        marginRight: Spacing.xs,
+    },
+    flatListContainer: {
+        maxHeight: maxModalHeight * 0.5, // 减少FlatList高度为50%
+        flexGrow: 0,
+    },
+    playerItem: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.md,
+        marginVertical: Spacing.xs,
+        backgroundColor: color.lightGray,
+        borderRadius: Radius.md,
+        elevation: 1,
+        shadowColor: color.shadowLight,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    summarySection: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        paddingTop: Spacing.md, // 减少垂直padding
+        paddingHorizontal: Spacing.md,
+        marginTop: Spacing.sm, // 减少顶部margin
+        borderTopWidth: 1,
+        borderTopColor: color.mediumGray,
+        backgroundColor: color.lightBackground, // 更浅的背景色
+        borderRadius: Radius.sm, // 更小的圆角
+    },
+    summaryText: {
+        fontWeight: '600' as const, // 减少字重
+        fontSize: FontSize.body, // 减少字体大小
+        color: color.valueText,
+    },
+    summarySubText: {
+        fontSize: FontSize.small,
+        color: color.text,
+        marginTop: 2,
+    },
+    totalAmountContainer: {
+        paddingVertical: Spacing.xs, // 减少padding
+        paddingHorizontal: Spacing.sm,
+        borderRadius: Radius.sm,
+        elevation: 1, // 减少阴影
+        shadowColor: color.shadowDark,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+    },
+    totalAmountText: {
+        color: 'white',
+        fontWeight: '600' as const, // 减少字重
+        fontSize: FontSize.small, // 减少字体大小
+        marginLeft: 4,
+    },
+    buttonsContainer: {
+        flexDirection: 'row' as const,
+        justifyContent: 'space-between' as const,
+        marginTop: Spacing.md, // 减少顶部margin
+        paddingTop: Spacing.md, // 减少顶部padding
+        borderTopWidth: 1,
+        borderTopColor: color.mediumGray,
     },
 });
 
