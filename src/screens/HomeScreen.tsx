@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -7,8 +7,9 @@ import {
     ScrollView,
     Image,
     TouchableOpacity,
+    BackHandler,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -113,6 +114,27 @@ const HomeScreen = () => {
 
         return () => unsub && unsub();
     }, []);
+
+    // 禁用返回和侧滑（当页面处于焦点时）
+    useFocusEffect(
+        useCallback(() => {
+            // 拦截 Android 返回键
+            const onBackPress = () => {
+                // 阻止返回
+                return true;
+            };
+            const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+            // 禁用侧滑返回（iOS）
+            navigation.setOptions({ gestureEnabled: false });
+
+            return () => {
+                // 恢复默认行为
+                sub.remove();
+                navigation.setOptions({ gestureEnabled: true });
+            };
+        }, [navigation])
+    );
 
     if (!isReady) {
         return (
