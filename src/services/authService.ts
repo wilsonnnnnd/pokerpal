@@ -87,6 +87,12 @@ class AuthService {
     try {
       const auth = getAuth();
       const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+      // 记录用于诊断的 providers 列表
+      try {
+        console.info(`AuthService.checkEmailConflict: email=${email}, providers=${Array.isArray(signInMethods) ? signInMethods.join(',') : String(signInMethods)}`);
+      } catch (e) {
+        // ignore logging errors
+      }
       
       // 邮箱从未注册，允许注册
       if (signInMethods.length === 0) {
@@ -102,12 +108,16 @@ class AuthService {
       // 有冲突 - 邮箱被其他提供商使用
       const existingProvider = signInMethods[0]; // 取第一个已存在的提供商
       
-      return {
+      const conflict: EmailConflictError = {
         type: 'EMAIL_CONFLICT',
         email,
         existingProvider,
         currentProvider,
       };
+
+      // 建议在 UI 层提供“使用原提供商登录或登录并关联”的提示
+      console.info('AuthService.checkEmailConflict: detected conflict', conflict);
+      return conflict;
     } catch (error) {
       console.warn('邮箱预检查失败:', error);
       // 如果预检查失败，允许继续（可能是网络问题）
@@ -185,6 +195,12 @@ class AuthService {
                 const firebaseCred = GoogleAuthProvider.credential(credential.idToken);
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred as any);
                 const u = userCred.user;
+                try {
+                  const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
+                  console.info('AuthService.signInWithCredential: signed-in user providers', providers);
+                } catch (e) {
+                  // ignore logging errors
+                }
                 currentUser = {
                     uid: String(u.uid),
                     email: u.email ?? null,
@@ -195,6 +211,13 @@ class AuthService {
                 notify();
                 try {
                     await storage.setLocal(CURRENT_USER_KEY, currentUser);
+                          try {
+                            const creation = (u.metadata && (u.metadata as any).creationTime) || null;
+                            const lastSignIn = (u.metadata && (u.metadata as any).lastSignInTime) || null;
+                            console.info('AuthService.signInWithCredential: user metadata', { creationTime: creation, lastSignInTime: lastSignIn });
+                          } catch (e) {
+                            // ignore logging errors
+                          }
                 } catch (e) {
                     console.warn('AuthService: failed to persist signed-in user', e);
                 }
@@ -218,10 +241,29 @@ class AuthService {
 
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred);
                 const u = userCred.user;
+                  try {
+                    const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
+                    console.info('AuthService.signInWithCredential: signed-in user providers', providers);
+                  } catch (e) {
+                    // ignore logging errors
+                  }
+                  try {
+                    const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
+                    console.info('AuthService.signInWithCredential: signed-in user providers', providers);
+                  } catch (e) {
+                    // ignore logging errors
+                  }
 
                 // Apple 登录时，如果是首次登录且提供了姓名，使用传入的 displayName
                 let displayName = u.displayName;
                 if (!displayName && credential.displayName) {
+                          try {
+                            const creation = (u.metadata && (u.metadata as any).creationTime) || null;
+                            const lastSignIn = (u.metadata && (u.metadata as any).lastSignInTime) || null;
+                            console.info('AuthService.signInWithCredential: user metadata', { creationTime: creation, lastSignInTime: lastSignIn });
+                          } catch (e) {
+                            // ignore logging errors
+                          }
                     displayName = credential.displayName;
                 }
 
@@ -344,6 +386,25 @@ class AuthService {
       }
     } catch (error) {
       console.error('初始化用户档案失败:', error);
+      // 如果是权限不足（Missing or insufficient permissions），不要阻塞登录流。
+      // 这在开发环境或 Firebase 安全规则未开通写入时很常见。
+      try {
+        const errAny: any = error;
+        const msg = errAny?.message ?? String(errAny);
+        const code = errAny?.code ?? '';
+        if (
+          code === 'permission-denied' ||
+          msg.includes('Missing or insufficient permissions') ||
+          msg.toLowerCase().includes('permission')
+        ) {
+          console.warn('AuthService: Firestore 权限拒绝，跳过远程用户档案写入。');
+          return;
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // 非权限类错误仍然向上抛出以便被调用方处理
       throw error;
     }
   }
@@ -470,6 +531,25 @@ class AuthService {
         ],
       });
 
+      // 诊断日志（仅记录非敏感存在性信息，避免打印邮箱/姓名原文）
+      try {
+        console.info('AuthService.signInWithApple: credential received', {
+          hasIdentityToken: !!credential.identityToken,
+          hasAuthorizationCode: !!credential.authorizationCode,
+          hasEmail: !!credential.email,
+          hasFullName: !!credential.fullName,
+          fullNameParts: credential.fullName
+            ? {
+                givenNamePresent: !!credential.fullName.givenName,
+                familyNamePresent: !!credential.fullName.familyName,
+              }
+            : undefined,
+          userIdPresent: !!credential.user,
+        });
+      } catch (e) {
+        // ignore logging errors
+      }
+
       if (!credential.identityToken) {
         throw new Error('未获得 Apple 身份令牌');
       }
@@ -566,6 +646,25 @@ class AuthService {
                     AppleAuthentication.AppleAuthenticationScope.EMAIL,
                 ],
             });
+
+            // 诊断日志（仅记录非敏感存在性信息）
+            try {
+              console.info('AuthService.signInWithAppleSimple: credential received', {
+                hasIdentityToken: !!credential.identityToken,
+                hasAuthorizationCode: !!credential.authorizationCode,
+                hasEmail: !!credential.email,
+                hasFullName: !!credential.fullName,
+                fullNameParts: credential.fullName
+                  ? {
+                      givenNamePresent: !!credential.fullName.givenName,
+                      familyNamePresent: !!credential.fullName.familyName,
+                    }
+                  : undefined,
+                userIdPresent: !!credential.user,
+              });
+            } catch (e) {
+              // ignore logging errors
+            }
 
             console.log('简化版 Apple 认证成功');
 

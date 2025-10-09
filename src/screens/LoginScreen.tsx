@@ -74,10 +74,11 @@ export default function LoginScreen() {
                 {
                     text: `使用 ${existingProviderName} 登录`,
                     onPress: () => {
-                        if (existingProvider === 'google.com') {
-                            onGoogleSignIn();
-                        } else if (existingProvider === 'apple.com') {
-                            onAppleSignIn();
+                            console.info(`User chose to sign in with existing provider: ${existingProvider}`);
+                            if (existingProvider === 'google.com') {
+                                onGoogleSignIn();
+                            } else if (existingProvider === 'apple.com') {
+                                onAppleSignIn();
                         }
                     }
                 }
