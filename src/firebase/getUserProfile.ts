@@ -1,21 +1,14 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { userDoc } from '@/constants/namingVar';
+import { FirestoreUserProfile } from '@/types';
 
-export type UserProfile = {
-    nickname?: string;
-    email?: string;
-    photoURL?: string;
-    role?: string;
-    isActive?: boolean;
-};
-
-export async function fetchUserProfile(uid: string): Promise<UserProfile | null> {
+export async function fetchUserProfile(uid: string): Promise<FirestoreUserProfile | null> {
     if (!uid) return null;
     const ref = doc(db, userDoc, uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) return null;
-    return snap.data() as UserProfile;
+    return snap.data() as FirestoreUserProfile;
 }
 
 export async function userHasRole(uid: string, role: string): Promise<boolean> {

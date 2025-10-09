@@ -1,57 +1,23 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
+import 'react-native-get-random-values';
 import { Platform } from 'react-native';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInWithCredential as firebaseSignInWithCredential, 
-  GoogleAuthProvider, 
-  OAuthProvider, 
-  signOut as firebaseSignOut,
-  fetchSignInMethodsForEmail,
-  signInAnonymously as firebaseSignInAnonymously
+import {
+    getAuth,
+    signInWithCredential as firebaseSignInWithCredential,
+    GoogleAuthProvider,
+    OAuthProvider,
+    signOut as firebaseSignOut,
+    fetchSignInMethodsForEmail,
+    signInAnonymously as firebaseSignInAnonymously
 } from 'firebase/auth';
 import { db } from '@/firebase/config';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
 import { v4 as uuidv4 } from 'uuid';
-
-// 认证提供商类型
-export enum AuthProvider {
-  GOOGLE = 'google.com',
-  APPLE = 'apple.com',
-  ANONYMOUS = 'anonymous',
-  EMAIL = 'password',
-}
-
-// 邮箱冲突错误类型
-export interface EmailConflictError {
-  type: 'EMAIL_CONFLICT';
-  email: string;
-  existingProvider: string;
-  currentProvider: string;
-}
-
-// 用户类型定义
-type User = {
-  uid: string;
-  email?: string | null;
-  displayName?: string | null;
-  photoURL?: string | null;
-  isAnonymous?: boolean;
-  provider?: string;
-};
-
-// 认证结果类型
-export interface AuthResult {
-  success: boolean;
-  user?: User;
-  error?: string;
-  conflictError?: EmailConflictError;
-}
-
-// 用户配置文件类型
-export interface UserProfile extends User {}
+import { AuthProvider, EmailConflictError, User, AuthResult, UserProfile } from '@/types';
 
 // 全局状态管理
 let currentUser: User | null = null;
@@ -68,64 +34,58 @@ function notify() {
 }
 
 class AuthService {
-  // 提供商名称映射
-  private static getProviderDisplayName(providerId: string): string {
-    switch (providerId) {
-      case AuthProvider.GOOGLE:
-        return 'Google';
-      case AuthProvider.APPLE:
-        return 'Apple';
-      case AuthProvider.EMAIL:
-        return '邮箱密码';
-      default:
-        return providerId;
+    // 提供商名称映射
+    private static getProviderDisplayName(providerId: string): string {
+        switch (providerId) {
+            case AuthProvider.GOOGLE:
+                return 'Google';
+            case AuthProvider.APPLE:
+                return 'Apple';
+            case AuthProvider.EMAIL:
+                return '邮箱密码';
+            default:
+                return providerId;
+        }
     }
-  }
 
-  // 邮箱预检查 - 检查是否有冲突
-  private static async checkEmailConflict(email: string, currentProvider: string): Promise<EmailConflictError | null> {
-    try {
-      const auth = getAuth();
-      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
-      // 记录用于诊断的 providers 列表
-      try {
-        console.info(`AuthService.checkEmailConflict: email=${email}, providers=${Array.isArray(signInMethods) ? signInMethods.join(',') : String(signInMethods)}`);
-      } catch (e) {
-        // ignore logging errors
-      }
-      
-      // 邮箱从未注册，允许注册
-      if (signInMethods.length === 0) {
-        return null;
-      }
-      
-      // 检查是否包含当前提供商
-      if (signInMethods.includes(currentProvider)) {
-        // 老用户使用相同提供商，允许登录
-        return null;
-      }
-      
-      // 有冲突 - 邮箱被其他提供商使用
-      const existingProvider = signInMethods[0]; // 取第一个已存在的提供商
-      
-      const conflict: EmailConflictError = {
-        type: 'EMAIL_CONFLICT',
-        email,
-        existingProvider,
-        currentProvider,
-      };
+    // 邮箱预检查 - 检查是否有冲突
+    private static async checkEmailConflict(email: string, currentProvider: string): Promise<EmailConflictError | null> {
+        try {
+            const auth = getAuth();
+            const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+            // (diagnostic logs removed) avoid printing potentially sensitive provider lists
 
-      // 建议在 UI 层提供“使用原提供商登录或登录并关联”的提示
-      console.info('AuthService.checkEmailConflict: detected conflict', conflict);
-      return conflict;
-    } catch (error) {
-      console.warn('邮箱预检查失败:', error);
-      // 如果预检查失败，允许继续（可能是网络问题）
-      return null;
+            // 邮箱从未注册，允许注册
+            if (signInMethods.length === 0) {
+                return null;
+            }
+
+            // 检查是否包含当前提供商
+            if (signInMethods.includes(currentProvider)) {
+                // 老用户使用相同提供商，允许登录
+                return null;
+            }
+
+            // 有冲突 - 邮箱被其他提供商使用
+            const existingProvider = signInMethods[0]; // 取第一个已存在的提供商
+
+            const conflict: EmailConflictError = {
+                type: 'EMAIL_CONFLICT',
+                email,
+                existingProvider,
+                currentProvider,
+            };
+
+            // 建议在 UI 层提供“使用原提供商登录或登录并关联”的提示
+            return conflict;
+        } catch (error) {
+            console.warn('邮箱预检查失败:', error);
+            // 如果预检查失败，允许继续（可能是网络问题）
+            return null;
+        }
     }
-  }
 
-  // 初始化认证服务
+    // 初始化认证服务
     static initialize() {
         // 配置 Google 登录
         GoogleSignin.configure({
@@ -195,12 +155,7 @@ class AuthService {
                 const firebaseCred = GoogleAuthProvider.credential(credential.idToken);
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred as any);
                 const u = userCred.user;
-                try {
-                  const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
-                  console.info('AuthService.signInWithCredential: signed-in user providers', providers);
-                } catch (e) {
-                  // ignore logging errors
-                }
+                // skipped verbose provider logging
                 currentUser = {
                     uid: String(u.uid),
                     email: u.email ?? null,
@@ -211,13 +166,7 @@ class AuthService {
                 notify();
                 try {
                     await storage.setLocal(CURRENT_USER_KEY, currentUser);
-                          try {
-                            const creation = (u.metadata && (u.metadata as any).creationTime) || null;
-                            const lastSignIn = (u.metadata && (u.metadata as any).lastSignInTime) || null;
-                            console.info('AuthService.signInWithCredential: user metadata', { creationTime: creation, lastSignInTime: lastSignIn });
-                          } catch (e) {
-                            // ignore logging errors
-                          }
+                    // skipped metadata logging
                 } catch (e) {
                     console.warn('AuthService: failed to persist signed-in user', e);
                 }
@@ -226,44 +175,27 @@ class AuthService {
 
             // Apple 登录：使用 identityToken
             if (credential?.identityToken) {
-                console.log('处理 Apple Firebase 凭据...');
+                // processing Apple Firebase credential
                 const provider = new OAuthProvider('apple.com');
                 const credentialOptions: any = {
                     idToken: credential.identityToken,
                 };
-                
+
                 // 只有当nonce存在时才添加
                 if (credential.nonce) {
                     credentialOptions.rawNonce = credential.nonce;
                 }
-                
+
                 const firebaseCred = provider.credential(credentialOptions);
 
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred);
                 const u = userCred.user;
-                  try {
-                    const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
-                    console.info('AuthService.signInWithCredential: signed-in user providers', providers);
-                  } catch (e) {
-                    // ignore logging errors
-                  }
-                  try {
-                    const providers = Array.isArray(u.providerData) ? u.providerData.map(p => p.providerId) : [];
-                    console.info('AuthService.signInWithCredential: signed-in user providers', providers);
-                  } catch (e) {
-                    // ignore logging errors
-                  }
+                // skipped verbose provider logging
 
                 // Apple 登录时，如果是首次登录且提供了姓名，使用传入的 displayName
                 let displayName = u.displayName;
                 if (!displayName && credential.displayName) {
-                          try {
-                            const creation = (u.metadata && (u.metadata as any).creationTime) || null;
-                            const lastSignIn = (u.metadata && (u.metadata as any).lastSignInTime) || null;
-                            console.info('AuthService.signInWithCredential: user metadata', { creationTime: creation, lastSignInTime: lastSignIn });
-                          } catch (e) {
-                            // ignore logging errors
-                          }
+                    // skipped metadata logging
                     displayName = credential.displayName;
                 }
 
@@ -274,9 +206,9 @@ class AuthService {
                     photoURL: u.photoURL ?? null,
                     isAnonymous: u.isAnonymous ?? false,
                 };
-                
-                console.log('Apple 用户创建成功:', currentUser.uid, currentUser.displayName);
-                
+
+                // Apple user created
+
                 notify();
                 try {
                     await storage.setLocal(CURRENT_USER_KEY, currentUser);
@@ -324,13 +256,12 @@ class AuthService {
     // 检查 Apple 登录是否可用
     static async isAppleAuthAvailable(): Promise<boolean> {
         if (Platform.OS !== 'ios') {
-            console.log('Apple 登录检查: 非 iOS 平台');
+            // Apple Sign-In not available on non-iOS platforms
             return false;
         }
 
         try {
             const isAvailable = await AppleAuthentication.isAvailableAsync();
-            console.log('Apple 登录可用性检查:', isAvailable);
             return isAvailable;
         } catch (error) {
             console.warn('Apple Auth availability check failed:', error);
@@ -338,299 +269,316 @@ class AuthService {
         }
     }
 
-  // 初始化用户配置文件到 Firestore
-  private static async initializeUserProfile(user: UserProfile): Promise<void> {
-    try {
-      const uid = user.uid;
-      const userRef = doc(db, userDoc, uid);
-      
-      // 检查用户文档是否已存在
-      const existing = await getDoc(userRef);
-      
-      if (!existing.exists()) {
-        // 用户不存在，创建新档案
-        const now = new Date().toISOString();
-        const userData = {
-          nickname: user.displayName || '用户',
-          email: user.email || '',
-          photoURL: user.photoURL || '',
-          provider: user.provider || '',
-          isActive: true,
-          role: 'player',
-          createdAt: now,
-          updatedAt: now,
-          isProvisioned: true,
-        };
-
-        await setDoc(userRef, userData);
-        console.log('用户档案已创建:', uid);
-
-        // 如果有邮箱，创建邮箱索引
-        if (user.email) {
-          const emailKey = user.email.toLowerCase().trim();
-          await setDoc(doc(db, userByEmailDoc, emailKey), {
-            uid,
-            nickname: userData.nickname,
-            photoURL: userData.photoURL,
-            provider: user.provider,
-            registered: true,
-            lastLinkedAt: now,
-          }, { merge: true });
+    // 生成随机 nonce（安全随机）
+    private static generateNonce(length = 32): string {
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+        const randomBytes = new Uint8Array(length);
+        // react-native-get-random-values polyfills globalThis.crypto.getRandomValues
+        try {
+            (globalThis as any).crypto.getRandomValues(randomBytes);
+        } catch (e) {
+            // Fallback to Math.random (less secure) if crypto not available
+            for (let i = 0; i < length; i++) {
+                randomBytes[i] = Math.floor(Math.random() * 256);
+            }
         }
-      } else {
-        // 用户已存在，仅更新时间戳
-        await setDoc(userRef, { 
-          updatedAt: new Date().toISOString() 
-        }, { merge: true });
-        console.log('用户档案已更新:', uid);
-      }
-    } catch (error) {
-      console.error('初始化用户档案失败:', error);
-      // 如果是权限不足（Missing or insufficient permissions），不要阻塞登录流。
-      // 这在开发环境或 Firebase 安全规则未开通写入时很常见。
-      try {
-        const errAny: any = error;
-        const msg = errAny?.message ?? String(errAny);
-        const code = errAny?.code ?? '';
-        if (
-          code === 'permission-denied' ||
-          msg.includes('Missing or insufficient permissions') ||
-          msg.toLowerCase().includes('permission')
-        ) {
-          console.warn('AuthService: Firestore 权限拒绝，跳过远程用户档案写入。');
-          return;
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      // 非权限类错误仍然向上抛出以便被调用方处理
-      throw error;
+        return Array.from(randomBytes).map((b) => chars[b % chars.length]).join('');
     }
-  }
 
-  // Google 登录
-  static async signInWithGoogle(): Promise<AuthResult> {
-    try {
-      // 检查配置
-      const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
-      if (!iosClientId) {
-        return {
-          success: false,
-          error: '登录未配置：未检测到 iOS Google Client ID，构建时请设置 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
-        };
-      }
-
-      // 执行 Google 登录获取用户信息
-      const userInfo = await GoogleSignin.signIn();
-      let idToken: string | null = (userInfo as any)?.idToken ?? null;
-      
-      if (!idToken) {
-        const tokens = await GoogleSignin.getTokens();
-        idToken = (tokens as any)?.idToken ?? null;
-      }
-      
-      if (!idToken) {
-        throw new Error('未获得 idToken');
-      }
-
-      // 提取用户信息
-      const gi: any = userInfo as any;
-      const profileEmail = gi?.user?.email ?? gi?.email ?? null;
-      
-      if (!profileEmail) {
-        throw new Error('Google 登录未返回邮箱信息');
-      }
-
-      // 邮箱预检查
-      const conflict = await this.checkEmailConflict(profileEmail, AuthProvider.GOOGLE);
-      if (conflict) {
-        return {
-          success: false,
-          error: `该邮箱 ${conflict.email} 已使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录注册。请使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录继续。`,
-          conflictError: conflict,
-        };
-      }
-
-      // 通过验证，执行登录
-      const profileId = gi?.user?.id ?? gi?.id ?? null;
-      const profileName = gi?.user?.name ?? gi?.user?.givenName ?? gi?.name ?? null;
-      const profilePhoto = gi?.user?.photo ?? gi?.user?.photoUrl ?? gi?.photo ?? null;
-
-      const googleCredential = {
-        idToken,
-        displayName: profileName,
-        email: profileEmail,
-        photoURL: profilePhoto,
-        googleId: profileId,
-      };
-
-      // 使用凭据登录
-      const userCred = await this.signInWithCredential(googleCredential);
-      const user = userCred.user;
-
-      // 创建用户配置文件
-      const userProfile: UserProfile = {
-        uid: user.uid,
-        email: profileEmail,
-        displayName: profileName || '用户',
-        photoURL: profilePhoto,
-        isAnonymous: false,
-        provider: AuthProvider.GOOGLE,
-      };
-
-      // 初始化用户档案
-      await this.initializeUserProfile(userProfile);
-
-      // 验证持久化
-      try {
-        await storage.getLocal(CURRENT_USER_KEY);
-      } catch (error) {
-        console.warn('登录：读取持久化用户失败', error);
-      }
-
-      return {
-        success: true,
-        user: userProfile,
-      };
-    } catch (error: any) {
-      console.error('Google 登录错误:', error);
-      
-      const message = error?.message || error?.toString?.() || '未知错误';
-      let hint = '';
-      
-      if (message.includes('invalid_client') || message.includes('misconfigured')) {
-        hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
-      } else if (message.includes('DEVELOPER_ERROR') || message.includes('10')) {
-        hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
-      }
-
-      return {
-        success: false,
-        error: message + hint,
-      };
-    }
-  }
-
-  // Apple 登录
-  static async signInWithApple(): Promise<AuthResult> {
-    try {
-      // 检查 Apple 登录可用性
-      if (!(await this.isAppleAuthAvailable())) {
-        return {
-          success: false,
-          error: 'Apple 登录在此设备上不可用',
-        };
-      }
-
-      // 执行 Apple 登录
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      // 诊断日志（仅记录非敏感存在性信息，避免打印邮箱/姓名原文）
-      try {
-        console.info('AuthService.signInWithApple: credential received', {
-          hasIdentityToken: !!credential.identityToken,
-          hasAuthorizationCode: !!credential.authorizationCode,
-          hasEmail: !!credential.email,
-          hasFullName: !!credential.fullName,
-          fullNameParts: credential.fullName
-            ? {
-                givenNamePresent: !!credential.fullName.givenName,
-                familyNamePresent: !!credential.fullName.familyName,
-              }
-            : undefined,
-          userIdPresent: !!credential.user,
-        });
-      } catch (e) {
-        // ignore logging errors
-      }
-
-      if (!credential.identityToken) {
-        throw new Error('未获得 Apple 身份令牌');
-      }
-
-      // 构建显示名称
-      let displayName = '用户';
-      if (credential.fullName) {
-        const { givenName, familyName } = credential.fullName;
-        if (givenName || familyName) {
-          displayName = [givenName, familyName].filter(Boolean).join(' ').trim() || '用户';
+    // 计算 SHA-256 哈希（hex）
+    private static async sha256(value: string): Promise<string> {
+        try {
+            const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value);
+            return digest;
+        } catch (e) {
+            console.warn('sha256 digest failed', e);
+            // 如果哈希失败，返回原始值（会降低安全性，但允许流程继续）
+            return value;
         }
-      }
-
-      // Apple 特殊处理：有 email 则预检，无 email 则直接登录
-      if (credential.email) {
-        // 有邮箱，进行预检查
-        const conflict = await this.checkEmailConflict(credential.email, AuthProvider.APPLE);
-        if (conflict) {
-          return {
-            success: false,
-            error: `该邮箱 ${conflict.email} 已使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录注册。请使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录继续。`,
-            conflictError: conflict,
-          };
-        }
-      }
-
-      // 构建 Apple 凭据
-      const appleCredential = {
-        identityToken: credential.identityToken,
-        authorizationCode: credential.authorizationCode,
-        displayName,
-        email: credential.email, // 可能为 null（隐藏邮箱）
-        photoURL: null, // Apple 不提供头像
-        appleId: credential.user,
-      };
-
-      // 使用凭据登录
-      const userCred = await this.signInWithCredential(appleCredential);
-      const user = userCred.user;
-
-      // 创建用户配置文件
-      const userProfile: UserProfile = {
-        uid: user.uid,
-        email: appleCredential.email ?? user.email,
-        displayName: appleCredential.displayName ?? user.displayName,
-        photoURL: null,
-        isAnonymous: false,
-        provider: AuthProvider.APPLE,
-      };
-
-      // 初始化用户档案
-      await this.initializeUserProfile(userProfile);
-
-      return {
-        success: true,
-        user: userProfile,
-      };
-    } catch (error: any) {
-      console.error('Apple 登录错误:', error);
-      
-      // Apple 登录特定错误处理
-      if (error.code === 'ERR_CANCELED') {
-        return {
-          success: false,
-          error: '用户取消了登录',
-        };
-      }
-
-      const message = error?.message || error?.toString?.() || '未知错误';
-      return {
-        success: false,
-        error: `Apple 登录失败: ${message}`,
-      };
     }
-  }
+
+    // 初始化用户配置文件到 Firestore
+    private static async initializeUserProfile(user: UserProfile): Promise<void> {
+        try {
+            const uid = user.uid;
+            const userRef = doc(db, userDoc, uid);
+
+            // 检查用户文档是否已存在
+            const existing = await getDoc(userRef);
+
+            if (!existing.exists()) {
+                // 用户不存在，创建新档案
+                const now = new Date().toISOString();
+                const userData = {
+                    nickname: user.displayName || '用户',
+                    email: user.email || '',
+                    photoURL: user.photoURL || '',
+                    provider: user.provider || '',
+                    isActive: true,
+                    role: 'player',
+                    createdAt: now,
+                    updatedAt: now,
+                    isProvisioned: true,
+                };
+
+                await setDoc(userRef, userData);
+
+                // 如果有邮箱，创建邮箱索引
+                if (user.email) {
+                    const emailKey = user.email.toLowerCase().trim();
+                    await setDoc(doc(db, userByEmailDoc, emailKey), {
+                        uid,
+                        nickname: userData.nickname,
+                        photoURL: userData.photoURL,
+                        provider: user.provider,
+                        registered: true,
+                        lastLinkedAt: now,
+                    }, { merge: true });
+                }
+            } else {
+                // 用户已存在，仅更新时间戳
+                await setDoc(userRef, {
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('初始化用户档案失败:', error);
+            // 如果是权限不足（Missing or insufficient permissions），不要阻塞登录流。
+            // 这在开发环境或 Firebase 安全规则未开通写入时很常见。
+            try {
+                const errAny: any = error;
+                const msg = errAny?.message ?? String(errAny);
+                const code = errAny?.code ?? '';
+                if (
+                    code === 'permission-denied' ||
+                    msg.includes('Missing or insufficient permissions') ||
+                    msg.toLowerCase().includes('permission')
+                ) {
+                    console.warn('AuthService: Firestore 权限拒绝，跳过远程用户档案写入。');
+                    return;
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            // 非权限类错误仍然向上抛出以便被调用方处理
+            throw error;
+        }
+    }
+
+    // Google 登录
+    static async signInWithGoogle(): Promise<AuthResult> {
+        try {
+            // 检查配置
+            const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+            if (!iosClientId) {
+                return {
+                    success: false,
+                    error: '登录未配置：未检测到 iOS Google Client ID，构建时请设置 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
+                };
+            }
+
+            // 执行 Google 登录获取用户信息
+            const userInfo = await GoogleSignin.signIn();
+            let idToken: string | null = (userInfo as any)?.idToken ?? null;
+
+            if (!idToken) {
+                const tokens = await GoogleSignin.getTokens();
+                idToken = (tokens as any)?.idToken ?? null;
+            }
+
+            if (!idToken) {
+                throw new Error('未获得 idToken');
+            }
+
+            // 提取用户信息
+            const gi: any = userInfo as any;
+            const profileEmail = gi?.user?.email ?? gi?.email ?? null;
+
+            if (!profileEmail) {
+                throw new Error('Google 登录未返回邮箱信息');
+            }
+
+            // 邮箱预检查
+            const conflict = await this.checkEmailConflict(profileEmail, AuthProvider.GOOGLE);
+            if (conflict) {
+                return {
+                    success: false,
+                    error: `该邮箱 ${conflict.email} 已使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录注册。请使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录继续。`,
+                    conflictError: conflict,
+                };
+            }
+
+            // 通过验证，执行登录
+            const profileId = gi?.user?.id ?? gi?.id ?? null;
+            const profileName = gi?.user?.name ?? gi?.user?.givenName ?? gi?.name ?? null;
+            const profilePhoto = gi?.user?.photo ?? gi?.user?.photoUrl ?? gi?.photo ?? null;
+
+            const googleCredential = {
+                idToken,
+                displayName: profileName,
+                email: profileEmail,
+                photoURL: profilePhoto,
+                googleId: profileId,
+            };
+
+            // 使用凭据登录
+            const userCred = await this.signInWithCredential(googleCredential);
+            const user = userCred.user;
+
+            // 创建用户配置文件
+            const userProfile: UserProfile = {
+                uid: user.uid,
+                email: profileEmail,
+                displayName: profileName || '用户',
+                photoURL: profilePhoto,
+                isAnonymous: false,
+                provider: AuthProvider.GOOGLE,
+            };
+
+            // 初始化用户档案
+            await this.initializeUserProfile(userProfile);
+
+            // 验证持久化
+            try {
+                await storage.getLocal(CURRENT_USER_KEY);
+            } catch (error) {
+                console.warn('登录：读取持久化用户失败', error);
+            }
+
+            return {
+                success: true,
+                user: userProfile,
+            };
+        } catch (error: any) {
+            console.error('Google 登录错误:', error);
+
+            const message = error?.message || error?.toString?.() || '未知错误';
+            let hint = '';
+
+            if (message.includes('invalid_client') || message.includes('misconfigured')) {
+                hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
+            } else if (message.includes('DEVELOPER_ERROR') || message.includes('10')) {
+                hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
+            }
+
+            return {
+                success: false,
+                error: message + hint,
+            };
+        }
+    }
+
+    // Apple 登录
+    static async signInWithApple(): Promise<AuthResult> {
+        try {
+            // 检查 Apple 登录可用性
+            if (!(await this.isAppleAuthAvailable())) {
+                return {
+                    success: false,
+                    error: 'Apple 登录在此设备上不可用',
+                };
+            }
+
+            // 生成 nonce（raw + hashed）并将 hashedNonce 传给 Apple
+            const rawNonce = this.generateNonce();
+            const hashedNonce = await this.sha256(rawNonce);
+
+            // 执行 Apple 登录，传入 hashed nonce（字段名为 nonce）
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+                // expo-apple-authentication 要求名为 'nonce' 的字段传入已 hash 的 nonce
+                nonce: hashedNonce,
+            });
+
+            // minimal diagnostic: presence checks performed below, avoid verbose logging
+
+            if (!credential.identityToken) {
+                throw new Error('未获得 Apple 身份令牌');
+            }
+
+            // 构建显示名称
+            let displayName = '用户';
+            if (credential.fullName) {
+                const { givenName, familyName } = credential.fullName;
+                if (givenName || familyName) {
+                    displayName = [givenName, familyName].filter(Boolean).join(' ').trim() || '用户';
+                }
+            }
+
+            // Apple 特殊处理：有 email 则预检，无 email 则直接登录
+            if (credential.email) {
+                // 有邮箱，进行预检查
+                const conflict = await this.checkEmailConflict(credential.email, AuthProvider.APPLE);
+                if (conflict) {
+                    return {
+                        success: false,
+                        error: `该邮箱 ${conflict.email} 已使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录注册。请使用 ${this.getProviderDisplayName(conflict.existingProvider)} 登录继续。`,
+                        conflictError: conflict,
+                    };
+                }
+            }
+
+            // 构建 Apple 凭据
+            const appleCredential: any = {
+                identityToken: credential.identityToken,
+                authorizationCode: credential.authorizationCode,
+                displayName,
+                email: credential.email, // 可能为 null（隐藏邮箱）
+                photoURL: null, // Apple 不提供头像
+                appleId: credential.user,
+                // 将 rawNonce 传递到后续的 Firebase 登录流程，便于 Firebase 验证
+                nonce: rawNonce,
+            };
+
+            // 使用凭据登录
+            const userCred = await this.signInWithCredential(appleCredential);
+            const user = userCred.user;
+
+            // 创建用户配置文件
+            const userProfile: UserProfile = {
+                uid: user.uid,
+                email: appleCredential.email ?? user.email,
+                displayName: appleCredential.displayName ?? user.displayName,
+                photoURL: null,
+                isAnonymous: false,
+                provider: AuthProvider.APPLE,
+            };
+
+            // 初始化用户档案
+            await this.initializeUserProfile(userProfile);
+
+            return {
+                success: true,
+                user: userProfile,
+            };
+        } catch (error: any) {
+            console.error('Apple 登录错误:', error);
+
+            // Apple 登录特定错误处理
+            if (error.code === 'ERR_CANCELED') {
+                return {
+                    success: false,
+                    error: '用户取消了登录',
+                };
+            }
+
+            const message = error?.message || error?.toString?.() || '未知错误';
+            return {
+                success: false,
+                error: `Apple 登录失败: ${message}`,
+            };
+        }
+    }
 
     // Apple 登录 - 简化版本（备用）
     static async signInWithAppleSimple(): Promise<AuthResult> {
         try {
-            console.log('开始简化版 Apple 登录...');
-            
+            // starting simplified Apple sign-in
+
             // 检查 Apple 登录可用性
             if (!(await this.isAppleAuthAvailable())) {
                 return {
@@ -647,26 +595,9 @@ class AuthService {
                 ],
             });
 
-            // 诊断日志（仅记录非敏感存在性信息）
-            try {
-              console.info('AuthService.signInWithAppleSimple: credential received', {
-                hasIdentityToken: !!credential.identityToken,
-                hasAuthorizationCode: !!credential.authorizationCode,
-                hasEmail: !!credential.email,
-                hasFullName: !!credential.fullName,
-                fullNameParts: credential.fullName
-                  ? {
-                      givenNamePresent: !!credential.fullName.givenName,
-                      familyNamePresent: !!credential.fullName.familyName,
-                    }
-                  : undefined,
-                userIdPresent: !!credential.user,
-              });
-            } catch (e) {
-              // ignore logging errors
-            }
+            // minimal diagnostic only; avoid printing credential contents
 
-            console.log('简化版 Apple 认证成功');
+            // simplified Apple credential received
 
             if (!credential.identityToken) {
                 throw new Error('未获得 Apple 身份令牌');
@@ -707,7 +638,7 @@ class AuthService {
 
             await this.initializeUserProfile(userProfile);
 
-            console.log('简化版 Apple 登录完成');
+            // simplified Apple sign-in completed
 
             return {
                 success: true,
@@ -723,49 +654,49 @@ class AuthService {
         }
     }
 
-  // 匿名登录
-  static async signInAnonymously(): Promise<AuthResult> {
-    try {
-      const auth = getAuth();
-      const userCred = await firebaseSignInAnonymously(auth);
-      const user = userCred.user;
-      
-      // 创建匿名用户配置
-      const userProfile: UserProfile = {
-        uid: user.uid,
-        email: null,
-        displayName: '访客',
-        photoURL: null,
-        isAnonymous: true,
-        provider: AuthProvider.ANONYMOUS,
-      };
+    // 匿名登录
+    static async signInAnonymously(): Promise<AuthResult> {
+        try {
+            const auth = getAuth();
+            const userCred = await firebaseSignInAnonymously(auth);
+            const user = userCred.user;
 
-      // 更新本地状态
-      currentUser = userProfile;
-      notify();
-      
-      try {
-        await storage.setLocal(CURRENT_USER_KEY, currentUser);
-      } catch (error) {
-        console.warn('登录：持久化访客用户失败', error);
-      }
+            // 创建匿名用户配置
+            const userProfile: UserProfile = {
+                uid: user.uid,
+                email: null,
+                displayName: '访客',
+                photoURL: null,
+                isAnonymous: true,
+                provider: AuthProvider.ANONYMOUS,
+            };
 
-      // 初始化用户档案
-      await this.initializeUserProfile(userProfile);
+            // 更新本地状态
+            currentUser = userProfile;
+            notify();
 
-      return {
-        success: true,
-        user: userProfile,
-      };
-    } catch (error: any) {
-      console.error('匿名登录错误:', error);
-      
-      return {
-        success: false,
-        error: error?.message ?? String(error),
-      };
+            try {
+                await storage.setLocal(CURRENT_USER_KEY, currentUser);
+            } catch (error) {
+                console.warn('登录：持久化访客用户失败', error);
+            }
+
+            // 初始化用户档案
+            await this.initializeUserProfile(userProfile);
+
+            return {
+                success: true,
+                user: userProfile,
+            };
+        } catch (error: any) {
+            console.error('匿名登录错误:', error);
+
+            return {
+                success: false,
+                error: error?.message ?? String(error),
+            };
+        }
     }
-  }
 
     // 获取可用的登录方式
     static async getAvailableAuthMethods(): Promise<{

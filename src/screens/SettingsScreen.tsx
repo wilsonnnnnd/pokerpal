@@ -7,7 +7,7 @@ import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/authService';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
+import { fetchUserProfile } from '@/firebase/getUserProfile';
 import SelectField from '@/components/SelectField';
 import { commonCurrencies, getCurrencySymbol } from '@/constants/currency';
 import { InfoRow } from '@/components/InfoRow';
@@ -20,10 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
 import { usePermission } from '@/hooks/usePermission';
 import { getLastUpdateTime } from '@/utils/exchangeRateUtils';
-
-type AppSettings = {
-    language?: string;
-};
+import { UserProfile } from '@/types';
 
 // (use SelectField component for dropdowns)
 
@@ -121,7 +118,7 @@ export default function SettingsScreen() {
             setUser(u);
             try {
                 const p = await fetchUserProfile(u.uid);
-                setProfile(p ?? null);
+                setProfile(p ? { ...p, uid: u.uid } : null);
             } catch (e) {
                 setProfile(null);
             }
@@ -370,7 +367,7 @@ export default function SettingsScreen() {
                     <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('user_info', language)}</Text>
                     {user ? (
                         <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-                            <Text style={{ fontWeight: '600', color: color.title }}>{profile?.nickname ?? user.displayName ?? simpleT('unnamed', language)}</Text>
+                            <Text style={{ fontWeight: '600', color: color.title }}>{ user.displayName ?? simpleT('unnamed', language)}</Text>
                             <Text style={{ color: color.text, marginTop: 4 }}>{user.email ?? (user.isAnonymous ? simpleT('guest_account', language) : '')}</Text>
                             <Text style={{ color: color.text, marginTop: 4 }}>{simpleT('identity', language)}: {profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}</Text>
                             <View style={{ flexDirection: 'row', marginTop: 12, justifyContent: 'flex-end' }}>

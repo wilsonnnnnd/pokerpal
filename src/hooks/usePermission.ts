@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from '@/services/authService';
-import { fetchUserProfile, UserProfile, userHasRole } from '@/firebase/getUserProfile';
+import { fetchUserProfile, userHasRole } from '@/firebase/getUserProfile';
+import { UserProfile } from '@/types';
 
 /**
  * usePermission Hook
@@ -52,7 +53,7 @@ export function usePermission() {
             try {
                 // 先拉取 profile（用于本地判断）
                 const p = await fetchUserProfile(u.uid);
-                setProfile(p ?? null);
+                setProfile(p ? { ...p, uid: u.uid } : null);
 
                 // 再做一次远端角色检查（userHasRole），将结果作为 isHost
                 try {

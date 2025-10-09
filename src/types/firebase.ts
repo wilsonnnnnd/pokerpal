@@ -19,3 +19,12 @@ export type AggregatedPlayer = {
     gamesPlayed: number;
     photoURL?: string;
 };
+
+// Firestore 存储的用户档案类型（用于 /users 文档）
+export type FirestoreUserProfile = {
+    nickname?: string;
+    email?: string;
+    photoURL?: string;
+    role?: string;
+    isActive?: boolean;
+};

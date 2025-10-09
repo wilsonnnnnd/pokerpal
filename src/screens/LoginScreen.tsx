@@ -7,9 +7,10 @@ import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
-import AuthService, { AuthResult, EmailConflictError } from '@/services/authService';
+import AuthService from '@/services/authService';
 import { usePageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
+import { EmailConflictError } from '@/types';
 
 export default function LoginScreen() {
     const navigation = useNavigation();

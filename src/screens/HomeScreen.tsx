@@ -28,10 +28,11 @@ import { HomePagestyles as styles } from '@/assets/styles';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { onAuthStateChanged, signOut } from '@/services/authService';
 import storage from '@/services/storageService';
-import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
+import { fetchUserProfile } from '@/firebase/getUserProfile';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 import { useLogger } from '@/utils/useLogger';
+import { UserProfile } from '@/types';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -95,8 +96,9 @@ const HomeScreen = () => {
                 return;
             }
 
-            const profile = await fetchUserProfile(u.uid);
-            setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile: profile ?? undefined });
+            const firestoreProfile = await fetchUserProfile(u.uid);
+            const profile = firestoreProfile ? { ...firestoreProfile, uid: u.uid } : undefined;
+            setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile });
             // load persisted user for avatar/name preference
             try {
                 const pu = await storage.getLocal(CURRENT_USER_KEY);
@@ -146,16 +148,16 @@ const HomeScreen = () => {
                             <View style={styles.userInfoContainer}>
                                 <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
                                     {(persistedUser?.photoURL ?? user.photoURL) ? (
-                                        <Image 
-                                            source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }} 
-                                            style={styles.userAvatar} 
+                                        <Image
+                                            source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }}
+                                            style={styles.userAvatar}
                                         />
                                     ) : (
                                         <View style={styles.userAvatar}>
-                                            <Text style={{ 
-                                                color: color.text, 
-                                                fontWeight: '700', 
-                                                fontSize: FontSize.h2 
+                                            <Text style={{
+                                                color: color.text,
+                                                fontWeight: '700',
+                                                fontSize: FontSize.h2
                                             }}>
                                                 {((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}
                                             </Text>
@@ -165,8 +167,8 @@ const HomeScreen = () => {
 
                                 <View style={styles.userInfo}>
                                     <Text style={styles.userName}>
-                                        {(persistedUser?.displayName ?? user.displayName) ?? 
-                                         (user.profile?.nickname ?? (user.isAnonymous ? '访客' : '未命名'))}
+                                        {(persistedUser?.displayName ?? user.displayName) ??
+                                            (user.isAnonymous ? '访客' : '未命名')}
                                     </Text>
                                     <Text style={styles.userEmail}>
                                         {persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}

@@ -23,6 +23,10 @@ export {
     InfoRowProps
 } from './layout';
 
+export { AuthProvider, EmailConflictError, User, AuthResult, UserProfile } from './auth';
+
+export { FirestoreUserProfile } from './firebase';
+
 export { PlayerSnapshotCash, GameDocFS, GameSnapshotUI, PlayerItem, GameHistoryItem, GameHistoryState, GameState, GameSetupCardProps } from './game';
 
 export { CallTimerHandle, CallTimerProps } from './callTime';
