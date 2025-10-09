@@ -7,7 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PopupProvider } from '@/components/PopupProvider';
 import { SettingsProvider } from '@/providers/SettingsProvider';
 import Toast from 'react-native-toast-message';
-import { onAuthStateChanged, restoreUser } from '@/services/localAuth';
+import { onAuthStateChanged, restoreUser } from '@/services/authService';
 import { getLocal, setLocal } from '@/services/storageService';
 import localDb from '@/services/localDb';
 import { Header } from '@/components/Header';

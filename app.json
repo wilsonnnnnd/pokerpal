@@ -14,6 +14,7 @@
       "backgroundColor": "#fcf5e7"
     },
     "ios": {
+      "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.wilsonnnnd.pokerpal.dev",
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -33,6 +34,7 @@
       ]
     },
     "plugins": [
+      ["expo-apple-authentication"],
       [
         "@react-native-google-signin/google-signin",
         {

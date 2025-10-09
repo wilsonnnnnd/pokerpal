@@ -26,7 +26,7 @@ import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
-import { onAuthStateChanged, signOut } from '@/services/localAuth';
+import { onAuthStateChanged, signOut } from '@/services/authService';
 import storage from '@/services/storageService';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';

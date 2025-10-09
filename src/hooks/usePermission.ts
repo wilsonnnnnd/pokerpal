@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from '@/services/localAuth';
+import { onAuthStateChanged } from '@/services/authService';
 import { fetchUserProfile, UserProfile, userHasRole } from '@/firebase/getUserProfile';
 
 /**

@@ -5,7 +5,7 @@ import { getLocal, removeLocal, setLocal } from '@/services/storageService';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { onAuthStateChanged, signOut } from '@/services/localAuth';
+import { onAuthStateChanged, signOut } from '@/services/authService';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { fetchUserProfile, UserProfile } from '@/firebase/getUserProfile';
 import SelectField from '@/components/SelectField';
