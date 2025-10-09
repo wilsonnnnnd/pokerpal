@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, StyleSheet, StatusBar, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -7,7 +7,7 @@ import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
-import AuthService from '@/services/authService';
+import AuthService, { AuthResult, EmailConflictError } from '@/services/authService';
 import { usePageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
 
@@ -45,6 +45,44 @@ export default function LoginScreen() {
         } catch (e) {
             // Navigation handled by App's auth subscription
         }
+    };
+
+    const handleEmailConflict = (conflictError: EmailConflictError) => {
+        const { email, existingProvider, currentProvider } = conflictError;
+        
+        // 提供商显示名称映射
+        const getProviderName = (provider: string) => {
+            switch (provider) {
+                case 'google.com': return 'Google';
+                case 'apple.com': return 'Apple';
+                case 'password': return '邮箱密码';
+                default: return provider;
+            }
+        };
+
+        const existingProviderName = getProviderName(existingProvider);
+        const currentProviderName = getProviderName(currentProvider);
+
+        Alert.alert(
+            '账号冲突',
+            `该邮箱 ${email} 已使用 ${existingProviderName} 登录注册。\n\n请使用 ${existingProviderName} 登录继续。`,
+            [
+                {
+                    text: '取消',
+                    style: 'cancel'
+                },
+                {
+                    text: `使用 ${existingProviderName} 登录`,
+                    onPress: () => {
+                        if (existingProvider === 'google.com') {
+                            onGoogleSignIn();
+                        } else if (existingProvider === 'apple.com') {
+                            onAppleSignIn();
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleAuthError = (error: any, method: string) => {
@@ -92,8 +130,11 @@ export default function LoginScreen() {
         pageState.setLoading(true);
         try {
             const result = await AuthService.signInWithGoogle();
+            
             if (result.success && result.user) {
                 handleAuthSuccess(result.user);
+            } else if (result.conflictError) {
+                handleEmailConflict(result.conflictError);
             } else {
                 handleAuthError(new Error(result.error || '登录失败'), 'Google');
             }
@@ -107,29 +148,17 @@ export default function LoginScreen() {
     const onAppleSignIn = async () => {
         pageState.setLoading(true);
         try {
-            let result = await AuthService.signInWithApple();
+            const result = await AuthService.signInWithApple();
 
-            // 如果标准方法失败，尝试简化版本
-            if (!result.success && result.error && result.error.includes('unknown reason')) {
-                result = await AuthService.signInWithAppleSimple();
-            }
-            
             if (result.success && result.user) {
                 handleAuthSuccess(result.user);
+            } else if (result.conflictError) {
+                handleEmailConflict(result.conflictError);
             } else {
                 handleAuthError(result.error || '登录失败', 'Apple');
             }
         } catch (error) {
-            try {
-                const result = await AuthService.signInWithAppleSimple();
-                if (result.success && result.user) {
-                    handleAuthSuccess(result.user);
-                } else {
-                    handleAuthError(result.error || '登录失败', 'Apple');
-                }
-            } catch (fallbackError) {
-                handleAuthError(fallbackError, 'Apple');
-            }
+            handleAuthError(error, 'Apple');
         } finally {
             pageState.setLoading(false);
         }
