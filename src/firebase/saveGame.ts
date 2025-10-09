@@ -55,6 +55,8 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 		smallBlind: game.smallBlind,
 		bigBlind: game.bigBlind,
 		// store totals in both chips and cash (cash = chips * rate)
+		baseCashAmount: game.baseCashAmount ?? 0,
+		baseChipAmount: game.baseChipAmount ?? 0,
 		totalBuyInChips,
 		totalBuyInCash,
 		totalEndingChips,

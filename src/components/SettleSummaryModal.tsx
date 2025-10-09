@@ -190,119 +190,190 @@ export function SettleSummaryModal({
                                 />
                             </View>
                             
-                            {/* 汇率显示和编辑 - 只在显示RMB时出现 */}
-                            {showRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
-                                <View style={modalStyles.exchangeRateSection}>
-                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                                        <Text style={modalStyles.exchangeRateLabel}>
-                                            汇率:
+                            {/* 汇率显示和编辑区域 */}
+                            {showRMB && currentCurrency.toUpperCase() !== 'CNY' && (
+                                <View style={{
+                                    backgroundColor: Palette.lightBackground,
+                                    borderRadius: Radius.md,
+                                    padding: Spacing.sm,
+                                    marginTop: Spacing.sm,
+                                    borderWidth: 1,
+                                    borderColor: Palette.lightGray,
+                                }}>
+                                    {/* 汇率标题 */}
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        marginBottom: Spacing.xs,
+                                    }}>
+                                        <MaterialCommunityIcons
+                                            name="swap-horizontal"
+                                            size={16}
+                                            color={Palette.primary}
+                                        />
+                                        <Text style={{
+                                            fontSize: FontSize.small,
+                                            fontWeight: '600',
+                                            color: Palette.text,
+                                            marginLeft: Spacing.xs,
+                                        }}>
+                                            汇率设置
                                         </Text>
-                                        {isEditingRate ? (
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                                <Text style={{ fontSize: FontSize.small - 1, color: Palette.text }}>
-                                                    1 {currentCurrency.toUpperCase()} = ¥
-                                                </Text>
-                                                <TextInput
-                                                    style={{
-                                                        borderWidth: 1,
-                                                        borderColor: Palette.primary,
-                                                        borderRadius: Radius.sm,
-                                                        paddingHorizontal: Spacing.xs,
-                                                        paddingVertical: 1, // 减少padding
-                                                        fontSize: FontSize.small - 1, // 更小字体
-                                                        color: Palette.text,
-                                                        backgroundColor: Palette.background,
-                                                        minWidth: 50, // 减少最小宽度
-                                                        marginHorizontal: 3,
-                                                    }}
-                                                    value={tempRate}
-                                                    onChangeText={setTempRate}
-                                                    keyboardType="numeric"
-                                                    autoFocus
-                                                />
-                                                <Text style={{ fontSize: FontSize.small - 1, color: Palette.text }}>
-                                                    CNY
-                                                </Text>
-                                            </View>
-                                        ) : (
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                                <TouchableOpacity 
-                                                    onPress={handleEditRate}
-                                                    style={{ flexDirection: 'row', alignItems: 'center' }}
-                                                >
-                                                    <Text style={{
-                                                        fontSize: FontSize.small - 1, // 更小字体
-                                                        color: Palette.primary,
-                                                        fontWeight: '500',
-                                                    }}>
-                                                        1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)} CNY
-                                                    </Text>
-                                                    <MaterialCommunityIcons
-                                                        name="pencil"
-                                                        size={12} // 减少图标大小从14到12
-                                                        color={Palette.primary}
-                                                        style={{ marginLeft: Spacing.xs }}
-                                                    />
-                                                </TouchableOpacity>
-                                                {/* 显示汇率数据来源状态 */}
-                                                {!isExchangeRateValid(exchangeRates.CNY) && (
-                                                    <MaterialCommunityIcons
-                                                        name="alert-circle-outline"
-                                                        size={10} // 减少图标大小从12到10
-                                                        color={Palette.warning}
-                                                        style={{ marginLeft: Spacing.xs }}
-                                                    />
-                                                )}
-                                            </View>
+                                        {!isExchangeRateValid(exchangeRates.CNY) && (
+                                            <MaterialCommunityIcons
+                                                name="alert-circle-outline"
+                                                size={12}
+                                                color={Palette.warning}
+                                                style={{ marginLeft: Spacing.xs }}
+                                            />
                                         )}
                                     </View>
-                                    
-                                    <View style={{ flexDirection: 'row', marginLeft: Spacing.xs }}> {/* 减少margin */}
-                                        <TouchableOpacity
-                                            onPress={handleUpdateRates}
-                                            disabled={isUpdatingRates}
-                                            style={{
-                                                backgroundColor: isUpdatingRates ? Palette.lightGray : Palette.primary,
-                                                paddingHorizontal: Spacing.xs - 2, // 减少padding
-                                                paddingVertical: 3, // 减少padding
-                                                borderRadius: Radius.sm,
-                                                marginRight: Spacing.xs,
-                                                opacity: isUpdatingRates ? 0.6 : 1,
-                                            }}
-                                        >
-                                            <MaterialCommunityIcons 
-                                                name={isUpdatingRates ? "loading" : "refresh"} 
-                                                size={14} // 减少图标大小从16到14
-                                                color="white" 
-                                            />
-                                        </TouchableOpacity>
-                                        {isEditingRate && (
-                                            <>
-                                                <TouchableOpacity
-                                                    onPress={handleSaveRate}
+
+                                    {/* 汇率内容 */}
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                    }}>
+                                        {/* 汇率显示/编辑 */}
+                                        <View style={{ flex: 1 }}>
+                                            {isEditingRate ? (
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    backgroundColor: 'white',
+                                                    borderRadius: Radius.sm,
+                                                    borderWidth: 1,
+                                                    borderColor: Palette.primary,
+                                                    paddingHorizontal: Spacing.sm,
+                                                    paddingVertical: Spacing.xs,
+                                                }}>
+                                                    <Text style={{
+                                                        fontSize: FontSize.small,
+                                                        color: Palette.text,
+                                                        fontWeight: '500',
+                                                    }}>
+                                                        1 {currentCurrency.toUpperCase()} = ¥
+                                                    </Text>
+                                                    <TextInput
+                                                        style={{
+                                                            fontSize: FontSize.small,
+                                                            color: Palette.text,
+                                                            fontWeight: '600',
+                                                            minWidth: 60,
+                                                            textAlign: 'center',
+                                                            marginHorizontal: Spacing.xs,
+                                                        }}
+                                                        value={tempRate}
+                                                        onChangeText={setTempRate}
+                                                        keyboardType="numeric"
+                                                        autoFocus
+                                                        selectTextOnFocus
+                                                        placeholder="0.0000"
+                                                    />
+                                                    <Text style={{
+                                                        fontSize: FontSize.small,
+                                                        color: Palette.text,
+                                                        fontWeight: '500',
+                                                    }}>
+                                                        CNY
+                                                    </Text>
+                                                </View>
+                                            ) : (
+                                                <TouchableOpacity 
+                                                    onPress={handleEditRate}
                                                     style={{
-                                                        backgroundColor: Palette.success,
-                                                        paddingHorizontal: Spacing.xs - 2, // 减少padding
-                                                        paddingVertical: 3, // 减少padding
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        backgroundColor: 'white',
                                                         borderRadius: Radius.sm,
-                                                        marginRight: Spacing.xs,
+                                                        borderWidth: 1,
+                                                        borderColor: Palette.lightGray,
+                                                        paddingHorizontal: Spacing.sm,
+                                                        paddingVertical: Spacing.xs,
                                                     }}
+                                                    activeOpacity={0.7}
                                                 >
-                                                    <MaterialCommunityIcons name="check" size={14} color="white" /> {/* 减少图标大小 */}
+                                                    <Text style={{
+                                                        fontSize: FontSize.small,
+                                                        color: Palette.primary,
+                                                        fontWeight: '600',
+                                                        flex: 1,
+                                                    }}>
+                                                        1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)}
+                                                    </Text>
+                                                    <MaterialCommunityIcons
+                                                        name="pencil-outline"
+                                                        size={14}
+                                                        color={Palette.primary}
+                                                    />
                                                 </TouchableOpacity>
-                                                <TouchableOpacity
-                                                    onPress={handleCancelEdit}
-                                                    style={{
-                                                        backgroundColor: Palette.error,
-                                                        paddingHorizontal: Spacing.xs - 2, // 减少padding
-                                                        paddingVertical: 3, // 减少padding
-                                                        borderRadius: Radius.sm,
-                                                    }}
-                                                >
-                                                    <MaterialCommunityIcons name="close" size={14} color="white" /> {/* 减少图标大小 */}
-                                                </TouchableOpacity>
-                                            </>
-                                        )}
+                                            )}
+                                        </View>
+
+                                        {/* 操作按钮 */}
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            marginLeft: Spacing.sm,
+                                        }}>
+                                            {/* 刷新按钮 */}
+                                            <TouchableOpacity
+                                                onPress={handleUpdateRates}
+                                                disabled={isUpdatingRates}
+                                                style={{
+                                                    width: 32,
+                                                    height: 32,
+                                                    borderRadius: 16,
+                                                    backgroundColor: isUpdatingRates ? Palette.lightGray : Palette.info,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginLeft: Spacing.xs,
+                                                }}
+                                                activeOpacity={0.8}
+                                            >
+                                                <MaterialCommunityIcons 
+                                                    name={isUpdatingRates ? "loading" : "refresh"} 
+                                                    size={16} 
+                                                    color="white" 
+                                                />
+                                            </TouchableOpacity>
+
+                                            {/* 编辑状态下的确认/取消按钮 */}
+                                            {isEditingRate && (
+                                                <>
+                                                    <TouchableOpacity
+                                                        onPress={handleSaveRate}
+                                                        style={{
+                                                            width: 32,
+                                                            height: 32,
+                                                            borderRadius: 16,
+                                                            backgroundColor: Palette.success,
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            marginLeft: Spacing.xs,
+                                                        }}
+                                                        activeOpacity={0.8}
+                                                    >
+                                                        <MaterialCommunityIcons name="check" size={16} color="white" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={handleCancelEdit}
+                                                        style={{
+                                                            width: 32,
+                                                            height: 32,
+                                                            borderRadius: 16,
+                                                            backgroundColor: Palette.error,
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            marginLeft: Spacing.xs,
+                                                        }}
+                                                        activeOpacity={0.8}
+                                                    >
+                                                        <MaterialCommunityIcons name="close" size={16} color="white" />
+                                                    </TouchableOpacity>
+                                                </>
+                                            )}
+                                        </View>
                                     </View>
                                 </View>
                             )}

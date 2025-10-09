@@ -12,7 +12,7 @@
 
 // API 配置
 const EXCHANGE_RATE_API_BASE = 'https://v6.exchangerate-api.com/v6';
-const API_KEY = process.env.EXPO_PUBLIC_EXCHANGE_RATE_API_KEY;
+const API_KEY = process.env.EXPO_PUBLIC_CURRENCYLAYER_API_KEY;
 
 // 缓存配置
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时缓存

@@ -73,7 +73,10 @@ const HomeScreen = () => {
                             visibilityTime: 2000,
                         });
 
-
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: 'Home' }],
+                        });
                     }
                 } catch (e) {
                     Toast.show({

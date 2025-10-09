@@ -14,6 +14,7 @@ import {
     signInAnonymously as firebaseSignInAnonymously
 } from 'firebase/auth';
 import { db } from '@/firebase/config';
+import { fetchUserProfile } from '@/firebase/getUserProfile';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
 import { v4 as uuidv4 } from 'uuid';
@@ -155,12 +156,18 @@ class AuthService {
                 const firebaseCred = GoogleAuthProvider.credential(credential.idToken);
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred as any);
                 const u = userCred.user;
-                // skipped verbose provider logging
+                // Fetch Firestore profile and prefer its fields when available
+                let firestoreProfile = null;
+                try {
+                    firestoreProfile = await fetchUserProfile(String(u.uid));
+                } catch (e) {
+                    // ignore fetch errors, fall back to firebase user fields
+                }
                 currentUser = {
                     uid: String(u.uid),
-                    email: u.email ?? null,
-                    displayName: u.displayName ?? null,
-                    photoURL: u.photoURL ?? null,
+                    email: (firestoreProfile && firestoreProfile.email) ?? u.email ?? null,
+                    displayName: (firestoreProfile && firestoreProfile.nickname) ?? u.displayName ?? null,
+                    photoURL: (firestoreProfile && firestoreProfile.photoURL) ?? u.photoURL ?? null,
                     isAnonymous: u.isAnonymous ?? false,
                 };
                 notify();
@@ -190,7 +197,13 @@ class AuthService {
 
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred);
                 const u = userCred.user;
-                // skipped verbose provider logging
+                // Fetch Firestore profile and prefer its fields when available
+                let firestoreProfile = null;
+                try {
+                    firestoreProfile = await fetchUserProfile(String(u.uid));
+                } catch (e) {
+                    // ignore fetch errors
+                }
 
                 // Apple 登录时，如果是首次登录且提供了姓名，使用传入的 displayName
                 let displayName = u.displayName;
@@ -201,9 +214,9 @@ class AuthService {
 
                 currentUser = {
                     uid: String(u.uid),
-                    email: u.email ?? credential.email ?? null,
-                    displayName: displayName ?? '用户',
-                    photoURL: u.photoURL ?? null,
+                    email: (firestoreProfile && firestoreProfile.email) ?? u.email ?? credential.email ?? null,
+                    displayName: (firestoreProfile && firestoreProfile.nickname) ?? displayName ?? u.displayName ?? '用户',
+                    photoURL: (firestoreProfile && firestoreProfile.photoURL) ?? u.photoURL ?? null,
                     isAnonymous: u.isAnonymous ?? false,
                 };
 
@@ -220,11 +233,18 @@ class AuthService {
 
             // Fallback: if no idToken or identityToken, fall back to creating a local user record
             const uid = credential?.uid ?? uuidv4();
+            // Attempt to fetch Firestore profile for the uid if available
+            let firestoreProfile = null;
+            try {
+                firestoreProfile = await fetchUserProfile(String(uid));
+            } catch (e) {
+                // ignore
+            }
             currentUser = {
                 uid: String(uid),
-                email: credential?.email ?? null,
-                displayName: credential?.displayName ?? credential?.name ?? 'Player',
-                photoURL: credential?.photoURL ?? null,
+                email: (firestoreProfile && firestoreProfile.email) ?? credential?.email ?? null,
+                displayName: (firestoreProfile && firestoreProfile.nickname) ?? credential?.displayName ?? credential?.name ?? 'Player',
+                photoURL: (firestoreProfile && firestoreProfile.photoURL) ?? credential?.photoURL ?? null,
                 isAnonymous: false,
             };
             notify();
