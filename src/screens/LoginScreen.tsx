@@ -20,14 +20,14 @@ export default function LoginScreen() {
         // Check if Apple Sign-In is available
         const checkAppleSupport = async () => {
             if (Platform.OS === 'ios') {
-                try {
-                    const isSupported = await AppleAuthentication.isAvailableAsync();
-                    setIsAppleSupported(isSupported);
-                } catch (error) {
-                    console.log('Apple authentication not available', error);
-                    setIsAppleSupported(false);
+                    try {
+                        const isSupported = await AppleAuthentication.isAvailableAsync();
+                        setIsAppleSupported(isSupported);
+                    } catch (error) {
+                        console.error('Apple authentication not available', error);
+                        setIsAppleSupported(false);
+                    }
                 }
-            }
         };
         checkAppleSupport();
     }, []);
@@ -107,12 +107,10 @@ export default function LoginScreen() {
     const onAppleSignIn = async () => {
         pageState.setLoading(true);
         try {
-            console.log('尝试标准 Apple 登录...');
             let result = await AuthService.signInWithApple();
-            
+
             // 如果标准方法失败，尝试简化版本
             if (!result.success && result.error && result.error.includes('unknown reason')) {
-                console.log('标准 Apple 登录失败，尝试简化版本...');
                 result = await AuthService.signInWithAppleSimple();
             }
             
@@ -122,7 +120,6 @@ export default function LoginScreen() {
                 handleAuthError(result.error || '登录失败', 'Apple');
             }
         } catch (error) {
-            console.log('Apple 登录异常，尝试简化版本...');
             try {
                 const result = await AuthService.signInWithAppleSimple();
                 if (result.success && result.user) {
