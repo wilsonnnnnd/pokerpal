@@ -49,7 +49,17 @@ export default function LoginScreen() {
 
     const handleAuthError = (error: any, method: string) => {
         console.error(`${method} sign in error`, error);
-        const message = error?.message || String(error);
+        
+        // 安全地提取错误消息
+        let message = '';
+        if (typeof error === 'string') {
+            message = error;
+        } else if (error && typeof error === 'object') {
+            message = error.message || error.toString() || '未知错误';
+        } else {
+            message = String(error || '未知错误');
+        }
+        
         let hint = '';
         
         if (method === 'Google') {
@@ -57,6 +67,17 @@ export default function LoginScreen() {
                 hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
             } else if (message.includes('DEVELOPER_ERROR') || message.includes('10')) {
                 hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
+            }
+        } else if (method === 'Apple') {
+            if (message.includes('用户取消了登录')) {
+                // 用户主动取消，不显示错误
+                return;
+            } else if (message.includes('网络连接失败')) {
+                hint = ' 请检查网络连接是否正常。';
+            } else if (message.includes('Apple 服务器响应无效')) {
+                hint = ' Apple 服务暂时不可用，请稍后重试。';
+            } else if (message.includes('The authorization attempt failed for an unknown reason')) {
+                hint = ' 可能是设备或网络问题，请确保已登录 Apple ID 并重试。';
             }
         }
         
@@ -86,14 +107,32 @@ export default function LoginScreen() {
     const onAppleSignIn = async () => {
         pageState.setLoading(true);
         try {
-            const result = await AuthService.signInWithApple();
+            console.log('尝试标准 Apple 登录...');
+            let result = await AuthService.signInWithApple();
+            
+            // 如果标准方法失败，尝试简化版本
+            if (!result.success && result.error && result.error.includes('unknown reason')) {
+                console.log('标准 Apple 登录失败，尝试简化版本...');
+                result = await AuthService.signInWithAppleSimple();
+            }
+            
             if (result.success && result.user) {
                 handleAuthSuccess(result.user);
             } else {
-                handleAuthError(new Error(result.error || '登录失败'), 'Apple');
+                handleAuthError(result.error || '登录失败', 'Apple');
             }
         } catch (error) {
-            handleAuthError(error, 'Apple');
+            console.log('Apple 登录异常，尝试简化版本...');
+            try {
+                const result = await AuthService.signInWithAppleSimple();
+                if (result.success && result.user) {
+                    handleAuthSuccess(result.user);
+                } else {
+                    handleAuthError(result.error || '登录失败', 'Apple');
+                }
+            } catch (fallbackError) {
+                handleAuthError(fallbackError, 'Apple');
+            }
         } finally {
             pageState.setLoading(false);
         }

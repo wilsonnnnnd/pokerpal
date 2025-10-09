@@ -7,6 +7,7 @@ import { db } from '@/firebase/config';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
 import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 
 // 认证提供商类型
 export enum AuthProvider {
@@ -137,11 +138,18 @@ class AuthService {
 
             // Apple 登录：使用 identityToken
             if (credential?.identityToken) {
+                console.log('处理 Apple Firebase 凭据...');
                 const provider = new OAuthProvider('apple.com');
-                const firebaseCred = provider.credential({
+                const credentialOptions: any = {
                     idToken: credential.identityToken,
-                    rawNonce: credential.nonce, // 如果使用 nonce
-                });
+                };
+                
+                // 只有当nonce存在时才添加
+                if (credential.nonce) {
+                    credentialOptions.rawNonce = credential.nonce;
+                }
+                
+                const firebaseCred = provider.credential(credentialOptions);
 
                 const userCred = await firebaseSignInWithCredential(auth, firebaseCred);
                 const u = userCred.user;
@@ -159,6 +167,9 @@ class AuthService {
                     photoURL: u.photoURL ?? null,
                     isAnonymous: u.isAnonymous ?? false,
                 };
+                
+                console.log('Apple 用户创建成功:', currentUser.uid, currentUser.displayName);
+                
                 notify();
                 try {
                     await storage.setLocal(CURRENT_USER_KEY, currentUser);
@@ -205,10 +216,15 @@ class AuthService {
 
     // 检查 Apple 登录是否可用
     static async isAppleAuthAvailable(): Promise<boolean> {
-        if (Platform.OS !== 'ios') return false;
+        if (Platform.OS !== 'ios') {
+            console.log('Apple 登录检查: 非 iOS 平台');
+            return false;
+        }
 
         try {
-            return await AppleAuthentication.isAvailableAsync();
+            const isAvailable = await AppleAuthentication.isAvailableAsync();
+            console.log('Apple 登录可用性检查:', isAvailable);
+            return isAvailable;
         } catch (error) {
             console.warn('Apple Auth availability check failed:', error);
             return false;
@@ -363,20 +379,68 @@ class AuthService {
     // Apple 登录
     static async signInWithApple(): Promise<AuthResult> {
         try {
+            console.log('开始 Apple 登录流程...');
+            
             // 检查 Apple 登录可用性
-            if (!(await this.isAppleAuthAvailable())) {
+            const isAvailable = await this.isAppleAuthAvailable();
+            console.log('Apple 登录可用性:', isAvailable);
+            
+            if (!isAvailable) {
                 return {
                     success: false,
                     error: 'Apple 登录在此设备上不可用',
                 };
             }
 
-            // 执行 Apple 登录
-            const credential = await AppleAuthentication.signInAsync({
+            // 检查是否支持所需的scope
+            try {
+                const supportedScopes = await AppleAuthentication.getCredentialStateAsync('test');
+                console.log('Apple 认证状态检查完成');
+            } catch (e) {
+                console.log('无法检查Apple认证状态:', e);
+            }
+
+            // 生成 nonce 用于安全验证
+            let nonce: string;
+            let hashedNonce: string;
+            
+            try {
+                nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                hashedNonce = await Crypto.digestStringAsync(
+                    Crypto.CryptoDigestAlgorithm.SHA256,
+                    nonce,
+                    { encoding: Crypto.CryptoEncoding.HEX }
+                );
+                console.log('Nonce 生成成功, 长度:', nonce.length);
+            } catch (nonceError) {
+                console.warn('Nonce 生成失败，将不使用 nonce:', nonceError);
+                nonce = '';
+                hashedNonce = '';
+            }
+
+            console.log('开始 Apple 认证...');
+            
+            // 执行 Apple 登录 - 尝试最小化的请求
+            const requestOptions = {
                 requestedScopes: [
                     AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
                     AppleAuthentication.AppleAuthenticationScope.EMAIL,
                 ],
+            } as any;
+
+            // 只有当 nonce 生成成功时才使用
+            if (hashedNonce) {
+                requestOptions.nonce = hashedNonce;
+            }
+
+            const credential = await AppleAuthentication.signInAsync(requestOptions);
+
+            console.log('Apple 认证成功，获得凭据:', {
+                hasToken: !!credential.identityToken,
+                hasCode: !!credential.authorizationCode,
+                hasEmail: !!credential.email,
+                hasFullName: !!credential.fullName,
+                user: credential.user
             });
 
             if (!credential.identityToken) {
@@ -400,6 +464,131 @@ class AuthService {
                 email: credential.email,
                 photoURL: null, // Apple 不提供头像
                 appleId: credential.user,
+                nonce: hashedNonce ? nonce : undefined, // 只有当使用了 nonce 时才传递
+            };
+
+            console.log('开始 Firebase 认证...');
+            
+            // 使用凭据登录
+            const userCred = await this.signInWithCredential(appleCredential);
+            const user = userCred.user;
+
+            console.log('Firebase 认证成功:', user.uid);
+
+            // 保存用户配置文件
+            const userProfile: UserProfile = {
+                uid: user.uid,
+                email: appleCredential.email ?? user.email,
+                displayName: appleCredential.displayName ?? user.displayName,
+                photoURL: appleCredential.photoURL ?? user.photoURL,
+                isAnonymous: user.isAnonymous,
+            };
+
+            await this.saveUserProfile(userProfile);
+
+            console.log('Apple 登录完成');
+
+            return {
+                success: true,
+                user: userProfile,
+            };
+        } catch (error: any) {
+            console.error('Apple 登录错误:', error);
+            
+            // 安全地记录错误详情
+            try {
+                console.error('错误详情:', {
+                    code: error?.code || 'no_code',
+                    message: error?.message || 'no_message',
+                    type: typeof error
+                });
+            } catch (logError) {
+                console.error('无法记录错误详情');
+            }
+
+            // Apple 登录特定错误处理
+            if (error && (error.code === 'ERR_CANCELED' || error.code === 'ERR_REQUEST_CANCELED')) {
+                return {
+                    success: false,
+                    error: '用户取消了登录',
+                };
+            }
+
+            if (error && error.code === 'ERR_INVALID_RESPONSE') {
+                return {
+                    success: false,
+                    error: 'Apple 服务器响应无效，请重试',
+                };
+            }
+
+            if (error && error.code === 'ERR_REQUEST_FAILED') {
+                return {
+                    success: false,
+                    error: '网络连接失败，请检查网络后重试',
+                };
+            }
+
+            // 针对 "unknown reason" 错误的特殊处理
+            const message = error?.message || error?.toString?.() || String(error) || '未知错误';
+            if (message.includes('unknown reason') || message.includes('authorization attempt failed')) {
+                return {
+                    success: false,
+                    error: '登录失败，请确保设备已登录 Apple ID 且网络连接正常。如果问题持续，请尝试重启设备或使用其他登录方式。',
+                };
+            }
+
+            return {
+                success: false,
+                error: `Apple 登录失败: ${message}`,
+            };
+        }
+    }
+
+    // Apple 登录 - 简化版本（备用）
+    static async signInWithAppleSimple(): Promise<AuthResult> {
+        try {
+            console.log('开始简化版 Apple 登录...');
+            
+            // 检查 Apple 登录可用性
+            if (!(await this.isAppleAuthAvailable())) {
+                return {
+                    success: false,
+                    error: 'Apple 登录在此设备上不可用',
+                };
+            }
+
+            // 不使用nonce的简化版本
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+            });
+
+            console.log('简化版 Apple 认证成功');
+
+            if (!credential.identityToken) {
+                throw new Error('未获得 Apple 身份令牌');
+            }
+
+            // 构建显示名称
+            let displayName = '用户';
+            if (credential.fullName) {
+                const { givenName, familyName } = credential.fullName;
+                if (givenName || familyName) {
+                    displayName = [givenName, familyName].filter(Boolean).join(' ').trim() || '用户';
+                }
+            }
+
+            // 构建简化的 Apple 凭据（不使用nonce）
+            const appleCredential = {
+                identityToken: credential.identityToken,
+                authorizationCode: credential.authorizationCode,
+                displayName,
+                email: credential.email,
+                photoURL: null,
+                appleId: credential.user,
+                // 不传递nonce
             };
 
             // 使用凭据登录
@@ -417,21 +606,14 @@ class AuthService {
 
             await this.saveUserProfile(userProfile);
 
+            console.log('简化版 Apple 登录完成');
+
             return {
                 success: true,
                 user: userProfile,
             };
         } catch (error: any) {
-            console.error('Apple 登录错误:', error);
-
-            // Apple 登录特定错误处理
-            if (error.code === 'ERR_CANCELED') {
-                return {
-                    success: false,
-                    error: '用户取消了登录',
-                };
-            }
-
+            console.error('简化版 Apple 登录错误:', error);
             const message = error?.message || error?.toString?.() || '未知错误';
             return {
                 success: false,
