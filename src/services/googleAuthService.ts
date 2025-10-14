@@ -57,16 +57,12 @@ export class GoogleAuthService {
 
             // 执行 Google 登录获取用户信息
             const userInfo = await GoogleSignin.signIn();
-            
-            // 调试：打印完整的用户信息结构
-            console.log('Google 登录返回的完整用户信息:', JSON.stringify(userInfo, null, 2));
-            
+       
             let idToken: string | null = (userInfo as any)?.idToken ?? null;
 
             if (!idToken) {
                 const tokens = await GoogleSignin.getTokens();
                 idToken = (tokens as any)?.idToken ?? null;
-                console.log('从 tokens 获取的 idToken:', !!idToken);
             }
 
             if (!idToken) {
@@ -106,15 +102,6 @@ export class GoogleAuthService {
                                 gi?.user?.profileImageUrl ||
                                 null;
 
-            // 调试信息：检查返回的用户信息结构
-            console.log('Google 用户信息结构:', {
-                hasUser: !!gi?.user,
-                hasEmail: !!profileEmail,
-                hasId: !!profileId,
-                hasName: !!profileName,
-                userKeys: gi?.user ? Object.keys(gi.user) : [],
-                topLevelKeys: Object.keys(gi || {}),
-            });
 
             // 邮箱不是必需的，某些情况下用户可能不提供邮箱权限
             if (!profileEmail) {

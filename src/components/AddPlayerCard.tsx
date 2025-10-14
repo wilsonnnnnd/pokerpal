@@ -56,28 +56,15 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
     useEffect(() => {
         if (isHost && activeTab === AddPlayerTab.SCAN && gameId) {
-            // 开始监听
-            console.log(`🔄 开始监听二维码扫描加入的玩家, gameId: ${gameId}`);
             startPlayerSyncListener(gameId, getGame().baseChipAmount, true);
             // 清理函数
             return () => {
-                console.log(`⏹️ 停止监听二维码扫描加入的玩家, gameId: ${gameId}`);
                 stopPlayerSyncListener();
             };
         }
         return () => { /* no-op when not scanning */ };
     }, [activeTab, gameId, isHost]);
 
-    // 监听玩家数量变化，记录通过二维码加入的玩家
-    useEffect(() => {
-        if (isHost && activeTab === AddPlayerTab.SCAN && players.length > 0) {
-            const latestPlayer = players[players.length - 1];
-            if (latestPlayer && latestPlayer.isSyncing === false) {
-                console.log(`✅ 监听到新玩家通过二维码加入: ${latestPlayer.nickname}${latestPlayer.email ? ` (${latestPlayer.email})` : ''}, 总玩家数: ${players.length}`);
-                console.log('📋 Latest player details:', JSON.stringify(latestPlayer, null, 2));
-            }
-        }
-    }, [players, activeTab, isHost]);
 
     useEffect(() => {
         // Only load registered users for hosts

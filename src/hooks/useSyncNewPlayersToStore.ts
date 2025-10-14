@@ -43,20 +43,17 @@ export function startPlayerSyncListener(
 ) {
     const { mergePlayers, setSyncing } = usePlayerStore.getState();
 
-    console.log(`📡 Attempting to start listener for gameId=${gameId}`);
     if (!enabled) {
-        console.log('🛑 Listener not enabled, skipping.');
+
         stopPlayerSyncListener();
         return;
     }
 
     if (currentGameIdRef === gameId) {
-        console.log(`⚠️ Listener already active for gameId=${gameId}, skipping.`);
         return;
     }
 
     stopPlayerSyncListener();
-    console.log(`📡 Starting new listener for gameId=${gameId}`);
     currentGameIdRef = gameId;
     setSyncing(true);
 
@@ -64,20 +61,14 @@ export function startPlayerSyncListener(
     unsubscribeRef = onSnapshot(
         playerRef,
         (snapshot) => {
-            console.log(`🔍 Received snapshot with ${snapshot.docs.length} documents`);
-            
+    
             const remotePlayers = snapshot.docs.map((doc) => {
                 const raw = doc.data();
-                console.log(`📄 Raw document data for ${doc.id}:`, JSON.stringify(raw, null, 2));
-                console.log(`🎭 Player info: nickname="${raw.nickname}", email="${raw.email}", photoURL="${raw.photoURL}"`);
-                
+
                 const sanitizedPlayer = sanitizeRemotePlayer({ id: doc.id, ...raw }, baseChipAmount);
-                console.log(`✨ Sanitized player:`, JSON.stringify(sanitizedPlayer, null, 2));
-                
+ 
                 return sanitizedPlayer;
             });
-
-            console.log(`🎮 Merging ${remotePlayers.length} players into store`);
             mergePlayers(remotePlayers);
             setSyncing(false);
         },
@@ -97,7 +88,6 @@ export function stopPlayerSyncListener(logFn?: ReturnType<typeof useLogger>['log
     if (unsubscribeRef) {
         unsubscribeRef();
         unsubscribeRef = null;
-        console.log(`🛑 取消监听 gameId=${currentGameIdRef}`);
     }
     currentGameIdRef = null;
 }

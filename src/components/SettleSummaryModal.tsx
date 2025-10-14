@@ -419,7 +419,7 @@ export function SettleSummaryModal({
                                                         resizeMode: 'cover',
                                                     }}
                                                     onError={() => {
-                                                        console.log('头像加载失败:', item.photoURL);
+                                                        console.warn('头像加载失败:', item.photoURL);
                                                     }}
                                                 />
                                             </View>
