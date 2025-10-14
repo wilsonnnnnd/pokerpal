@@ -14,20 +14,18 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { useGameStore } from '@/stores/useGameStore';
-import { logInfo, logSuccess } from '@/utils/useLogger';
+import { logInfo } from '@/utils/useLogger';
 import QRCode from 'react-native-qrcode-svg';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
-import { collection, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '@/firebase/config';
-import { userByEmailDoc } from '@/constants/namingVar';
 import { Ionicons } from '@expo/vector-icons';
 import usePermission from '@/hooks/usePermission';
 import { AddPlayerCardProps, AddPlayerTab } from '@/types';
 import { AddPlayerCardStyles } from '@/assets/styles';
-import { fetchUsersByEmail } from '@/firebase/fetchUser';
+import { fetchUsersByEmail, fetchUsersByHostname } from '@/firebase/fetchUser';
+import { onAuthStateChanged } from '@/services/authService';
 
 
 export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps) => {
@@ -46,16 +44,40 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [registeredUsers, setRegisteredUsers] = useState<{ email: string, uid: string, nickname: string, photoURL?: string }[]>([]);
     const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentUser, setCurrentUser] = useState<{ displayName?: string; isAnonymous?: boolean } | null>(null);
+
+    // 监听当前用户状态
+    useEffect(() => {
+        const unsub = onAuthStateChanged((user: any) => {
+            setCurrentUser(user);
+        });
+        return () => unsub && unsub();
+    }, []);
 
     useEffect(() => {
         if (isHost && activeTab === AddPlayerTab.SCAN && gameId) {
             // 开始监听
-            startPlayerSyncListener(gameId, getGame().baseChipAmount, true, logInfo);
+            console.log(`🔄 开始监听二维码扫描加入的玩家, gameId: ${gameId}`);
+            startPlayerSyncListener(gameId, getGame().baseChipAmount, true);
             // 清理函数
-            return () => stopPlayerSyncListener(logInfo);
+            return () => {
+                console.log(`⏹️ 停止监听二维码扫描加入的玩家, gameId: ${gameId}`);
+                stopPlayerSyncListener();
+            };
         }
         return () => { /* no-op when not scanning */ };
     }, [activeTab, gameId, isHost]);
+
+    // 监听玩家数量变化，记录通过二维码加入的玩家
+    useEffect(() => {
+        if (isHost && activeTab === AddPlayerTab.SCAN && players.length > 0) {
+            const latestPlayer = players[players.length - 1];
+            if (latestPlayer && latestPlayer.isSyncing === false) {
+                console.log(`✅ 监听到新玩家通过二维码加入: ${latestPlayer.nickname}${latestPlayer.email ? ` (${latestPlayer.email})` : ''}, 总玩家数: ${players.length}`);
+                console.log('📋 Latest player details:', JSON.stringify(latestPlayer, null, 2));
+            }
+        }
+    }, [players, activeTab, isHost]);
 
     useEffect(() => {
         // Only load registered users for hosts
@@ -67,16 +89,24 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         const loadUsers = async () => {
             setIsLoadingUsers(true);
             try {
-                const users = await fetchUsersByEmail();
+                let users: { email: string, uid: string, nickname: string, photoURL?: string }[] = [];
+                
+                if (currentUser && !currentUser.isAnonymous && currentUser.displayName) {
+                    // 使用 hostname 方式获取用户
+                    users = await fetchUsersByHostname(currentUser.displayName);
+                }
+                
                 setRegisteredUsers(users);
             } catch (error) {
                 console.error('Error loading users:', error);
+                // 错误时清空数据
+                setRegisteredUsers([]);
             } finally {
                 setIsLoadingUsers(false);
             }
         };
         loadUsers();
-    }, [isHost]);
+    }, [isHost, currentUser]);
 
     // Get the emails of existing players to filter them out
     const existingPlayerEmails = players.map(player => (player.email ?? '').toLowerCase()).filter(email => email);
@@ -122,12 +152,12 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         addPlayer(newPlayer);
         setNickname('');
         setEmail('');
-        stopPlayerSyncListener(logInfo);
+        stopPlayerSyncListener();
         onAdd();
     };
 
     const handleCancel = () => {
-        stopPlayerSyncListener(logInfo);
+        stopPlayerSyncListener();
         onCancel();
     };
 

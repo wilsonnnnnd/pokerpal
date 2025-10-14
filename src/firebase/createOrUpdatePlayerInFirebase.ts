@@ -4,7 +4,7 @@ import { Player } from '@/types';
 import { userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { logInfo } from '@/utils/useLogger';
 
-export async function createOrUpdatePlayerInFirebase(player: Player): Promise<void> {
+export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: string): Promise<void> {
     if (!player.id || !player.email) {
         console.warn('⚠️ 缺少 player.id 或 email，无法写入用户信息');
         return;
@@ -15,9 +15,30 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
 
     const userRef = doc(db, userDoc, uid);
     const emailRef = doc(db, userByEmailDoc, email);
+    
+    // 添加按hostname分组的邮箱映射
+    let hostnameEmailRef;
+    if (hostname) {
+        hostnameEmailRef = doc(db, userByEmailDoc, hostname, 'emails', email);
+    }
 
     try {
-        // 1️⃣ 写入用户主档（合并昵称/头像等）
+        // 1️⃣ 如果有hostname，先写入按hostname分组的email映射
+        if (hostname && hostnameEmailRef) {
+            await setDoc(hostnameEmailRef, {
+                uid,
+                email,
+                nickname: player.nickname,
+                photoURL: player.photoURL || '',
+                registered: true,
+                addedByHost: hostname,
+                created: new Date().toISOString(),
+            });
+            
+            logInfo(`✅ 玩家信息已写入host分组：${hostname}/${email}`, `uid: ${uid}`);
+        }
+
+        // 2️⃣ 写入用户主档（合并昵称/头像等）
         await setDoc(userRef, {
             nickname: player.nickname,
             email,
@@ -26,7 +47,7 @@ export async function createOrUpdatePlayerInFirebase(player: Player): Promise<vo
             created: new Date().toISOString(),
         }, { merge: true });
 
-        // 2️⃣ 写入 email → uid 映射（用于登录白名单校验）
+        // 3️⃣ 写入全局 email → uid 映射（用于登录白名单校验）
         await setDoc(emailRef, {
             uid,
             registered: true,

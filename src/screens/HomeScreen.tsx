@@ -101,7 +101,6 @@ const HomeScreen = () => {
 
             try {
                 const firestoreProfile = await fetchUserProfile(u.uid);
-                console.log('Fetched user profile:', firestoreProfile);
                 
                 // 构建用户对象，优先使用 Firestore 数据
                 const userWithProfile = {

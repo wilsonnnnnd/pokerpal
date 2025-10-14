@@ -2129,6 +2129,7 @@ export const AddPlayerCardStyles = StyleSheet.create({
     },
     selectedUserItem: {
         backgroundColor: color.info,
+        borderRadius: 12,
     },
     userItemContent: {
         flexDirection: 'row',
