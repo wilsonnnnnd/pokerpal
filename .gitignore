@@ -40,3 +40,4 @@ yarn-error.*
 /ios
 .env
 
+package-lock.json
