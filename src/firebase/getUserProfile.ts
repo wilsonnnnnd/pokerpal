@@ -6,7 +6,9 @@ import { FirestoreUserProfile } from '@/types';
 export async function fetchUserProfile(uid: string): Promise<FirestoreUserProfile | null> {
     if (!uid) return null;
     const ref = doc(db, userDoc, uid);
+    
     const snap = await getDoc(ref);
+    console.log('Fetched user profile:', snap.exists() ? snap.data() : 'No data');
     if (!snap.exists()) return null;
     return snap.data() as FirestoreUserProfile;
 }

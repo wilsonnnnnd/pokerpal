@@ -6,7 +6,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/authService';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleAuthService } from '@/services/googleAuthService';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
 import SelectField from '@/components/SelectField';
 import { commonCurrencies, getCurrencySymbol } from '@/constants/currency';
@@ -379,11 +379,9 @@ export default function SettingsScreen() {
                                     onPress={async () => {
                                         // Soft sign-out: clear in-memory auth but keep persisted user in storage
                                         try {
-                                            try { await GoogleSignin.revokeAccess(); } catch (_) {
-                                                try { await GoogleSignin.signOut(); } catch (_) { /* ignore */ }
-                                            }
+                                            await GoogleAuthService.signOut();
                                         } catch (e) {
-                                            // ignore errors from GoogleSignin (best-effort)
+                                            // ignore errors from Google sign-out (best-effort)
                                         }
 
                                         await signOut();
@@ -409,9 +407,7 @@ export default function SettingsScreen() {
                                                     style: 'destructive',
                                                     onPress: async () => {
                                                         try {
-                                                            try { await GoogleSignin.revokeAccess(); } catch (_) {
-                                                                try { await GoogleSignin.signOut(); } catch (_) { /* ignore */ }
-                                                            }
+                                                            await GoogleAuthService.signOut();
                                                         } catch (e) {
                                                             // ignore
                                                         }

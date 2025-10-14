@@ -48,6 +48,9 @@ const titles: Record<string, { title: string; icon?: string }> = {
     GameHistory: { title: '游戏记录', icon: 'history' },
     GameDetail: { title: '游戏详情', icon: 'information' },
     GamePlayerRank: { title: '玩家排名', icon: 'trophy' },
+    LocalHistory: { title: '本地记录', icon: 'database' },
+    Profile: { title: '个人资料', icon: 'account-circle' },
+    Settings: { title: '设置', icon: 'cog' }
 };
 
 export const Header = () => {

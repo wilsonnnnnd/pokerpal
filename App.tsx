@@ -18,6 +18,7 @@ import GameDetailScreen from '@/screens/GameDetailScreen';
 import LocalhistoryScreen from '@/screens/LocalHistoryScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
+import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { getDeviceTimezone } from '@/utils/timezoneUtils';
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   GameDetail: { game: any };
   GamePlayerRank: undefined;
   LocalHistory: undefined;
+  Profile: undefined;
   Settings: undefined;
 };
 
@@ -56,6 +58,7 @@ function MainNavigator() {
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
       <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
       <Stack.Screen name="LocalHistory" component={LocalhistoryScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );

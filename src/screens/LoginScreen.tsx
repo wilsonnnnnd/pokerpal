@@ -40,12 +40,8 @@ export default function LoginScreen() {
             text2: `欢迎 ${userProfile.displayName ?? '玩家'}` 
         });
         
-        try {
-            // @ts-ignore
-            navigation.navigate('Home');
-        } catch (e) {
-            // Navigation handled by App's auth subscription
-        }
+        // 不需要手动导航，App.tsx 会监听认证状态变化并自动切换到 MainNavigator
+        // 移除手动导航逻辑，让认证状态自动处理导航
     };
 
     const handleEmailConflict = (conflictError: EmailConflictError) => {
@@ -56,7 +52,6 @@ export default function LoginScreen() {
             switch (provider) {
                 case 'google.com': return 'Google';
                 case 'apple.com': return 'Apple';
-                case 'password': return '邮箱密码';
                 default: return provider;
             }
         };
@@ -172,12 +167,7 @@ export default function LoginScreen() {
             const result = await AuthService.signInAnonymously();
             if (result.success && result.user) {
                 Toast.show({ type: 'success', text1: '已以访客身份登录' });
-                try {
-                    // @ts-ignore
-                    navigation.navigate('Home');
-                } catch (e) {
-                    // Navigation handled by App's auth subscription
-                }
+                // 不需要手动导航，认证状态变化会自动切换导航器
             } else {
                 handleAuthError(new Error(result.error || '访客登录失败'), '访客');
             }

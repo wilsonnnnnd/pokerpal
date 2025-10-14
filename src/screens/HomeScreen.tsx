@@ -15,7 +15,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../App';
-import { PrimaryButton } from '@/components/PrimaryButton';
 import { useGameStore } from '@/stores/useGameStore';
 import { useStoreReady } from '@/hooks/useStoreReady';
 
@@ -100,15 +99,44 @@ const HomeScreen = () => {
                 return;
             }
 
-            const firestoreProfile = await fetchUserProfile(u.uid);
-            const profile = firestoreProfile ? { ...firestoreProfile, uid: u.uid } : undefined;
-            setUser({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL, isAnonymous: u.isAnonymous, profile });
-            // load persisted user for avatar/name preference
             try {
-                const pu = await storage.getLocal(CURRENT_USER_KEY);
-                setPersistedUser(pu);
-            } catch (e) {
-                // ignore
+                const firestoreProfile = await fetchUserProfile(u.uid);
+                console.log('Fetched user profile:', firestoreProfile);
+                
+                // 构建用户对象，优先使用 Firestore 数据
+                const userWithProfile = {
+                    uid: u.uid,
+                    email: firestoreProfile?.email || u.email,
+                    displayName: firestoreProfile?.nickname || u.displayName,
+                    photoURL: firestoreProfile?.photoURL || u.photoURL,
+                    isAnonymous: u.isAnonymous,
+                    profile: firestoreProfile ? {
+                        ...firestoreProfile,
+                        uid: u.uid,
+                        displayName: firestoreProfile.nickname,
+                    } : undefined
+                };
+                
+                setUser(userWithProfile);
+                
+                // load persisted user for avatar/name preference
+                try {
+                    const pu = await storage.getLocal(CURRENT_USER_KEY);
+                    setPersistedUser(pu);
+                } catch (e) {
+                    // ignore
+                }
+            } catch (error) {
+                console.warn('获取用户档案失败:', error);
+                // 即使获取 Firestore 档案失败，也设置基础用户信息
+                setUser({
+                    uid: u.uid,
+                    email: u.email,
+                    displayName: u.displayName,
+                    photoURL: u.photoURL,
+                    isAnonymous: u.isAnonymous,
+                    profile: undefined
+                });
             }
         });
 
@@ -169,70 +197,262 @@ const HomeScreen = () => {
                 <View style={styles.mainContent}>
                     {/* User Profile Card */}
                     {user && (
-                        <View style={styles.userCard}>
+                        <View style={[styles.userCard, { 
+                            marginBottom: Spacing.lg,
+                            backgroundColor: color.lightBackground, // 使用纯白背景
+                            borderWidth: 1,
+                            borderColor: color.lightGray + '60',
+                            shadowColor: color.shadowLight,
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.12,
+                            shadowRadius: 8,
+                            elevation: 3,
+                        }]}>
                             <View style={styles.userInfoContainer}>
-                                <TouchableOpacity onPress={() => navigation.navigate('GamePlayerRank')}>
-                                    {(persistedUser?.photoURL ?? user.photoURL) ? (
-                                        <Image
-                                            source={{ uri: (persistedUser?.photoURL ?? user.photoURL) }}
-                                            style={styles.userAvatar}
-                                        />
+                                <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                                    {user.photoURL ? (
+                                        <View style={{ 
+                                            borderRadius: Radius.round, 
+                                            padding: 3,
+                                            shadowColor: color.shadowLight,
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: 0.1,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }}>
+                                            <Image
+                                                source={{ uri: user.photoURL }}
+                                                style={[styles.userAvatar, { borderRadius: Radius.round}]}
+                                            />
+                                        </View>
                                     ) : (
-                                        <View style={styles.userAvatar}>
+                                        <View style={[styles.userAvatar, {
+                                            backgroundColor: color.primary,
+                                            borderWidth: 3,
+                                            borderColor: color.background,
+                                            shadowColor: color.shadowLight,
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: 0.1,
+                                            shadowRadius: 4,
+                                            elevation: 2,
+                                        }]}>
                                             <Text style={{
-                                                color: color.text,
-                                                fontWeight: '700',
+                                                color: color.lightText,
+                                                fontWeight: '800',
                                                 fontSize: FontSize.h2
                                             }}>
-                                                {((persistedUser?.displayName ?? user.displayName) || '访客').slice(0, 1)}
+                                                {(user.displayName || '访客').slice(0, 1)}
                                             </Text>
                                         </View>
                                     )}
                                 </TouchableOpacity>
 
                                 <View style={styles.userInfo}>
-                                    <Text style={styles.userName}>
-                                        {(persistedUser?.displayName ?? user.displayName) ??
-                                            (user.isAnonymous ? '访客' : '未命名')}
-                                    </Text>
-                                    <Text style={styles.userEmail}>
-                                        {persistedUser?.email ?? user.email ?? (user.isAnonymous ? '访客账户' : '')}
-                                    </Text>
-                                    <View style={styles.userRole}>
-                                        <Text style={styles.roleText}>
-                                            身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs }}>
+                                        <Text style={[styles.userName, { flex: 1 }]}>
+                                            {user.displayName ??
+                                                (user.isAnonymous ? '访客' : '未命名')}
                                         </Text>
                                         {isHost && (
-                                            <View style={styles.vipBadge}>
+                                            <LinearGradient
+                                                colors={[color.primary, color.highLighter]}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 0 }}
+                                                style={[styles.vipBadge, {
+                                                    borderRadius: Radius.sm,
+                                                    paddingHorizontal: Spacing.sm,
+                                                    paddingVertical: 2,
+                                                    shadowColor: color.shadowLight,
+                                                    shadowOffset: { width: 0, height: 1 },
+                                                    shadowOpacity: 0.2,
+                                                    shadowRadius: 2,
+                                                    elevation: 1,
+                                                }]}
+                                            >
                                                 <MaterialCommunityIcons name="crown" size={12} color={color.lightText} />
-                                                <Text style={styles.vipText}>VIP</Text>
-                                            </View>
+                                                <Text style={[styles.vipText, { marginLeft: 2, fontWeight: '700' }]}>HOST</Text>
+                                            </LinearGradient>
                                         )}
                                     </View>
+                                    
+                                    <Text style={[styles.userEmail, { marginBottom: Spacing.sm }]}>
+                                        {user.email ?? (user.isAnonymous ? '访客账户' : '')}
+                                    </Text>
+                                    
+                                    <View style={{
+                                        backgroundColor: color.primary + '10',
+                                        borderRadius: Radius.md,
+                                        padding: Spacing.sm,
+                                        marginBottom: Spacing.sm,
+                                        borderWidth: 1,
+                                        borderColor: color.primary + '20',
+                                    }}>
+                                        <Text style={[styles.roleText, { fontWeight: '600', color: color.primary }]}>
+                                            身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
+                                        </Text>
+                                    </View>
+                                    
+                                    {/* 显示游戏统计信息（如果可用） */}
+                                    {user.profile && !user.isAnonymous && (user.profile as any).gamesPlayed !== undefined && (
+                                        <>
+                                            <View style={{
+                                                backgroundColor: color.info + '10',
+                                                borderRadius: Radius.md,
+                                                padding: Spacing.sm,
+                                                marginBottom: Spacing.xs,
+                                                borderWidth: 1,
+                                                borderColor: color.info + '20',
+                                            }}>
+                                                <Text style={[styles.roleText, { color: color.info, fontWeight: '600' }]}>
+                                                    🎮 游戏 {(user.profile as any).gamesPlayed || 0} 局 · 
+                                                    胜 {(user.profile as any).wins || 0} 负 {(user.profile as any).losses || 0}
+                                                </Text>
+                                            </View>
+                                            
+                                            {/* 显示总收益统计 */}
+                                            <View style={{
+                                                backgroundColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '10' : color.error + '10',
+                                                borderRadius: Radius.md,
+                                                padding: Spacing.sm,
+                                                marginBottom: Spacing.xs,
+                                                borderWidth: 1,
+                                                borderColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '20' : color.error + '20',
+                                            }}>
+                                                <Text style={[styles.roleText, { 
+                                                    color: (user.profile as any).totalProfit >= 0 ? color.confirm : color.error, 
+                                                    fontWeight: '600' 
+                                                }]}>
+                                                    💰 总收益: ${(user.profile as any).totalProfit || 0}
+                                                </Text>
+                                            </View>
+
+                                            {/* 显示ROI统计 */}
+                                            <View style={{
+                                                backgroundColor: (user.profile as any).averageROI >= 0 ? color.confirm + '10' : color.error + '10',
+                                                borderRadius: Radius.md,
+                                                padding: Spacing.sm,
+                                                borderWidth: 1,
+                                                borderColor: (user.profile as any).averageROI >= 0 ? color.confirm + '20' : color.error + '20',
+                                            }}>
+                                                <Text style={[styles.roleText, { 
+                                                    color: (user.profile as any).averageROI >= 0 ? color.confirm : color.error, 
+                                                    fontWeight: '600' 
+                                                }]}>
+                                                    📈 ROI: {(((user.profile as any).averageROI || 0) * 100).toFixed(1)}%
+                                                </Text>
+                                            </View>
+                                        </>
+                                    )}
                                 </View>
                             </View>
                         </View>
                     )}
 
-                    {/* Action Buttons */}
+                    {/* Action Buttons with Enhanced Design */}
                     <View style={styles.buttonsSection}>
-                        <View style={styles.actionsCard}>
-                            <PrimaryButton
-                                title="开始新游戏"
-                                icon="play-circle"
-                                iconColor={color.lightText}
-                                onPress={() => setModalVisible(true)}
-                                style={styles.startGameButton}
-                                size="large"
-                                fullWidth={true}
-                            />
+                        {/* Primary Action - Start Game */}
+                        <View style={{
+                            backgroundColor: color.lightBackground,
+                            borderRadius: Radius.lg,
+                            padding: Spacing.lg,
+                            marginBottom: Spacing.md,
+                            shadowColor: color.shadowLight,
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.12,
+                            shadowRadius: 8,
+                            elevation: 3,
+                            borderWidth: 1,
+                            borderColor: color.lightGray + '50',
+                        }}>
+                            <LinearGradient
+                                colors={[color.primary, color.highLighter]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={{
+                                    borderRadius: Radius.lg,
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() => setModalVisible(true)}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingVertical: Spacing.lg,
+                                        paddingHorizontal: Spacing.xl,
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="play-circle"
+                                        size={24}
+                                        color={color.lightText}
+                                        style={{ marginRight: Spacing.sm }}
+                                    />
+                                    <Text style={{
+                                        color: color.lightText,
+                                        fontSize: FontSize.h3,
+                                        fontWeight: '700',
+                                    }}>
+                                        开始新游戏
+                                    </Text>
+                                </TouchableOpacity>
+                            </LinearGradient>
+                        </View>
 
-                            <View style={styles.buttonGrid}>
+                        {/* Secondary Actions Grid */}
+                        <View style={{
+                            backgroundColor: color.lightBackground,
+                            borderRadius: Radius.lg,
+                            padding: Spacing.lg,
+                            marginBottom: Spacing.md,
+                            shadowColor: color.shadowLight,
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.12,
+                            shadowRadius: 8,
+                            elevation: 3,
+                            borderWidth: 1,
+                            borderColor: color.lightGray + '50',
+                        }}>
+                            <Text style={{
+                                fontSize: FontSize.body,
+                                fontWeight: '700',
+                                color: color.title,
+                                marginBottom: Spacing.md,
+                                textAlign: 'center',
+                            }}>
+                                功能菜单
+                            </Text>
+                            
+                            <View style={{
+                                flexDirection: 'row',
+                                flexWrap: 'wrap',
+                                justifyContent: 'space-between',
+                                gap: Spacing.md, // 统一间隔
+                            }}>
                                 {[
+                                    {
+                                        key: 'profile',
+                                        title: '个人资料',
+                                        icon: 'account-circle',
+                                        color: color.primary,
+                                        onPress: () => navigation.navigate('Profile'),
+                                        visible: !user?.isAnonymous,
+                                    },
+                                    {
+                                        key: 'ranking',
+                                        title: '玩家排行',
+                                        icon: 'trophy',
+                                        color: color.warning,
+                                        onPress: () => navigation.navigate('GamePlayerRank'),
+                                        visible: isHost,
+                                    },
                                     {
                                         key: 'history',
                                         title: '游戏历史',
                                         icon: 'history',
+                                        color: color.info,
                                         onPress: () => navigation.navigate('GameHistory'),
                                         visible: isHost,
                                     },
@@ -240,40 +460,83 @@ const HomeScreen = () => {
                                         key: 'localHistory',
                                         title: '本地历史',
                                         icon: 'database',
+                                        color: color.confirm,
                                         onPress: () => navigation.navigate('LocalHistory'),
                                         visible: true,
-                                    },
-                                    {
-                                        key: 'ranking',
-                                        title: '玩家排行',
-                                        icon: 'trophy',
-                                        onPress: () => navigation.navigate('GamePlayerRank'),
-                                        visible: isHost,
                                     },
                                     {
                                         key: 'settings',
                                         title: '全局设置',
                                         icon: 'cog-outline',
+                                        color: color.mutedText,
                                         onPress: () => navigation.navigate('Settings'),
                                         visible: true,
                                     },
-                                ].filter(btn => btn.visible).map((btn) => (
-                                    <PrimaryButton
-                                        key={btn.key}
-                                        title={btn.title}
-                                        icon={btn.icon as any}
-                                        variant="outlined"
-                                        onPress={btn.onPress}
-                                        style={styles.gridButton}
-                                        iconColor={color.info}
-                                    />
-                                ))}
+                                ].filter(btn => btn.visible).map((btn, index, filteredArray) => {
+                                    // 计算动态宽度，考虑间隔
+                                    const itemsPerRow = filteredArray.length >= 4 ? 2 : filteredArray.length <= 2 ? filteredArray.length : 3;
+                                    const isLastRow = index >= filteredArray.length - (filteredArray.length % itemsPerRow || itemsPerRow);
+                                    const itemWidth = itemsPerRow === 1 ? '100%' : 
+                                                     itemsPerRow === 2 ? '47%' : 
+                                                     '30%';
+                                    
+                                    return (
+                                        <TouchableOpacity
+                                            key={btn.key}
+                                            onPress={btn.onPress}
+                                            style={{
+                                                width: itemWidth,
+                                                backgroundColor: color.lightBackground,
+                                                borderRadius: Radius.md,
+                                                padding: Spacing.md,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderWidth: 1,
+                                                borderColor: btn.color + '35',
+                                                shadowColor: color.shadowLight,
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.1,
+                                                shadowRadius: 4,
+                                                elevation: 2,
+                                                marginBottom: isLastRow ? 0 : Spacing.sm, // 最后一行不加底部间距
+                                                minHeight: 65, // 减小按钮高度
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name={btn.icon as any}
+                                                size={20} // 减小图标尺寸
+                                                color={btn.color}
+                                                style={{ marginBottom: Spacing.xs }}
+                                            />
+                                            <Text style={{
+                                                color: btn.color,
+                                                fontSize: FontSize.small - 1, // 减小字体
+                                                fontWeight: '600',
+                                                textAlign: 'center',
+                                            }}>
+                                                {btn.title}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
                             </View>
+                        </View>
 
-                            <PrimaryButton
-                                title="退出登录"
-                                icon="logout"
-                                variant="outlined"
+                        {/* Logout Button */}
+                        <View style={{
+                            backgroundColor: color.lightBackground,
+                            borderRadius: Radius.lg,
+                            padding: Spacing.lg,
+                            shadowColor: color.shadowLight,
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.12,
+                            shadowRadius: 8,
+                            elevation: 3,
+                            borderWidth: 1,
+                            borderColor: color.lightGray + '50',
+                        }}>
+                            <TouchableOpacity
                                 onPress={async () => {
                                     try {
                                         await signOut();
@@ -285,9 +548,33 @@ const HomeScreen = () => {
                                         Toast.show({ type: 'error', text1: '退出登录失败' });
                                     }
                                 }}
-                                style={styles.logoutButton}
-                                iconColor={color.error}
-                            />
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    paddingVertical: Spacing.md,
+                                    paddingHorizontal: Spacing.lg,
+                                    borderRadius: Radius.md,
+                                    backgroundColor: 'transparent',
+                                    borderWidth: 1.5,
+                                    borderColor: color.error + '60',
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <MaterialCommunityIcons
+                                    name="logout"
+                                    size={20}
+                                    color={color.error}
+                                    style={{ marginRight: Spacing.sm }}
+                                />
+                                <Text style={{
+                                    color: color.error,
+                                    fontSize: FontSize.body,
+                                    fontWeight: '600',
+                                }}>
+                                    退出登录
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
