@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import usePermission from '@/hooks/usePermission';
 import { AddPlayerCardProps, AddPlayerTab } from '@/types';
 import { AddPlayerCardStyles } from '@/assets/styles';
-import { fetchUsersByEmail, fetchUsersByHostname } from '@/firebase/fetchUser';
+import { fetchUsersByHostname } from '@/firebase/fetchUser';
 import { onAuthStateChanged } from '@/services/authService';
 
 

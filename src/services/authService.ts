@@ -9,6 +9,7 @@ import {
     fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import { db } from '@/firebase/config';
+import { addUserToHostnameIndex } from '@/firebase/fetchUser';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
 import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
@@ -289,17 +290,27 @@ class AuthService {
 
                 await setDoc(userRef, userData);
 
-                // 如果有邮箱，创建邮箱索引
+                // 如果有邮箱，创建邮箱索引（同时写入 hostname 分组索引）
                 if (user.email) {
                     const emailKey = user.email.toLowerCase().trim();
-                    await setDoc(doc(db, userByEmailDoc, emailKey), {
-                        uid,
-                        nickname: userData.nickname,
-                        photoURL: userData.photoURL,
-                        provider: user.provider,
-                        registered: true,
-                        lastLinkedAt: now,
-                    }, { merge: true });
+
+                    // 尝试使用 displayName 作为 hostname，如果不可用则从环境读取或使用 'default'
+                    const hostnameCandidate = user.displayName;
+
+                    if (!hostnameCandidate) return;
+
+                    try {
+                        // 优先写入 hostname 分组索引
+                        await addUserToHostnameIndex(hostnameCandidate, user.email, {
+                            uid,
+                            nickname: userData.nickname,
+                            photoURL: userData.photoURL,
+                            provider: user.provider,
+                        });
+                    } catch (e) {
+                        // 记录但不阻塞主流程
+                        console.warn('写入 hostname 索引失败，回退到全局邮箱索引:', e);
+                    }
                 }
             } else {
                 // 用户已存在，仅更新时间戳

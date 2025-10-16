@@ -1,7 +1,7 @@
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
-import { userByEmailDoc, userDoc } from '@/constants/namingVar';
+import { playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { logInfo } from '@/utils/useLogger';
 
 export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: string): Promise<void> {
@@ -14,12 +14,11 @@ export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: 
     const email = player.email.toLowerCase();
 
     const userRef = doc(db, userDoc, uid);
-    const emailRef = doc(db, userByEmailDoc, email);
     
     // 添加按hostname分组的邮箱映射
     let hostnameEmailRef;
     if (hostname) {
-        hostnameEmailRef = doc(db, userByEmailDoc, hostname, 'emails', email);
+        hostnameEmailRef = doc(db, userByEmailDoc, hostname, playerDoc, email);
     }
 
     try {
@@ -47,11 +46,6 @@ export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: 
             created: new Date().toISOString(),
         }, { merge: true });
 
-        // 3️⃣ 写入全局 email → uid 映射（用于登录白名单校验）
-        await setDoc(emailRef, {
-            uid,
-            registered: true,
-        });
 
         logInfo(`✅ 玩家信息已写入：${player.nickname} (${uid})`, `email: ${email}`);
     } catch (error) {
