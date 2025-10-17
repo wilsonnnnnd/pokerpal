@@ -57,7 +57,6 @@ export const fetchExchangeRates = async (baseCurrency: string = 'AUD'): Promise<
         const cached = await getCachedRates(cacheKey);
         
         if (cached && isCacheValid(cached)) {
-            console.warn(`Using cached exchange rates for ${baseCurrency}`);
             return cached.data;
         }
 

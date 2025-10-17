@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     TextInput,
-    Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,8 +15,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { onAuthStateChanged, signOut } from '@/services/authService';
+import { onAuthStateChanged } from '@/services/authService';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
+import { fetchUserGameHistory, UserGameHistoryItem } from '@/firebase/fetchUserGameHistory';
 import storage from '@/services/storageService';
 import { CURRENT_USER_KEY, playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { UserProfile } from '@/types';
@@ -48,6 +48,9 @@ const ProfileScreen = () => {
         nickname: '',
         email: '',
     });
+    // 游戏历史相关状态
+    const [gameHistory, setGameHistory] = useState<UserGameHistoryItem[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(async (u: any) => {
@@ -80,6 +83,19 @@ const ProfileScreen = () => {
                     nickname: firestoreProfile?.nickname || u.displayName || '',
                     email: firestoreProfile?.email || u.email || '',
                 });
+
+                // 加载游戏历史（非匿名用户）
+                if (!u.isAnonymous) {
+                    setHistoryLoading(true);
+                    try {
+                        const history = await fetchUserGameHistory(u.uid, 10, true);
+                        setGameHistory(history);
+                    } catch (historyError) {
+                        console.warn('获取游戏历史失败:', historyError);
+                    } finally {
+                        setHistoryLoading(false);
+                    }
+                }
 
             } catch (error) {
                 console.warn('获取用户档案失败:', error);
@@ -165,7 +181,8 @@ const ProfileScreen = () => {
 
                         if (confirmed) {
                             try {
-                                await signOut();
+                                // 直接导航到登录页面，让认证状态变化自动处理
+                                (navigation as any).navigate('Login');
                                 Toast.show({ type: 'success', text1: '已退出登录' });
                             } catch (e) {
                                 Toast.show({ type: 'error', text1: '退出失败' });
@@ -229,36 +246,7 @@ const ProfileScreen = () => {
         }
     };
 
-    const handleLogout = async () => {
-        Alert.alert(
-            '确认退出',
-            '您确定要退出登录吗？',
-            [
-                { text: '取消', style: 'cancel' },
-                {
-                    text: '退出',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await signOut();
-                            Toast.show({
-                                type: 'success',
-                                text1: '已退出登录',
-                            });
-                            // 退出后导航到登录页面
-                            (navigation as any).navigate('Login');
-                        } catch (error) {
-                            Toast.show({
-                                type: 'error',
-                                text1: '退出失败',
-                                text2: '请稍后再试',
-                            });
-                        }
-                    },
-                },
-            ]
-        );
-    };
+
 
     if (loading) {
         return (
@@ -641,6 +629,197 @@ const ProfileScreen = () => {
                     </View>
                 )}
 
+                {/* Game History Section */}
+                {!user.isAnonymous && (
+                    <View style={{
+                        backgroundColor: color.lightBackground,
+                        borderRadius: Radius.lg,
+                        padding: Spacing.lg,
+                        marginBottom: Spacing.md,
+                        shadowColor: color.shadowLight,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 6,
+                        elevation: 2,
+                        borderWidth: 1,
+                        borderColor: color.lightGray + '30',
+                    }}>
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: Spacing.md,
+                        }}>
+                            <Text style={{
+                                fontSize: FontSize.body,
+                                fontWeight: '700',
+                                color: color.title,
+                            }}>
+                                最近游戏
+                            </Text>
+                            
+                            <View style={{
+                                backgroundColor: color.primary + '15',
+                                paddingHorizontal: Spacing.sm,
+                                paddingVertical: Spacing.xs,
+                                borderRadius: Radius.sm,
+                            }}>
+                                <Text style={{
+                                    fontSize: FontSize.small,
+                                    color: color.primary,
+                                    fontWeight: '600',
+                                }}>
+                                    {gameHistory.length} 局
+                                </Text>
+                            </View>
+                        </View>
+
+                        {historyLoading ? (
+                            <View style={{
+                                alignItems: 'center',
+                                paddingVertical: Spacing.lg,
+                            }}>
+                                <ActivityIndicator size="small" color={color.primary} />
+                                <Text style={{
+                                    fontSize: FontSize.small,
+                                    color: color.mutedText,
+                                    marginTop: Spacing.xs,
+                                }}>
+                                    加载游戏历史...
+                                </Text>
+                            </View>
+                        ) : gameHistory.length === 0 ? (
+                            <View style={{
+                                alignItems: 'center',
+                                paddingVertical: Spacing.xl,
+                            }}>
+                                <MaterialCommunityIcons
+                                    name="cards-outline"
+                                    size={48}
+                                    color={color.mutedText}
+                                    style={{ marginBottom: Spacing.sm }}
+                                />
+                                <Text style={{
+                                    fontSize: FontSize.body,
+                                    color: color.mutedText,
+                                    textAlign: 'center',
+                                }}>
+                                    还没有游戏记录
+                                </Text>
+                                <Text style={{
+                                    fontSize: FontSize.small,
+                                    color: color.mutedText,
+                                    textAlign: 'center',
+                                    marginTop: Spacing.xs,
+                                }}>
+                                    开始您的第一局游戏吧！
+                                </Text>
+                            </View>
+                        ) : (
+                            <View>
+                                {gameHistory.slice(0, 5).map((game, index) => (
+                                    <View
+                                        key={game.gameId}
+                                        style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            paddingVertical: Spacing.sm,
+                                            borderBottomWidth: index < Math.min(gameHistory.length, 5) - 1 ? 1 : 0,
+                                            borderBottomColor: color.lightGray + '30',
+                                        }}
+                                    >
+                                        <View style={{ flex: 1 }}>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                marginBottom: Spacing.xs,
+                                            }}>
+                                                <MaterialCommunityIcons
+                                                    name={game.result === 'win' ? 'trending-up' : game.result === 'lose' ? 'trending-down' : 'trending-neutral'}
+                                                    size={16}
+                                                    color={game.result === 'win' ? color.confirm : game.result === 'lose' ? color.error : color.mutedText}
+                                                    style={{ marginRight: Spacing.xs }}
+                                                />
+                                                <Text style={{
+                                                    fontSize: FontSize.small,
+                                                    fontWeight: '600',
+                                                    color: color.title,
+                                                }}>
+                                                    {game.gameId.slice(0, 12)}
+                                                </Text>
+                                                
+                                                {game.gameDetails && (
+                                                    <Text style={{
+                                                        fontSize: FontSize.small,
+                                                        color: color.mutedText,
+                                                        marginLeft: Spacing.sm,
+                                                    }}>
+                                                        {game.gameDetails.smallBlind}/{game.gameDetails.bigBlind}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            
+                                            <Text style={{
+                                                fontSize: FontSize.small,
+                                                color: color.mutedText,
+                                            }}>
+                                                {new Date(game.finalizedAt).toLocaleDateString('zh-CN', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </Text>
+                                        </View>
+                                        
+                                        <View style={{
+                                            alignItems: 'flex-end',
+                                        }}>
+                                            <Text style={{
+                                                fontSize: FontSize.body,
+                                                fontWeight: '700',
+                                                color: (game.settleCashDiff ?? 0) >= 0 ? color.confirm : color.error,
+                                            }}>
+                                                {(game.settleCashDiff ?? 0) >= 0 ? '+' : ''}${Number(game.settleCashDiff || 0).toFixed(0)}
+                                            </Text>
+                                            
+                                            <Text style={{
+                                                fontSize: FontSize.small,
+                                                color: color.mutedText,
+                                            }}>
+                                                ROI: {(((game.settleROI ?? 0) * 100).toFixed(1))}%
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))}
+                                
+                                {gameHistory.length > 5 && (
+                                    <TouchableOpacity
+                                        style={{
+                                            alignItems: 'center',
+                                            paddingVertical: Spacing.md,
+                                            marginTop: Spacing.sm,
+                                        }}
+                                        onPress={() => {
+                                            // 可以导航到完整的游戏历史页面
+                                            console.log('导航到完整游戏历史页面');
+                                        }}
+                                    >
+                                        <Text style={{
+                                            fontSize: FontSize.small,
+                                            color: color.primary,
+                                            fontWeight: '600',
+                                        }}>
+                                            查看全部 {gameHistory.length} 局游戏
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+                    </View>
+                )}
+
                 {/* Action Buttons */}
                 {editing && (
                     <View style={{
@@ -709,47 +888,6 @@ const ProfileScreen = () => {
                     </View>
                 )}
 
-                {/* Logout Button */}
-                <View style={{
-                    backgroundColor: color.lightBackground,
-                    borderRadius: Radius.lg,
-                    padding: Spacing.lg,
-                    marginBottom: Spacing.xl,
-                    shadowColor: color.shadowLight,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 6,
-                    elevation: 2,
-                    borderWidth: 1,
-                    borderColor: color.lightGray + '30',
-                }}>
-                    <TouchableOpacity
-                        onPress={handleLogout}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            paddingVertical: Spacing.md,
-                            borderWidth: 1.5,
-                            borderColor: color.error + '60',
-                            borderRadius: Radius.md,
-                        }}
-                    >
-                        <MaterialCommunityIcons
-                            name="logout"
-                            size={20}
-                            color={color.error}
-                            style={{ marginRight: Spacing.sm }}
-                        />
-                        <Text style={{
-                            color: color.error,
-                            fontSize: FontSize.body,
-                            fontWeight: '600',
-                        }}>
-                            退出登录
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </View>
         </ScrollView>
     );

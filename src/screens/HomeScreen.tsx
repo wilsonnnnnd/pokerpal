@@ -33,6 +33,7 @@ import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 import { useLogger } from '@/utils/useLogger';
 import { UserProfile } from '@/types';
+import appConfig from '../../app.json';
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -101,7 +102,6 @@ const HomeScreen = () => {
 
             try {
                 const firestoreProfile = await fetchUserProfile(u.uid);
-                console.log('Fetched user profile:', firestoreProfile); // --- IGNORE ---
                 // 构建用户对象，优先使用 Firestore 数据
                 const userWithProfile = {
                     uid: u.uid,
@@ -596,7 +596,7 @@ const HomeScreen = () => {
             {/* Footer */}
             <View style={styles.footerSection}>
                 <Text style={styles.footerText}>
-                    版本 1.0.0 · 轻松记录每局游戏 ✨
+                    版本 {appConfig.expo.version} · 轻松记录每局游戏 ✨
                 </Text>
             </View>
         </>
