@@ -471,6 +471,7 @@ const HomeScreen = () => {
                                         onPress: () => navigation.navigate('Settings'),
                                         visible: true,
                                     },
+
                                 ].filter(btn => btn.visible).map((btn, index, filteredArray) => {
                                     // 计算动态宽度，考虑间隔
                                     const itemsPerRow = filteredArray.length >= 4 ? 2 : filteredArray.length <= 2 ? filteredArray.length : 3;

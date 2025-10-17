@@ -11,11 +11,13 @@ import {
     StyleSheet,
 } from 'react-native';
 import { collection, getDocs, limit, orderBy, query, startAfter, DocumentSnapshot } from 'firebase/firestore';
+import { where, documentId } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
-import { userDoc } from '@/constants/namingVar';
+import { playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import Toast from 'react-native-toast-message';
+import { getHosterId } from '@/utils/hostInfo';
 import { GamePlayerRankstyles as styles } from '@/assets/styles';
 import { usePaginatedPageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
@@ -38,6 +40,7 @@ export type AggregatedPlayer = {
     averageROI: number;      // ROI 累计（平均时除以 gamesPlayed）
     gamesPlayed: number;
     photoURL?: string;
+    lastPlayedAt?: number;   // 最后参与时间（时间戳）
 };
 
 // ===== 头像子项（保持你原样）=====
@@ -145,6 +148,9 @@ export default function PlayerRankingScreen() {
     // 分页核心
     const PAGE_SIZE = 20;
     const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+    // index id list and cursor for paging through index
+    const [indexIds, setIndexIds] = useState<string[]>([]);
+    const indexCursorRef = useRef<number>(0);
     const initializedRef = useRef<{ [key: string]: boolean }>({}); // 防止重复初始化，按 sortBy 区分
     const isLoadingRef = useRef<boolean>(false); // 防止重复加载
     const hasNextPageRef = useRef<boolean>(true); // 用 ref 确保状态同步
@@ -176,27 +182,79 @@ export default function PlayerRankingScreen() {
                 pageState.setIsLoadingMore(true);
             }
 
-            // ✅ 只使用一次 orderBy(currentSortBy, 'desc')
-            const baseRef = collection(db, userDoc);
-            let q = query(baseRef, orderBy(currentSortBy, 'desc'), limit(PAGE_SIZE));
-            if (!reset && currentLastDoc) {
-                q = query(baseRef, orderBy(currentSortBy, 'desc'), startAfter(currentLastDoc), limit(PAGE_SIZE));
+            // 新流程：先确保 indexIds 已加载（users-by-email/{email}/players 下的 doc id 列表）
+            let indexList = indexIds;
+            if (indexList.length === 0) {
+                // load index from users-by-email collection - here we assume email is stored on current user or a fixed path
+                try {
+                    // 读取所有 index 文档（注意：如果很多，可能需要后端分页或云函数支持）
+                    const email = await getHosterId();
+                    if (!email) {
+                        pageState.setError('无法获取当前用户邮箱');
+                        return;
+                    }
+                    const idxRef = collection(db, userByEmailDoc, email, playerDoc);
+                    const idxSnap = await getDocs(idxRef);
+                    // 从 index 文档中提取 uid 字段（优先使用 data.uid），若没有则回退到 doc.id
+                    const uids = idxSnap.docs.map(d => {
+                        const data = d.data() as any;
+                        const uidFromData = data && typeof data.uid === 'string' && data.uid.trim() ? data.uid.trim() : undefined;
+                        return uidFromData || d.id;
+                    }).filter(Boolean);
+                    setIndexIds(uids);
+                    indexList = uids;
+                } catch (e) {
+                    console.error('[PlayerRanking] load index ids error', e);
+                    pageState.setError('读取玩家索引失败');
+                    return;
+                }
             }
 
-            const snap = await getDocs(q);
-            const docs = snap.docs;
+            // 计算本页要拉的 id 段
+            if (reset) indexCursorRef.current = 0;
+            const start = reset ? 0 : indexCursorRef.current;
+            const end = Math.min(start + PAGE_SIZE, indexList.length);
+            const idsPage = indexList.slice(start, end);
 
-            const page: AggregatedPlayer[] = docs.map((d) => {
-                const data: any = d.data() ?? {};
-                return {
-                    id: d.id,
+            // 批量按 id 拉 users-by-uid（documentId in 查询，分片为 10）
+            const fetchUsersByIds = async (idsToFetch: string[]) => {
+                const map = new Map<string, any>();
+                if (!idsToFetch.length) return map;
+                const chunkSize = 10;
+                for (let i = 0; i < idsToFetch.length; i += chunkSize) {
+                    const chunk = idsToFetch.slice(i, i + chunkSize);
+                    const q = query(collection(db, userDoc), where(documentId(), 'in', chunk));
+                    const snap = await getDocs(q);
+                    for (const d of snap.docs) {
+                        map.set(d.id, d.data());
+                    }
+                }
+                return map;
+            };
+
+            const usersMap = await fetchUsersByIds(idsPage);
+
+            // Debug: log each returned user's data and when we skip
+
+            // 过滤：如果用户数据中没有 lastPlayedAt 则视为无效（不返回）
+            const page: AggregatedPlayer[] = idsPage.reduce<AggregatedPlayer[]>((acc, id) => {
+                const data: any = usersMap.get(id) || {};
+                if (!data || data.lastPlayedAt === undefined || data.lastPlayedAt === null) {
+                    // skip users without lastPlayedAt
+                    return acc;
+                }
+
+                acc.push({
+                    id,
                     nickname: data.nickname ?? '未知玩家',
                     totalProfit: Number(data.totalProfit) || 0,
                     averageROI: Number(data.averageROI) || 0,
                     gamesPlayed: Number(data.gamesPlayed) || 0,
                     photoURL: data.photoURL ?? '',
-                };
-            });
+                    lastPlayedAt: data.lastPlayedAt,
+                });
+                return acc;
+            }, []);
             if (reset) {
                 setPlayers(page);
             } else {
@@ -208,12 +266,9 @@ export default function PlayerRankingScreen() {
                 });
             }
 
-            // 更新 lastDoc 和分页状态
-            const newLastDoc = docs.length > 0 ? docs[docs.length - 1] : null;
-            setLastDoc(newLastDoc);
-            
-            // 如果返回的文档数量少于 PAGE_SIZE，说明没有更多数据了
-            const hasMore = docs.length === PAGE_SIZE;
+            // 更新 index cursor 和分页状态
+            indexCursorRef.current = end;
+            const hasMore = end < indexList.length;
             pageState.setHasNextPage(hasMore);
             hasNextPageRef.current = hasMore; // 同步更新 ref
             
@@ -259,6 +314,8 @@ export default function PlayerRankingScreen() {
         pageState.setHasNextPage(true);
         hasNextPageRef.current = true; // 重置 ref
         setLastDoc(null);
+        setIndexIds([]);
+        indexCursorRef.current = 0;
         isLoadingRef.current = false; // 重置加载状态
         fetchPage(true);
     }, []); // 移除 fetchPage 和 pageState 依赖
@@ -285,6 +342,8 @@ export default function PlayerRankingScreen() {
             hasNextPageRef.current = true; // 重置 ref
             isLoadingRef.current = false; // 重置加载状态
             initializedRef.current = {}; // 重置初始化状态
+            setIndexIds([]);
+            indexCursorRef.current = 0;
             setSortBy(SORT_TYPES.TOTAL_PROFIT);
         }
     }, [sortBy, pageState]);
@@ -298,6 +357,8 @@ export default function PlayerRankingScreen() {
             hasNextPageRef.current = true; // 重置 ref
             isLoadingRef.current = false; // 重置加载状态
             initializedRef.current = {}; // 重置初始化状态
+            setIndexIds([]);
+            indexCursorRef.current = 0;
             setSortBy(SORT_TYPES.ROI);
         }
     }, [sortBy, pageState]);
@@ -311,6 +372,8 @@ export default function PlayerRankingScreen() {
             hasNextPageRef.current = true; // 重置 ref
             isLoadingRef.current = false; // 重置加载状态
             initializedRef.current = {}; // 重置初始化状态
+            setIndexIds([]);
+            indexCursorRef.current = 0;
             setSortBy(SORT_TYPES.APPEARANCES);
         }
     }, [sortBy, pageState]);
@@ -372,6 +435,8 @@ export default function PlayerRankingScreen() {
     const handleRetry = useCallback(() => {
         initializedRef.current = {}; // 重置初始化状态
         setLastDoc(null);
+        setIndexIds([]);
+        indexCursorRef.current = 0;
         isLoadingRef.current = false; // 重置加载状态
         pageState.setHasNextPage(true);
         hasNextPageRef.current = true; // 重置 ref
