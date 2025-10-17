@@ -10,7 +10,7 @@ import {
 import { db } from '@/firebase/config';
 import { addUserToHostnameIndex } from '@/firebase/fetchUser';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
-import { userDoc, userByEmailDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
+import { userDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
 import { AppleAuthService } from '@/services/appleAuthService';
 import { GoogleAuthService } from '@/services/googleAuthService';
@@ -241,15 +241,9 @@ class AuthService {
 
                 // 如果有邮箱，创建邮箱索引（同时写入 hostname 分组索引）
                 if (user.email) {
-
-                    // 尝试使用 displayName 作为 hostname，如果不可用则从环境读取或使用 'default'
-                    const hostnameCandidate = user.displayName;
-
-                    if (!hostnameCandidate) return;
-
                     try {
                         // 优先写入 hostname 分组索引
-                        await addUserToHostnameIndex(hostnameCandidate, user.email, {
+                        await addUserToHostnameIndex(user.email, {
                             uid,
                             nickname: userData.nickname,
                             photoURL: userData.photoURL,

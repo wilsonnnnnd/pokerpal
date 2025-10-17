@@ -5,7 +5,7 @@ import storage from '@/services/storageService';
 export async function getHosterId(): Promise<string | null> {
     const pu = await storage.getLocal(CURRENT_USER_KEY);
     // support multiple possible casing from different writes
-    const raw = pu?.displayName ?? pu?.DisplayName ?? pu?.uid ?? pu?.id ?? null;
+    const raw = pu?.email ?? null;
     if (!raw) return null;
     return String(raw).trim() || 'default';
 }

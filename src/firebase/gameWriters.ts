@@ -163,9 +163,9 @@ export async function upsertUserAndCounters(
 export async function upsertEmailIndex(bb: BatchBuilder, db: any, player: Player) {
     if (!player.email) return
     const emailKey = player.email.toLowerCase().trim()
-    const hosterName = await getHosterId()
-    if (!hosterName) return
-    const emailRef = doc(db, userByEmailDoc, hosterName, playerDoc, emailKey)
+    const hosterEmail = await getHosterId()
+    if (!hosterEmail) return
+    const emailRef = doc(db, userByEmailDoc, hosterEmail, playerDoc, emailKey)
     bb.set(emailRef, {
         nickname: player.nickname,
         uid: player.id,

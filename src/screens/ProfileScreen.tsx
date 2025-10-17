@@ -19,11 +19,16 @@ import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged, signOut } from '@/services/authService';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
 import storage from '@/services/storageService';
-import { CURRENT_USER_KEY } from '@/constants/namingVar';
+import { CURRENT_USER_KEY, playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { UserProfile } from '@/types';
 import Toast from 'react-native-toast-message';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { updateProfile } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
+import { usePopup } from '@/components/PopupProvider';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
@@ -37,7 +42,7 @@ const ProfileScreen = () => {
         isAnonymous?: boolean;
         profile?: UserProfile;
     } | null>(null);
-
+    const { confirmPopup: showPopup } = usePopup();
     // 编辑状态的数据
     const [editData, setEditData] = useState({
         nickname: '',
@@ -100,20 +105,126 @@ const ProfileScreen = () => {
     }, []);
 
     const handleSave = async () => {
+        if (!user?.uid) {
+            Toast.show({
+                type: 'error',
+                text1: '保存失败',
+                text2: '用户信息无效',
+            });
+            return;
+        }
+
         try {
-            // 这里应该调用更新用户档案的API
-            // TODO: 实现用户档案更新功能
+            const { nickname } = editData;
+
+            // 验证输入 - 仅校验昵称
+            if (!nickname.trim()) {
+                Toast.show({
+                    type: 'error',
+                    text1: '保存失败',
+                    text2: '昵称不能为空',
+                });
+                return;
+            }
+
+            // 更新 Firestore 用户档案（只更新 nickname）
+            const userRef = doc(db, userDoc, user.uid);
+            const userEmailRef = user.email ? doc(db, userByEmailDoc, user.email, playerDoc,user.email) : null;
+            const updateData: any = {
+                nickname: nickname.trim(),
+                updatedAt: new Date().toISOString(),
+            };
+
+            await updateDoc(userRef, updateData);
+            
+            // 仅当用户有邮箱时才更新邮箱相关文档
+            if (userEmailRef) {
+                await updateDoc(userEmailRef, updateData);
+            }
+
+            // 更新 Firebase Auth 用户信息（displayName）
+            const auth = getAuth();
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                try {
+                    await updateProfile(currentUser, {
+                        displayName: nickname.trim(),
+                    });
+                } catch (authUpdateError) {
+                    console.warn('Firebase Auth 更新失败:', authUpdateError);
+                    // 不阻塞主流程，Firestore 更新已成功
+                }
+                    // 提示用户重新登录以刷新会话（使用应用统一弹窗）
+                    try {
+                        const confirmed = await showPopup({
+                            title: '需要重新登录',
+                            message: '为了确保所有服务使用新的昵称，建议您重新登录。是否现在退出登录并重新登录？',
+                            note: '',
+                            isWarning: true,
+                        });
+
+                        if (confirmed) {
+                            try {
+                                await signOut();
+                                Toast.show({ type: 'success', text1: '已退出登录' });
+                            } catch (e) {
+                                Toast.show({ type: 'error', text1: '退出失败' });
+                            }
+                        }
+                    } catch (popupError) {
+                        // 如果弹窗失败，回退到简单提示
+                        console.warn('showPopup 失败:', popupError);
+                    }
+            }
+
+            // 更新本地状态（只修改 displayName 和 profile.nickname）
+            setUser(prev => prev ? {
+                ...prev,
+                displayName: nickname.trim(),
+                profile: prev.profile ? {
+                    ...prev.profile,
+                    nickname: nickname.trim(),
+                    updatedAt: new Date().toISOString(),
+                } : undefined
+            } : null);
+
+            // 更新本地存储（只更新 displayName）
+            try {
+                const storedUser = await storage.getLocal(CURRENT_USER_KEY);
+                if (storedUser) {
+                    const updatedStoredUser = {
+                        ...storedUser,
+                        displayName: nickname.trim(),
+                    };
+                    await storage.setLocal(CURRENT_USER_KEY, updatedStoredUser);
+                }
+            } catch (storageError) {
+                console.warn('本地存储更新失败:', storageError);
+                // 不阻塞主流程
+            }
+
             Toast.show({
                 type: 'success',
                 text1: '档案已更新',
                 text2: '您的个人信息已成功保存',
             });
             setEditing(false);
-        } catch (error) {
+        } catch (error: any) {
+            console.error('用户档案更新失败:', error);
+
+            let errorMessage = '无法保存您的个人信息，请稍后再试';
+
+            // 处理特定错误
+            if (error?.code === 'permission-denied') {
+                errorMessage = '权限不足，无法更新用户信息';
+            } else if (error?.message?.includes('network')) {
+                errorMessage = '网络连接异常，请检查网络后重试';
+            }
+
             Toast.show({
                 type: 'error',
                 text1: '更新失败',
-                text2: '无法保存您的个人信息，请稍后再试',
+                text2: errorMessage,
             });
         }
     };
@@ -134,7 +245,8 @@ const ProfileScreen = () => {
                                 type: 'success',
                                 text1: '已退出登录',
                             });
-                            navigation.goBack();
+                            // 退出后导航到登录页面
+                            (navigation as any).navigate('Login');
                         } catch (error) {
                             Toast.show({
                                 type: 'error',
@@ -295,14 +407,48 @@ const ProfileScreen = () => {
                     borderWidth: 1,
                     borderColor: color.lightGray + '30',
                 }}>
-                    <Text style={{
-                        fontSize: FontSize.body,
-                        fontWeight: '700',
-                        color: color.title,
+                    <View style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         marginBottom: Spacing.md,
                     }}>
-                        基本信息
-                    </Text>
+                        <Text style={{
+                            fontSize: FontSize.body,
+                            fontWeight: '700',
+                            color: color.title,
+                        }}>
+                            基本信息
+                        </Text>
+
+                        {!editing && (
+                            <TouchableOpacity
+                                onPress={() => setEditing(true)}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingHorizontal: Spacing.sm,
+                                    paddingVertical: Spacing.xs,
+                                    borderRadius: Radius.sm,
+                                    backgroundColor: color.primary + '15',
+                                }}
+                            >
+                                <MaterialCommunityIcons
+                                    name="pencil"
+                                    size={16}
+                                    color={color.primary}
+                                    style={{ marginRight: Spacing.xs }}
+                                />
+                                <Text style={{
+                                    fontSize: FontSize.small,
+                                    color: color.primary,
+                                    fontWeight: '600',
+                                }}>
+                                    编辑
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
                     {/* Nickname */}
                     <View style={{ marginBottom: Spacing.md }}>
@@ -314,32 +460,24 @@ const ProfileScreen = () => {
                         }}>
                             昵称
                         </Text>
-                        {editing ? (
-                            <TextInput
-                                value={editData.nickname}
-                                onChangeText={(text) => setEditData(prev => ({ ...prev, nickname: text }))}
-                                style={{
-                                    borderWidth: 1,
-                                    borderColor: color.lightGray,
-                                    borderRadius: Radius.md,
-                                    padding: Spacing.sm,
-                                    fontSize: FontSize.body,
-                                    color: color.text,
-                                }}
-                                placeholder="请输入昵称"
-                            />
-                        ) : (
-                            <Text style={{
+                        <TextInput
+                            value={editData.nickname}
+                            onChangeText={(text) => setEditData(prev => ({ ...prev, nickname: text }))}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: color.lightGray,
+                                borderRadius: Radius.md,
+                                padding: Spacing.sm,
                                 fontSize: FontSize.body,
                                 color: color.text,
-                                paddingVertical: Spacing.sm,
-                            }}>
-                                {user.displayName || '未设置'}
-                            </Text>
-                        )}
+                            }}
+                            placeholder="请输入昵称"
+                            editable={editing}
+                        />
+
                     </View>
 
-                    {/* Email */}
+                    {/* Email (只读，不能修改) */}
                     <View style={{ marginBottom: Spacing.md }}>
                         <Text style={{
                             fontSize: FontSize.small,
@@ -349,30 +487,14 @@ const ProfileScreen = () => {
                         }}>
                             邮箱
                         </Text>
-                        {editing ? (
-                            <TextInput
-                                value={editData.email}
-                                onChangeText={(text) => setEditData(prev => ({ ...prev, email: text }))}
-                                style={{
-                                    borderWidth: 1,
-                                    borderColor: color.lightGray,
-                                    borderRadius: Radius.md,
-                                    padding: Spacing.sm,
-                                    fontSize: FontSize.body,
-                                    color: color.text,
-                                }}
-                                placeholder="请输入邮箱"
-                                keyboardType="email-address"
-                            />
-                        ) : (
-                            <Text style={{
-                                fontSize: FontSize.body,
-                                color: color.text,
-                                paddingVertical: Spacing.sm,
-                            }}>
-                                {user.email || '未设置'}
-                            </Text>
-                        )}
+                        <Text style={{
+                            fontSize: FontSize.small,
+                            color: color.mutedText,
+                            fontFamily: 'monospace',
+                        }}>
+                            {user.email || '未设置'}
+                        </Text>
+
                     </View>
 
                     {/* User ID */}

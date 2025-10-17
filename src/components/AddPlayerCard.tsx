@@ -44,7 +44,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [registeredUsers, setRegisteredUsers] = useState<{ email: string, uid: string, nickname: string, photoURL?: string }[]>([]);
     const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentUser, setCurrentUser] = useState<{ displayName?: string; isAnonymous?: boolean } | null>(null);
+    const [currentUser, setCurrentUser] = useState<{ email?: string; isAnonymous?: boolean } | null>(null);
 
     // 监听当前用户状态
     useEffect(() => {
@@ -53,7 +53,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
         });
         return () => unsub && unsub();
     }, []);
-
+    
     useEffect(() => {
         if (isHost && activeTab === AddPlayerTab.SCAN && gameId) {
             startPlayerSyncListener(gameId, getGame().baseChipAmount, true);
@@ -78,9 +78,9 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             try {
                 let users: { email: string, uid: string, nickname: string, photoURL?: string }[] = [];
                 
-                if (currentUser && !currentUser.isAnonymous && currentUser.displayName) {
+                if (currentUser && !currentUser.isAnonymous && currentUser.email) {
                     // 使用 hostname 方式获取用户
-                    users = await fetchUsersByHostname(currentUser.displayName);
+                    users = await fetchUsersByHostname(currentUser.email);
                 }
                 
                 setRegisteredUsers(users);
