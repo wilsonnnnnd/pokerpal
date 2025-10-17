@@ -10,10 +10,11 @@ import {
     Timestamp,
 } from 'firebase/firestore'
 import { BatchBuilder } from './batchBuilder'
-import { gameDoc, playerDoc, userDoc } from '@/constants/namingVar'
+import { gameDoc, playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar'
 import { Player } from '@/types'
 import { preparePlayerGraphBatch } from './preparePlayerGraphBatch'
 import { formatPlayerSnapshot, formatGameNumbers } from '@/utils/formatSnapshot'
+import { getHosterId } from '@/utils/hostInfo'
 
 export type GraphPoint = {
     gameId: string
@@ -159,10 +160,12 @@ export async function upsertUserAndCounters(
     return { userRef, userSnap }
 }
 
-export function upsertEmailIndex(bb: BatchBuilder, db: any, player: Player) {
+export async function upsertEmailIndex(bb: BatchBuilder, db: any, player: Player) {
     if (!player.email) return
     const emailKey = player.email.toLowerCase().trim()
-    const emailRef = doc(db, 'users-by-email', emailKey)
+    const hosterName = await getHosterId()
+    if (!hosterName) return
+    const emailRef = doc(db, userByEmailDoc, hosterName, playerDoc, emailKey)
     bb.set(emailRef, {
         nickname: player.nickname,
         uid: player.id,

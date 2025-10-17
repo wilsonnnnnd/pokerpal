@@ -7,5 +7,5 @@ export async function getHosterId(): Promise<string | null> {
     // support multiple possible casing from different writes
     const raw = pu?.displayName ?? pu?.DisplayName ?? pu?.uid ?? pu?.id ?? null;
     if (!raw) return null;
-    return String(raw).trim();
+    return String(raw).trim() || 'default';
 }

@@ -3,7 +3,6 @@ import { useGameStore } from '@/stores/useGameStore'
 import { Player } from '@/types'
 import Toast from 'react-native-toast-message'
 import { cacheGameForRetry } from '@/utils/gameCache'
-import { addUserToHostnameIndex } from '@/firebase/fetchUser'
 import {
 	calcRate,
 	makeCreateGamePayload,
@@ -17,9 +16,8 @@ import {
 } from './gameWriters'
 import { BatchBuilder } from './batchBuilder'
 import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
-import { CURRENT_USER_KEY, gameDoc, hostGameDoc, userDoc } from '@/constants/namingVar'
+import { gameDoc, hostGameDoc } from '@/constants/namingVar'
 import { appendAction } from '@/services/localDb';
-import storage from '@/services/storageService';
 import { getHosterId } from '@/utils/hostInfo'
 
 
@@ -214,21 +212,6 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 
 			await upsertUserAndCounters(bb, db, player, totalBuyInCash)
 			upsertEmailIndex(bb, db, player)
-			
-			// 添加 hostname 分组的用户索引
-			if (hostname && player.email) {
-				try {
-					await addUserToHostnameIndex(hostname, player.email, {
-						uid: player.id,
-						nickname: player.nickname,
-						photoURL: player.photoURL || '',
-						provider: 'game', // 来自游戏的玩家
-					})
-				} catch (error) {
-					console.warn(`⚠️ 写入 hostname 索引失败，玩家: ${player.nickname}`, error)
-					// 不阻塞主流程，继续处理其他玩家
-				}
-			}
 			
 			await ensureUserGameHistory(bb, db, player, gameId, totalBuyInCash)
 

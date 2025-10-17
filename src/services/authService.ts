@@ -292,7 +292,6 @@ class AuthService {
 
                 // 如果有邮箱，创建邮箱索引（同时写入 hostname 分组索引）
                 if (user.email) {
-                    const emailKey = user.email.toLowerCase().trim();
 
                     // 尝试使用 displayName 作为 hostname，如果不可用则从环境读取或使用 'default'
                     const hostnameCandidate = user.displayName;
