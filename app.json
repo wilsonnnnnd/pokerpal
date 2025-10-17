@@ -2,7 +2,7 @@
   "expo": {
     "name": "pokerpal",
     "slug": "pokerpal",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "pokerpal",
     "orientation": "portrait",
     "icon": "./src/assets/PokerPal.png",
@@ -34,7 +34,9 @@
       ]
     },
     "plugins": [
-      ["expo-apple-authentication"],
+      [
+        "expo-apple-authentication"
+      ],
       [
         "@react-native-google-signin/google-signin",
         {
@@ -52,6 +54,12 @@
         "projectId": "ee93057e-27d6-41c7-b9ae-d494fd7663c2"
       }
     },
-    "owner": "hd-software"
+    "owner": "hd-software",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ee93057e-27d6-41c7-b9ae-d494fd7663c2"
+    }
   }
 }
