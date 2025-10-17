@@ -3,6 +3,7 @@ import { db } from '@/firebase/config';
 import { Player } from '@/types';
 import { playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { logInfo } from '@/utils/useLogger';
+import { addUserToHostnameIndex } from '@/firebase/fetchUser';
 
 export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: string): Promise<void> {
     if (!player.id || !player.email) {
@@ -14,27 +15,19 @@ export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: 
     const email = player.email.toLowerCase();
 
     const userRef = doc(db, userDoc, uid);
-    
-    // 添加按hostname分组的邮箱映射
-    let hostnameEmailRef;
-    if (hostname) {
-        hostnameEmailRef = doc(db, userByEmailDoc, hostname, playerDoc, email);
-    }
 
     try {
-        // 1️⃣ 如果有hostname，先写入按hostname分组的email映射
-        if (hostname && hostnameEmailRef) {
-            await setDoc(hostnameEmailRef, {
+        // 1️⃣ 如果有hostname，使用统一的方法写入按hostname分组的email映射
+        if (hostname) {
+            const success = await addUserToHostnameIndex(hostname, email, {
                 uid,
-                email,
                 nickname: player.nickname,
                 photoURL: player.photoURL || '',
-                registered: true,
-                addedByHost: hostname,
-                created: new Date().toISOString(),
+                provider: 'manual', // 手动添加的玩家
             });
-            
-            logInfo(`✅ 玩家信息已写入host分组：${hostname}/${email}`, `uid: ${uid}`);
+            if (!success) {
+                console.warn(`⚠️ 写入host分组失败，但继续写入用户主档：${hostname}/${email}`);
+            }
         }
 
         // 2️⃣ 写入用户主档（合并昵称/头像等）
@@ -46,8 +39,6 @@ export async function createOrUpdatePlayerInFirebase(player: Player, hostname?: 
             created: new Date().toISOString(),
         }, { merge: true });
 
-
-        logInfo(`✅ 玩家信息已写入：${player.nickname} (${uid})`, `email: ${email}`);
     } catch (error) {
         console.error('❌ 写入玩家信息失败:', error);
     }

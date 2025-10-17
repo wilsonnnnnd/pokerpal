@@ -29,7 +29,7 @@ export const LogViewer: React.FC<Props> = ({ logs, onClose: isClosed }) => {
     }, [logs, filterTag]);
 
     return (
-        <View style={LogViewerStyles.container}>
+        <View style={[LogViewerStyles.container,{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
             <View style={LogViewerStyles.header}>
                 <Text style={LogViewerStyles.title}>🪵 德州日志</Text>
                 <View style={LogViewerStyles.headerActions}>

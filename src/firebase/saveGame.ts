@@ -1,15 +1,9 @@
-
-/**
- * saveGameToFirebase（唯一入口）
- * ------------------------------
- * 集中写：games、players、users、users-by-email、users/{uid}/games、graph
- */
 import { db } from '@/firebase/config'
 import { useGameStore } from '@/stores/useGameStore'
 import { Player } from '@/types'
 import Toast from 'react-native-toast-message'
 import { cacheGameForRetry } from '@/utils/gameCache'
-import { logInfo } from '@/utils/useLogger'
+import { addUserToHostnameIndex } from '@/firebase/fetchUser'
 import {
 	calcRate,
 	makeCreateGamePayload,
@@ -136,6 +130,7 @@ export async function registerHostGameRecord(gameId: string) {
 			},
 			{ merge: true }
 		);
+		
 	} catch (err) {
 		console.error("registerHostGameRecord error", err);
 		throw err;
@@ -155,7 +150,7 @@ export async function finalizeGameOnServer(gameId: string) {
 	// 只写 finalized/status/updated，不触碰 created
 	await updateGameOnServer(gameId, { finalized: true, status: 'finalized', token: null });
 	await registerHostGameRecord(gameId);
-
+	
 }
 
 
@@ -168,7 +163,8 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 		throw new Error('基础筹码为 0 导致汇率为 0，请检查游戏设置')
 	}
 
-	logInfo('Saving game to Firebase', { gameId, playerCount: players.length })
+	// 获取当前 hostname 用于分组索引
+	const hostname = await getHosterId()
 
 	const bb = new BatchBuilder(db, 450)
 	const gameRef = doc(db, gameDoc, gameId)
@@ -218,6 +214,22 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 
 			await upsertUserAndCounters(bb, db, player, totalBuyInCash)
 			upsertEmailIndex(bb, db, player)
+			
+			// 添加 hostname 分组的用户索引
+			if (hostname && player.email) {
+				try {
+					await addUserToHostnameIndex(hostname, player.email, {
+						uid: player.id,
+						nickname: player.nickname,
+						photoURL: player.photoURL || '',
+						provider: 'game', // 来自游戏的玩家
+					})
+				} catch (error) {
+					console.warn(`⚠️ 写入 hostname 索引失败，玩家: ${player.nickname}`, error)
+					// 不阻塞主流程，继续处理其他玩家
+				}
+			}
+			
 			await ensureUserGameHistory(bb, db, player, gameId, totalBuyInCash)
 
 			const graphResult = await collectGraphWrites(bb, player, gameId)
@@ -226,13 +238,6 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 
 		await bb.commitAll()
 
-		for (const { ref } of graphWrites) {
-			try {
-				const snap = await getDoc(ref)
-				const saved = ((snap.data() as { history?: any[] })?.history) ?? []
-				logInfo('Graph history saved', { len: saved.length })
-			} catch { /* ignore */ }
-		}
 
 		Toast.show({
 			type: 'success',
