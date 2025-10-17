@@ -30,21 +30,12 @@ export class GoogleAuthService {
             throw new Error('Google 登录未配置：缺少客户端 ID');
         }
 
-        try {
-            await GoogleSignin.configure({
-                iosClientId,
-                webClientId,
-                offlineAccess: true,
-                // 明确请求用户信息权限
-                scopes: ['profile', 'email'],
-                // 确保请求基本权限
-                hostedDomain: '', // 空字符串表示任何域名
-                forceCodeForRefreshToken: true,
-            });
-        } catch (error) {
-            console.error('Google 登录配置失败:', error);
-            throw error;
-        }
+        await GoogleSignin.configure({
+            iosClientId,
+            webClientId,
+            scopes: ['profile', 'email'],
+            offlineAccess: true,
+        });
     }
 
     /**
@@ -57,57 +48,20 @@ export class GoogleAuthService {
 
             // 执行 Google 登录获取用户信息
             const userInfo = await GoogleSignin.signIn();
-       
-            let idToken: string | null = (userInfo as any)?.idToken ?? null;
-
-            if (!idToken) {
-                const tokens = await GoogleSignin.getTokens();
-                idToken = (tokens as any)?.idToken ?? null;
-            }
+            const idToken = (userInfo as any)?.data?.idToken || (await GoogleSignin.getTokens()).idToken;
 
             if (!idToken) {
                 throw new Error('未获得 Google idToken');
             }
 
-            // 提取用户信息 - 尝试多种路径
-            const gi: any = userInfo as any;
+            // 从 Google Sign-In 响应中提取用户信息
+            const userData = (userInfo as any)?.data?.user;
             
-            // 尝试多种可能的邮箱路径
-            const profileEmail = gi?.user?.email || 
-                                gi?.email || 
-                                gi?.additionalUserInfo?.profile?.email ||
-                                gi?.user?.emailAddresses?.[0]?.value ||
-                                null;
-                                
-            // 尝试多种可能的ID路径
-            const profileId = gi?.user?.id || 
-                             gi?.id || 
-                             gi?.additionalUserInfo?.profile?.id ||
-                             gi?.user?.userId ||
-                             null;
-                             
-            // 尝试多种可能的姓名路径
-            const profileName = gi?.user?.name || 
-                               gi?.user?.givenName || 
-                               gi?.name || 
-                               gi?.additionalUserInfo?.profile?.name ||
-                               gi?.user?.displayName ||
-                               null;
-                               
-            // 尝试多种可能的头像路径
-            const profilePhoto = gi?.user?.photo || 
-                                gi?.user?.photoUrl || 
-                                gi?.photo || 
-                                gi?.additionalUserInfo?.profile?.picture ||
-                                gi?.user?.profileImageUrl ||
-                                null;
+            const profileId = userData?.id || null;
+            const profileName = userData?.name || null;
+            const profileEmail = userData?.email || null;
+            const profilePhoto = userData?.photo || null;
 
-
-            // 邮箱不是必需的，某些情况下用户可能不提供邮箱权限
-            if (!profileEmail) {
-                console.warn('Google 登录未返回邮箱信息，将使用默认设置继续');
-                // 不抛出错误，允许没有邮箱的情况
-            }
 
             return {
                 idToken,
@@ -119,25 +73,7 @@ export class GoogleAuthService {
         } catch (error: any) {
             console.error('Google 登录凭据获取失败:', error);
             
-            // 提供更详细的错误信息
-            const message = error?.message || error?.toString?.() || '未知错误';
-            let hint = '';
-
-            if (message.includes('invalid_client') || message.includes('misconfigured')) {
-                hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
-            } else if (message.includes('DEVELOPER_ERROR') || message.includes('10')) {
-                hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
-            } else if (message.includes('network')) {
-                hint = ' 请检查网络连接。';
-            } else if (message.includes('SIGN_IN_CANCELLED')) {
-                hint = ' 用户取消了登录。';
-            } else if (message.includes('SIGN_IN_REQUIRED')) {
-                hint = ' 需要重新登录Google账户。';
-            } else if (message.includes('API_NOT_CONNECTED')) {
-                hint = ' Google Play Services API未连接。';
-            }
-
-            throw new Error(message + hint);
+            throw error;
         }
     }
 
@@ -158,12 +94,25 @@ export class GoogleAuthService {
             const userCred = await firebaseSignInWithCredential(auth, firebaseCred as any);
             const user = userCred.user;
 
+            // 如果 Firebase 用户缺少 profile 信息，使用 Google 凭据更新
+            if ((!user.displayName || !user.photoURL) && (credential.displayName || credential.photoURL)) {
+                try {
+                    const { updateProfile } = await import('firebase/auth');
+                    await updateProfile(user, {
+                        displayName: credential.displayName || user.displayName || null,
+                        photoURL: credential.photoURL || user.photoURL || null,
+                    });
+                } catch (updateError) {
+                    console.warn('Firebase profile 更新失败:', updateError);
+                }
+            }
+
             return {
                 user: {
                     uid: String(user.uid),
                     email: user.email ?? null,
-                    displayName: user.displayName ?? null,
-                    photoURL: user.photoURL ?? null,
+                    displayName: user.displayName ?? credential.displayName ?? null,
+                    photoURL: user.photoURL ?? credential.photoURL ?? null,
                     isAnonymous: user.isAnonymous ?? false,
                 }
             };
