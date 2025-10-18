@@ -11,7 +11,7 @@ import { useSettings } from '@/providers/SettingsProvider';
 import { Palette } from '@/constants/color.palette';
 import { simpleT } from '@/i18n/simpleT';
 import { usePermission } from '@/hooks/usePermission';
-import { getCurrencyToCNYRate } from '@/utils/exchangeRateUtils';
+import { getExchangeRate } from '@/services/exchangeService';
 
 // small helper to render initials
 function initials(name?: string) {
@@ -21,6 +21,96 @@ function initials(name?: string) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// 小组件：编辑汇率块（内部复用）
+function EditExchangeRate({
+    currentCurrency,
+    tempRate,
+    setTempRate,
+    onSave,
+    onCancel,
+}: {
+    currentCurrency: string;
+    tempRate: string;
+    setTempRate: (s: string) => void;
+    onSave: () => void;
+    onCancel: () => void;
+}) {
+    return (
+        <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'white',
+            borderRadius: Radius.sm,
+            borderWidth: 1,
+            borderColor: Palette.primary,
+            paddingHorizontal: Spacing.sm,
+            paddingVertical: Spacing.xs,
+        }}>
+            <Text style={{
+                fontSize: FontSize.small,
+                color: Palette.text,
+                fontWeight: '500',
+            }}>
+                1 {currentCurrency.toUpperCase()} = \u00a5
+            </Text>
+            <TextInput
+                style={{
+                    fontSize: FontSize.small,
+                    color: Palette.text,
+                    fontWeight: '600',
+                    minWidth: 60,
+                    textAlign: 'center',
+                    marginHorizontal: Spacing.xs,
+                }}
+                value={tempRate}
+                onChangeText={setTempRate}
+                keyboardType="numeric"
+                autoFocus
+                selectTextOnFocus
+                placeholder="0.0000"
+            />
+            <Text style={{
+                fontSize: FontSize.small,
+                color: Palette.text,
+                fontWeight: '500',
+            }}>
+                CNY
+            </Text>
+            <View style={{ flexDirection: 'row', marginLeft: Spacing.sm }}>
+                <TouchableOpacity
+                    onPress={onSave}
+                    style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: Palette.success,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: Spacing.xs,
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <MaterialCommunityIcons name="check" size={16} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={onCancel}
+                    style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: Palette.error,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: Spacing.xs,
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <MaterialCommunityIcons name="close" size={16} color="white" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
 // 结算总览弹窗
 export function SettleSummaryModal({
     players,
@@ -49,17 +139,13 @@ export function SettleSummaryModal({
     const [tempRate, setTempRate] = useState('');
     const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? 'AUD';
     
-    // 处理汇率更新
+    // 处理汇率更新 - 优先使用 provider 的 updateExchangeRates，之后从 exchangeRates 中读取最新值
     const handleUpdateRates = async () => {
         try {
             await updateExchangeRates();
-            // 更新成功后，重新获取当前货币的汇率
-            const newRate = await getCurrencyToCNYRate(currentCurrency);
-            setCurrentExchangeRate(newRate);
-            // 可以添加一个成功提示
+            // provider 更新后，exchangeRates 变更会触发下面的 effect 来更新 currentExchangeRate
         } catch (error) {
             console.error('Failed to update exchange rates:', error);
-            // 可以添加一个错误提示
         }
     };
     
@@ -71,13 +157,23 @@ export function SettleSummaryModal({
     // 处理汇率编辑
     const handleEditRate = async () => {
         try {
-            // 使用 exchangeRateUtils 中的方法获取当前货币对CNY的汇率
-            const currentRate = await getCurrencyToCNYRate(currentCurrency);
-            setTempRate(currentRate.toString());
+            // 优先从 provider 的 exchangeRates 读取缓存
+            const cached = exchangeRates?.[ 'CNY' ];
+            if (typeof cached === 'number' && cached > 0) {
+                setTempRate(String(cached));
+            } else {
+                // fallback: 请求后台最新值
+                try {
+                    const res = await getExchangeRate(currentCurrency, 'CNY');
+                    setTempRate(String(res.rate));
+                } catch (e) {
+                    // 如果请求失败，则使用默认值
+                    setTempRate('1');
+                }
+            }
             setIsEditingRate(true);
         } catch (error) {
-            console.error('Failed to get current exchange rate:', error);
-            // 如果获取失败，使用默认值
+            console.error('Failed to prepare edit rate:', error);
             setTempRate('1');
             setIsEditingRate(true);
         }
@@ -90,14 +186,27 @@ export function SettleSummaryModal({
     React.useEffect(() => {
         const loadExchangeRate = async () => {
             try {
-                const rate = await getCurrencyToCNYRate(currentCurrency);
-                setCurrentExchangeRate(rate);
+                // 优先使用 provider 中缓存的汇率
+                const cached = exchangeRates?.[ 'CNY' ];
+                if (typeof cached === 'number' && cached > 0) {
+                    setCurrentExchangeRate(cached);
+                    return;
+                }
+
+                // as last resort, call backend for this pair
+                try {
+                    const res = await getExchangeRate(currentCurrency, 'CNY');
+                    setCurrentExchangeRate(res.rate);
+                } catch (e) {
+                    console.error('Failed to load exchange rate from backend:', e);
+                    setCurrentExchangeRate(1);
+                }
             } catch (error) {
                 console.error('Failed to load exchange rate:', error);
                 setCurrentExchangeRate(1);
             }
         };
-        
+
         loadExchangeRate();
     }, [currentCurrency, exchangeRates]); // 当货币或汇率变化时重新获取
     

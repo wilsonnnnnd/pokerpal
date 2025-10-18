@@ -51,6 +51,7 @@ const ProfileScreen = () => {
     // 游戏历史相关状态
     const [gameHistory, setGameHistory] = useState<UserGameHistoryItem[]>([]);
     const [historyLoading, setHistoryLoading] = useState(false);
+    const [showInspector, setShowInspector] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(async (u: any) => {
@@ -504,6 +505,27 @@ const ProfileScreen = () => {
                         </Text>
                     </View>
                 </View>
+
+                {/* Auth Inspector toggle (dev-only) */}
+                {__DEV__ && (
+                  <>
+                    <View style={{ marginTop: Spacing.md, marginBottom: Spacing.md }}>
+                        <PrimaryButton
+                            title={showInspector ? '隐藏 Auth Inspector' : '显示 Auth Inspector'}
+                            onPress={() => setShowInspector((s) => !s)}
+                        />
+                    </View>
+
+                    {showInspector && (
+                        <View style={{ marginBottom: Spacing.md }}>
+                            {/* lazy load inspector to avoid cycles */}
+                            {require('@/screens/AuthInspector').default ? (
+                                React.createElement(require('@/screens/AuthInspector').default)
+                            ) : null}
+                        </View>
+                    )}
+                  </>
+                )}
 
                 {/* Game Statistics Card */}
                 {user.profile && (user.profile as any).gamesPlayed !== undefined && (

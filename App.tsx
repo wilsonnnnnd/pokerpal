@@ -6,6 +6,8 @@ import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PopupProvider } from '@/components/PopupProvider';
 import { SettingsProvider } from '@/providers/SettingsProvider';
+import AuthProvider from '@/providers/AuthProvider';
+import AuthInspector from '@/screens/AuthInspector';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/authService';
 import { getLocal, setLocal } from '@/services/storageService';
@@ -22,7 +24,6 @@ import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { getDeviceTimezone } from '@/utils/timezoneUtils';
-import { checkAndUpdateRatesOnAppStart } from '@/utils/exchangeRateUtils';
 import { userHasRole } from '@/firebase/getUserProfile';
 
 
@@ -38,6 +39,8 @@ export type RootStackParamList = {
   LocalHistory: undefined;
   Profile: undefined;
   Settings: undefined;
+  AuthInspector: undefined;
+  HealthCheck: undefined;
 };
 
 // Opt-in to native screens for improved memory and performance
@@ -53,6 +56,8 @@ function MainNavigator() {
         header: () => <Header />,
       }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AuthInspector" component={AuthInspector} />
+      <Stack.Screen name="HealthCheck" component={require('@/screens/HealthCheckScreen').default} />
       <Stack.Screen name="GamePlay" component={GamePlayScreen} />
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
@@ -160,14 +165,11 @@ export default function App() {
           try {
             // 检查用户是否为host
             const isHost = await userHasRole(user.uid, 'host');
-            
-            if (isHost) {
-              await checkAndUpdateRatesOnAppStart();
-            } 
+
           } catch (e) {
             console.warn('Failed to check user role or update exchange rates:', e);
           }
-        } 
+        }
 
         // Simply update auth state and mark initialization done.
         // The navigator rendered in JSX will switch based on `authUser`.
@@ -190,30 +192,32 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <PopupProvider>
-          <NavigationContainer
-            ref={navigationRef}
-            onReady={() => {
-              // If no auth subsystem available, navigate to Login immediately when navigation is ready
-              if (typeof onAuthStateChanged !== 'function') {
-                try {
-                  if (!navigationRef.isReady()) return;
-                  navigationRef.navigate('Login');
-                } catch (e) {
-                  // ignore
+        <AuthProvider>
+          <PopupProvider>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={() => {
+                // If no auth subsystem available, navigate to Login immediately when navigation is ready
+                if (typeof onAuthStateChanged !== 'function') {
+                  try {
+                    if (!navigationRef.isReady()) return;
+                    navigationRef.navigate('Login');
+                  } catch (e) {
+                    // ignore
+                  }
                 }
-              }
-            }}
-          >
-            {initializing && (
-              <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator size="large" />
-              </View>
-            )}
-            {authUser ? <MainNavigator /> : <AuthNavigator />}
-          </NavigationContainer>
-          <Toast />
-        </PopupProvider>
+              }}
+            >
+              {initializing && (
+                <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                  <ActivityIndicator size="large" />
+                </View>
+              )}
+              {authUser ? <MainNavigator /> : <AuthNavigator />}
+            </NavigationContainer>
+            <Toast />
+          </PopupProvider>
+        </AuthProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );

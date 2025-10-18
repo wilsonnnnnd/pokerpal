@@ -115,9 +115,9 @@ const HomeScreen = () => {
                         displayName: firestoreProfile.nickname,
                     } : undefined
                 };
-                
+
                 setUser(userWithProfile);
-                
+
                 // load persisted user for avatar/name preference
                 try {
                     const pu = await storage.getLocal(CURRENT_USER_KEY);
@@ -196,7 +196,7 @@ const HomeScreen = () => {
                 <View style={styles.mainContent}>
                     {/* User Profile Card */}
                     {user && (
-                        <View style={[styles.userCard, { 
+                        <View style={[styles.userCard, {
                             marginBottom: Spacing.lg,
                             backgroundColor: color.lightBackground, // 使用纯白背景
                             borderWidth: 1,
@@ -210,8 +210,8 @@ const HomeScreen = () => {
                             <View style={styles.userInfoContainer}>
                                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                                     {user.photoURL ? (
-                                        <View style={{ 
-                                            borderRadius: Radius.round, 
+                                        <View style={{
+                                            borderRadius: Radius.round,
                                             padding: 3,
                                             shadowColor: color.shadowLight,
                                             shadowOffset: { width: 0, height: 2 },
@@ -221,7 +221,7 @@ const HomeScreen = () => {
                                         }}>
                                             <Image
                                                 source={{ uri: user.photoURL }}
-                                                style={[styles.userAvatar, { borderRadius: Radius.round}]}
+                                                style={[styles.userAvatar, { borderRadius: Radius.round }]}
                                             />
                                         </View>
                                     ) : (
@@ -273,11 +273,11 @@ const HomeScreen = () => {
                                             </LinearGradient>
                                         )}
                                     </View>
-                                    
+
                                     <Text style={[styles.userEmail, { marginBottom: Spacing.sm }]}>
                                         {user.email ?? (user.isAnonymous ? '访客账户' : '')}
                                     </Text>
-                                    
+
                                     <View style={{
                                         backgroundColor: color.primary + '10',
                                         borderRadius: Radius.md,
@@ -290,7 +290,7 @@ const HomeScreen = () => {
                                             身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
                                         </Text>
                                     </View>
-                                    
+
                                     {/* 显示游戏统计信息（如果可用） */}
                                     {user.profile && !user.isAnonymous && (user.profile as any).gamesPlayed !== undefined && (
                                         <>
@@ -303,11 +303,11 @@ const HomeScreen = () => {
                                                 borderColor: color.info + '20',
                                             }}>
                                                 <Text style={[styles.roleText, { color: color.info, fontWeight: '600' }]}>
-                                                    🎮 游戏 {(user.profile as any).gamesPlayed || 0} 局 · 
+                                                    🎮 游戏 {(user.profile as any).gamesPlayed || 0} 局 ·
                                                     胜 {(user.profile as any).wins || 0} 负 {(user.profile as any).losses || 0}
                                                 </Text>
                                             </View>
-                                            
+
                                             {/* 显示总收益统计 */}
                                             <View style={{
                                                 backgroundColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '10' : color.error + '10',
@@ -317,9 +317,9 @@ const HomeScreen = () => {
                                                 borderWidth: 1,
                                                 borderColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '20' : color.error + '20',
                                             }}>
-                                                <Text style={[styles.roleText, { 
-                                                    color: (user.profile as any).totalProfit >= 0 ? color.confirm : color.error, 
-                                                    fontWeight: '600' 
+                                                <Text style={[styles.roleText, {
+                                                    color: (user.profile as any).totalProfit >= 0 ? color.confirm : color.error,
+                                                    fontWeight: '600'
                                                 }]}>
                                                     💰 总收益: ${(user.profile as any).totalProfit || 0}
                                                 </Text>
@@ -333,9 +333,9 @@ const HomeScreen = () => {
                                                 borderWidth: 1,
                                                 borderColor: (user.profile as any).averageROI >= 0 ? color.confirm + '20' : color.error + '20',
                                             }}>
-                                                <Text style={[styles.roleText, { 
-                                                    color: (user.profile as any).averageROI >= 0 ? color.confirm : color.error, 
-                                                    fontWeight: '600' 
+                                                <Text style={[styles.roleText, {
+                                                    color: (user.profile as any).averageROI >= 0 ? color.confirm : color.error,
+                                                    fontWeight: '600'
                                                 }]}>
                                                     📈 ROI: {(((user.profile as any).averageROI || 0) * 100).toFixed(1)}%
                                                 </Text>
@@ -423,7 +423,7 @@ const HomeScreen = () => {
                             }}>
                                 功能菜单
                             </Text>
-                            
+
                             <View style={{
                                 flexDirection: 'row',
                                 flexWrap: 'wrap',
@@ -471,15 +471,23 @@ const HomeScreen = () => {
                                         onPress: () => navigation.navigate('Settings'),
                                         visible: true,
                                     },
+                                    {
+                                        key: 'health',
+                                        title: 'API Health',
+                                        icon: 'cloud-check',
+                                        color: color.primary,
+                                        onPress: () => navigation.navigate('HealthCheck'),
+                                        visible: true,
+                                    },
 
                                 ].filter(btn => btn.visible).map((btn, index, filteredArray) => {
                                     // 计算动态宽度，考虑间隔
                                     const itemsPerRow = filteredArray.length >= 4 ? 2 : filteredArray.length <= 2 ? filteredArray.length : 3;
                                     const isLastRow = index >= filteredArray.length - (filteredArray.length % itemsPerRow || itemsPerRow);
-                                    const itemWidth = itemsPerRow === 1 ? '100%' : 
-                                                     itemsPerRow === 2 ? '47%' : 
-                                                     '30%';
-                                    
+                                    const itemWidth = itemsPerRow === 1 ? '100%' :
+                                        itemsPerRow === 2 ? '47%' :
+                                            '30%';
+
                                     return (
                                         <TouchableOpacity
                                             key={btn.key}

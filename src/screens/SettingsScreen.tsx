@@ -19,8 +19,9 @@ import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
 import { usePermission } from '@/hooks/usePermission';
-import { getLastUpdateTime } from '@/utils/exchangeRateUtils';
 import { UserProfile } from '@/types';
+import { useCallback } from 'react';
+import SettingsExchangeCard from '@/components/SettingsExchangeCard';
 
 // (use SelectField component for dropdowns)
 
@@ -38,19 +39,13 @@ export default function SettingsScreen() {
         timezone, 
         setTimezone, 
         currency,
-        exchangeRates,
-        updateExchangeRates,
-        clearRateCache,
-        isUpdatingRates
     } = useSettings();
     
     // 权限检查 - 只有host用户可以看到汇率管理
     const { isHost, loading: permissionLoading } = usePermission();
     // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
-    const [initialCurrency, setInitialCurrency] = useState<string | null>(null);
     const initialSetRef = React.useRef(false);
-    const initialCurrencySetRef = React.useRef(false);
     
     // 汇率详细信息状态
     const [lastRateUpdate, setLastRateUpdate] = useState<string | null>(null);
@@ -76,16 +71,6 @@ export default function SettingsScreen() {
                 // language/timezone/currency are loaded by SettingsProvider; just load persisted user for debug
                 const pu = await getLocal(CURRENT_USER_KEY);
                 setPersistedUser(pu);
-                
-                // 加载汇率更新时间
-                if (isHost) {
-                    try {
-                        const updateTime = await getLastUpdateTime('AUD');
-                        setLastRateUpdate(updateTime);
-                    } catch (e) {
-                        console.warn('Failed to get last rate update time:', e);
-                    }
-                }
             } catch (e) {
                 console.warn('load settings', e);
             } finally {
@@ -94,15 +79,13 @@ export default function SettingsScreen() {
         })();
     }, [isHost]);
 
+    // SettingsExchangeCard is imported from components and reused here
+
     // set initialLanguage & initialCurrency once when provider has loaded persisted values
     useEffect(() => {
         if (!initialSetRef.current && language) {
             setInitialLanguage(language);
             initialSetRef.current = true;
-        }
-        if (!initialCurrencySetRef.current && currency !== undefined) {
-            setInitialCurrency(currency ?? null);
-            initialCurrencySetRef.current = true;
         }
     }, [language, currency]);
 
@@ -139,7 +122,6 @@ export default function SettingsScreen() {
                 try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
             } catch (e) { /* ignore */ }
             setInitialLanguage(language);
-            setInitialCurrency(currency ?? null);
             setPopup({
                 visible: true,
                 title: simpleT('save_success_title', language),
@@ -173,7 +155,6 @@ export default function SettingsScreen() {
                 try { await setTimezone(defaults.timezone); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
-                setInitialCurrency(defaults.currency);
                 setPopup(prev => ({ ...prev, visible: false }));
             },
             onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -288,69 +269,6 @@ export default function SettingsScreen() {
         } catch (e) {
             console.warn('Failed to set timezone:', e);
         }
-    };
-
-    // 更新汇率
-    const handleUpdateExchangeRates = async () => {
-        try {
-            await updateExchangeRates();
-            
-            // 直接使用 exchangeRateUtils 获取更新时间
-            const lastUpdate = await getLastUpdateTime('AUD');
-            setLastRateUpdate(lastUpdate);
-            
-            setPopup({
-                visible: true,
-                title: simpleT('rates_updated', language),
-                message: `${simpleT('rates_updated_msg', language)}${lastUpdate ? `\n${simpleT('last_update', language)}: ${lastUpdate}` : ''}`,
-                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-            });
-        } catch (e: any) {
-            setPopup({
-                visible: true,
-                title: simpleT('rates_update_failed', language),
-                message: e?.message || simpleT('rates_update_failed_msg', language),
-                isWarning: true,
-                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-            });
-        }
-    };
-
-    // 清除汇率缓存
-    const handleClearRateCache = async () => {
-        setPopup({
-            visible: true,
-            title: simpleT('clear_rate_cache', language),
-            message: simpleT('clear_rate_cache_confirm', language),
-            isWarning: true,
-            onConfirm: async () => {
-                try {
-                    await clearRateCache();
-                    // 清除缓存后，重置更新时间显示
-                    setLastRateUpdate(null);
-                    
-                    setPopup({
-                        visible: true,
-                        title: simpleT('cache_cleared', language),
-                        message: simpleT('cache_cleared_msg', language),
-                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-                    });
-                } catch (e: any) {
-                    setPopup({
-                        visible: true,
-                        title: simpleT('cache_clear_failed', language),
-                        message: e?.message || simpleT('cache_clear_failed_msg', language),
-                        isWarning: true,
-                        onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                        onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-                    });
-                }
-            },
-            onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-        });
     };
 
     if (loading) return (
@@ -495,58 +413,11 @@ export default function SettingsScreen() {
                         <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
                             <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
                             
-                            {/* 当前汇率显示 - 显示AUD兑换CNY和更新时间 */}
+                            {/* 当前汇率显示 - 使用 backend getExchangeRate */}
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
-                                {exchangeRates.CNY ? (
-                                    <View>
-                                        <Text style={{ color: color.text, fontSize: 14, marginBottom: 2, fontWeight: '500' }}>
-                                            1 AUD = ¥{exchangeRates.CNY.toFixed(4)} CNY
-                                        </Text>
-                                        {lastRateUpdate && (
-                                            <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 2 }}>
-                                                {simpleT('last_update', language)}: {lastRateUpdate}
-                                            </Text>
-                                        )}
-                                    </View>
-                                ) : (
-                                    <Text style={{ color: color.mutedText, fontSize: 12, marginBottom: 2 }}>
-                                        {simpleT('no_rate_data', language)}
-                                    </Text>
-                                )}
+                                <SettingsExchangeCard language={language} setLastRateUpdate={setLastRateUpdate} from="AUD" to="CNY" />
                             </View>
-
-                            {/* 汇率管理按钮 */}
-                            <View style={{ flexDirection: 'row' }}>
-                                <View style={{ flex: 1, marginRight: 4 }}>
-                                    <PrimaryButton
-                                        title={isUpdatingRates ? simpleT('updating_rates', language) : simpleT('update_rates', language)}
-                                        icon="refresh"
-                                        variant="outlined"
-                                        onPress={handleUpdateExchangeRates}
-                                        disabled={isUpdatingRates}
-                                        style={{ backgroundColor: color.card }}
-                                        textStyle={{ color: color.primary }}
-                                        iconColor={color.primary}
-                                    />
-                                </View>
-                                
-                                <View style={{ flex: 1, marginLeft: 4 }}>
-                                    <PrimaryButton
-                                        title={simpleT('clear_cache', language)}
-                                        icon="cached"
-                                        variant="outlined"
-                                        onPress={handleClearRateCache}
-                                        style={{ backgroundColor: color.card }}
-                                        textStyle={{ color: color.warning }}
-                                        iconColor={color.warning}
-                                    />
-                                </View>
-                            </View>
-                            
-                            <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 8 }}>
-                                {simpleT('rate_data_source', language)}: exchangerate-api.com (24小时缓存)
-                            </Text>
                         </View>
                     </View>
                 )}
