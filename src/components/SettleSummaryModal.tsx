@@ -123,7 +123,7 @@ export function SettleSummaryModal({
     onCancel: () => void;
     isLoading?: boolean;
 }) {
-    const { currency, formatCurrency, exchangeRates, formatAsRMB, language, setExchangeRate, updateExchangeRates, isUpdatingRates } = useSettings();
+    const { currency, formatCurrency, latestExchange, formatAsRMB, language, setExchangeRate, updateExchangeRates, isUpdatingRates } = useSettings();
     const { isHost } = usePermission();
     const baseChipAmount = useGameStore.getState().baseChipAmount;
     const baseCashAmount = useGameStore.getState().baseCashAmount;
@@ -157,8 +157,8 @@ export function SettleSummaryModal({
     // 处理汇率编辑
     const handleEditRate = async () => {
         try {
-            // 优先从 provider 的 exchangeRates 读取缓存
-            const cached = exchangeRates?.[ 'CNY' ];
+            // 优先从 provider 的 latestExchange 读取缓存（若目标为 CNY）
+            const cached = latestExchange && String(latestExchange.to).toUpperCase() === 'CNY' ? latestExchange.rate : undefined;
             if (typeof cached === 'number' && cached > 0) {
                 setTempRate(String(cached));
             } else {
@@ -181,13 +181,19 @@ export function SettleSummaryModal({
     
     // 获取当前货币对CNY的汇率（使用异步方法）
     const [currentExchangeRate, setCurrentExchangeRate] = useState<number>(1);
+
+    // 本地格式化：使用该组件加载到的 currentExchangeRate 来计算人民币显示，确保与“1 X = ¥Y”一致
+    const formatAsRMBLocal = (amount: number) => {
+        const r = typeof currentExchangeRate === 'number' && isFinite(currentExchangeRate) ? currentExchangeRate : 1;
+        return `¥${(amount * r).toFixed(2)}`;
+    };
     
     // 初始化时获取汇率
     React.useEffect(() => {
         const loadExchangeRate = async () => {
             try {
                 // 优先使用 provider 中缓存的汇率
-                const cached = exchangeRates?.[ 'CNY' ];
+                const cached = latestExchange?.rate;
                 if (typeof cached === 'number' && cached > 0) {
                     setCurrentExchangeRate(cached);
                     return;
@@ -208,7 +214,7 @@ export function SettleSummaryModal({
         };
 
         loadExchangeRate();
-    }, [currentCurrency, exchangeRates]); // 当货币或汇率变化时重新获取
+    }, [currentCurrency, latestExchange ]); // 当货币或汇率变化时重新获取
     
     const handleSaveRate = async () => {
         const newRate = parseFloat(tempRate);
@@ -328,7 +334,7 @@ export function SettleSummaryModal({
                                         }}>
                                             汇率设置
                                         </Text>
-                                        {!isExchangeRateValid(exchangeRates.CNY) && (
+                                        {!isExchangeRateValid(latestExchange?.rate) && (
                                             <MaterialCommunityIcons
                                                 name="alert-circle-outline"
                                                 size={12}
@@ -594,10 +600,10 @@ export function SettleSummaryModal({
                                                 fontSize: FontSize.small,
                                                 marginLeft: 4,
                                             }}>
-                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(cashDiff), currentCurrency) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
+                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMBLocal(Math.abs(cashDiff)) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
                                             </Text>
                                         </View>
-                                        {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                            {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
                                             <Text style={{
                                                 fontSize: FontSize.small - 2,
                                                 color: Palette.mutedText,
@@ -653,7 +659,7 @@ export function SettleSummaryModal({
                                                 color="white"
                                             />
                                             <Text style={modalStyles.totalAmountText}>
-                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMB(Math.abs(totalCashDiff), currentCurrency) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                                {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMBLocal(Math.abs(totalCashDiff)) : formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
                                             </Text>
                                         </View>
                                     </View>

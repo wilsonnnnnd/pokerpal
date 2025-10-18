@@ -3,6 +3,51 @@ import { API_BASE } from '@/constants/Url';
 
 const DEFAULT_TIMEOUT = 15000;
 
+// Simple in-memory sliding-window rate limiter.
+// Protects the app from making too many backend requests in a short period.
+// This is intentionally simple: it counts requests started within WINDOW_MS and
+// rejects new requests when the count exceeds MAX_REQUESTS.
+// Note: this limiter is process-global (per JS runtime) and will reset when the
+// app reloads. It's not persisted across restarts.
+// These values can be overridden via Expo public env variables:
+//  - EXPO_PUBLIC_RATE_LIMIT_WINDOW_MS (milliseconds)
+//  - EXPO_PUBLIC_RATE_LIMIT_MAX_REQUESTS (integer)
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 10000; // 10s window by default
+const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 8; // max requests allowed in the window
+
+function parseEnvInt(name: string, def: number) {
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env[name]) {
+      const v = parseInt(process.env[name] as string, 10);
+      if (!Number.isNaN(v) && Number.isFinite(v)) return v;
+    }
+  } catch (e) {
+    // ignore parse errors
+  }
+  return def;
+}
+
+const RATE_LIMIT_WINDOW_MS = parseEnvInt('EXPO_PUBLIC_RATE_LIMIT_WINDOW_MS', DEFAULT_RATE_LIMIT_WINDOW_MS);
+const RATE_LIMIT_MAX_REQUESTS = parseEnvInt('EXPO_PUBLIC_RATE_LIMIT_MAX_REQUESTS', DEFAULT_RATE_LIMIT_MAX_REQUESTS);
+
+let rateLimitTimestamps: number[] = [];
+
+function nowMs() {
+  return Date.now();
+}
+
+function pruneOldTimestamps(windowMs = RATE_LIMIT_WINDOW_MS) {
+  const cutoff = nowMs() - windowMs;
+  rateLimitTimestamps = rateLimitTimestamps.filter((t) => t >= cutoff);
+}
+
+function allowRequest(windowMs = RATE_LIMIT_WINDOW_MS, maxRequests = RATE_LIMIT_MAX_REQUESTS) {
+  pruneOldTimestamps(windowMs);
+  if (rateLimitTimestamps.length >= maxRequests) return false;
+  rateLimitTimestamps.push(nowMs());
+  return true;
+}
+
 async function attachAuthHeader(headers: Record<string, string> = {}): Promise<Record<string, string>> {
   try {
     const auth = (firebaseAuth as any) ?? null;
@@ -46,8 +91,18 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeout =
   }
 }
 
-export async function apiGet<T = any>(url: string, options?: { params?: Record<string, any>; headers?: Record<string, string>; timeout?: number }) {
+export async function apiGet<T = any>(
+  url: string,
+  options?: { params?: Record<string, any>; headers?: Record<string, string>; timeout?: number; disableRateLimit?: boolean }
+) {
   try {
+    // Rate limiting: allow callers to opt-out via options.disableRateLimit
+    if (!options?.disableRateLimit) {
+      const ok = allowRequest();
+      if (!ok) {
+        throw { status: 429, data: { message: 'Rate limit exceeded' } };
+      }
+    }
     const finalUrl = options?.params ? buildUrlWithParams(url, options.params) : (url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`);
     let headers = await attachAuthHeader(options?.headers ?? {});
     let res = await fetchWithTimeout(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT);
@@ -81,9 +136,17 @@ export async function apiGet<T = any>(url: string, options?: { params?: Record<s
 
 export async function apiPost<T = any>(url: string, body?: any, options?: { headers?: Record<string, string>; timeout?: number }) {
   try {
+    // For POST, allow callers to disable the rate limiter via options.disableRateLimit
+    const opt = options as any;
+    if (!opt?.disableRateLimit) {
+      const ok = allowRequest();
+      if (!ok) {
+        throw { status: 429, data: { message: 'Rate limit exceeded' } };
+      }
+    }
+
     let headers = await attachAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) });
     const finalUrl = url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
-    console.log('apiPost to', finalUrl, 'with body', body);
     let res = await fetchWithTimeout(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT);
     // If 401, try refresh and retry once
     if (res.status === 401) {
