@@ -2,7 +2,6 @@ type Locale = 'en' | 'zh' | string;
 
 const dict: Record<string, Record<string, string>> = {
     en: {
-            save_when_changed: 'Save and Reset buttons show only when you changed the language.',
             logout_explain: '"Logout" clears the current session only; "Delete Account" removes account info.',
             save_success: 'Settings saved locally',
             user_info: 'User',
@@ -80,7 +79,6 @@ const dict: Record<string, Record<string, string>> = {
             confirm_save: 'Confirm Save',
     },
     zh: {
-            save_when_changed: '保存/重置按钮仅在您修改语言设置后显示。',
             logout_explain: '"退出登录"：仅清除当前会话；"注销登录"：删除账户信息。',
             save_success: '设置已保存到本地',
             user_info: '用户信息',

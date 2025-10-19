@@ -477,7 +477,7 @@ const HomeScreen = () => {
                                         icon: 'cloud-check',
                                         color: color.primary,
                                         onPress: () => navigation.navigate('HealthCheck'),
-                                        visible: true,
+                                        visible: !user?.isAnonymous,
                                     },
 
                                 ].filter(btn => btn.visible).map((btn, index, filteredArray) => {

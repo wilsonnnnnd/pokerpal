@@ -1,34 +1,8 @@
 import { auth as firebaseAuth } from '@/firebase/config';
 import { API_BASE } from '@/constants/Url';
+import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS } from '@/constants/rateLimit';
 
 const DEFAULT_TIMEOUT = 15000;
-
-// Simple in-memory sliding-window rate limiter.
-// Protects the app from making too many backend requests in a short period.
-// This is intentionally simple: it counts requests started within WINDOW_MS and
-// rejects new requests when the count exceeds MAX_REQUESTS.
-// Note: this limiter is process-global (per JS runtime) and will reset when the
-// app reloads. It's not persisted across restarts.
-// These values can be overridden via Expo public env variables:
-//  - EXPO_PUBLIC_RATE_LIMIT_WINDOW_MS (milliseconds)
-//  - EXPO_PUBLIC_RATE_LIMIT_MAX_REQUESTS (integer)
-const DEFAULT_RATE_LIMIT_WINDOW_MS = 10000; // 10s window by default
-const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 8; // max requests allowed in the window
-
-function parseEnvInt(name: string, def: number) {
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env[name]) {
-      const v = parseInt(process.env[name] as string, 10);
-      if (!Number.isNaN(v) && Number.isFinite(v)) return v;
-    }
-  } catch (e) {
-    // ignore parse errors
-  }
-  return def;
-}
-
-const RATE_LIMIT_WINDOW_MS = parseEnvInt('EXPO_PUBLIC_RATE_LIMIT_WINDOW_MS', DEFAULT_RATE_LIMIT_WINDOW_MS);
-const RATE_LIMIT_MAX_REQUESTS = parseEnvInt('EXPO_PUBLIC_RATE_LIMIT_MAX_REQUESTS', DEFAULT_RATE_LIMIT_MAX_REQUESTS);
 
 let rateLimitTimestamps: number[] = [];
 

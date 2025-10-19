@@ -1,7 +1,0 @@
-const WEB_APP_ORIGIN = 'https://hdpoker.xyz';
-
-export const API_BASE = 'https://api-ljp2wx6gyq-uc.a.run.app';
-
-export default {
-  API_BASE,
-};

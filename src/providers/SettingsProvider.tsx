@@ -37,7 +37,6 @@ interface SettingsContextType {
     formatAsRMB: (amount: number, fromCurrency: string) => string;
     // 新增汇率管理功能
     updateExchangeRates: () => Promise<void>;
-    getLastRateUpdate: () => Promise<string | null>;
     isUpdatingRates: boolean;
 }
 
@@ -254,7 +253,23 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         try {
             setIsUpdatingRates(true);
 
-            // 使用 backend 接口获取 AUD -> CNY
+            // 首先检查本地 SETTINGS_KEY 中是否有最新汇率且在 TTL 内
+            try {
+                const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
+                const le = existing?.latestExchange as any | undefined;
+                if (le && le.updated) {
+                    const elapsed = Date.now() - Date.parse(le.updated);
+                    if (!isNaN(elapsed) && elapsed < EXCHANGE_TTL_MS) {
+                        // 本地数据仍然新鲜，直接使用并返回
+                        setLatestExchange({ from: le.from ?? 'AUD', to: le.to ?? 'CNY', rate: le.rate, updated: le.updated, source: le.source });
+                        return;
+                    }
+                }
+            } catch (e) {
+                // ignore local read errors and fallthrough to backend fetch
+            }
+
+            // 本地没有新鲜数据，使用 backend 接口获取 AUD -> CNY
             const r = await getExchangeRate('AUD', 'CNY');
             const now = new Date().toISOString();
             // 更新 latestExchange
@@ -277,16 +292,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             throw error;
         } finally {
             setIsUpdatingRates(false);
-        }
-    };
-
-    const getLastRateUpdate = async (): Promise<string | null> => {
-        try {
-            // Try to query backend for updated timestamp
-            const r = await getExchangeRate('AUD', 'CNY');
-            return r.updated ?? null;
-        } catch (e) {
-            return null;
         }
     };
 
@@ -326,7 +331,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             convertToRMB,
             formatAsRMB,
             updateExchangeRates,
-            getLastRateUpdate,
             isUpdatingRates
         }}>
             {children}

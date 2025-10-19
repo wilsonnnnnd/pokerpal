@@ -100,42 +100,7 @@ export default function App() {
     })();
 
     // load app setting object (language/timezone/currency) and attach for sync reads
-    (async () => {
-      try {
-        const raw = await getLocal<any>(SETTINGS_KEY);
-        // 使用设备时区作为默认值
-        const deviceTimezone = getDeviceTimezone();
-        const defaults = { language: 'zh', timezone: deviceTimezone, currency: 'AUD' };
-
-        let settings: any;
-        if (!raw) {
-          settings = defaults;
-          try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
-        } else if (typeof raw === 'string') {
-          settings = { ...defaults, language: raw };
-          try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
-        } else {
-          settings = {
-            language: raw.language ?? defaults.language,
-            timezone: raw.timezone ?? defaults.timezone,
-            currency: raw.currency ?? defaults.currency,
-            // keep extra fields if present
-            ...raw,
-          };
-          // persist if missing keys
-          if (!raw.language || !raw.timezone || !raw.currency) {
-            try { await setLocal(SETTINGS_KEY, settings); } catch (e) { /* ignore */ }
-          }
-        }
-
-        try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
-      } catch (e) {
-        console.warn('failed to load app settings', e);
-        // 发生错误时也使用设备时区作为默认值
-        const fallbackTimezone = getDeviceTimezone();
-        try { (global as any).__pokerpal_settings = { language: 'zh', timezone: fallbackTimezone, currency: 'AUD' }; } catch (e) { /* ignore */ }
-      }
-    })();
+    // settings 初始化已委托给 SettingsProvider，避免重复异步读写 SETTINGS_KEY
 
     // restore persisted user (if any) into auth shim before subscribing
     (async () => {
