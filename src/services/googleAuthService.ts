@@ -48,7 +48,22 @@ export class GoogleAuthService {
 
             // 执行 Google 登录获取用户信息
             const userInfo = await GoogleSignin.signIn();
-            const idToken = (userInfo as any)?.data?.idToken || (await GoogleSignin.getTokens()).idToken;
+            let idToken: string | null = (userInfo as any)?.data?.idToken ?? null;
+            if (!idToken) {
+                try {
+                    const tokens = await GoogleSignin.getTokens();
+                    idToken = tokens?.idToken ?? null;
+                } catch (tkErr: any) {
+                    const tmsg = (tkErr?.message ?? String(tkErr || '')).toString().toLowerCase();
+                    // On some platforms getTokens throws when sign-in was cancelled/not completed
+                    if (tmsg.includes('gettokens requires') || tmsg.includes('requires a user to be signed in')) {
+                        const e = new Error('用户取消了登录');
+                        (e as any).code = 'ERR_CANCELED';
+                        throw e;
+                    }
+                    throw tkErr;
+                }
+            }
 
             if (!idToken) {
                 throw new Error('未获得 Google idToken');
@@ -71,8 +86,27 @@ export class GoogleAuthService {
                 googleId: profileId,
             };
         } catch (error: any) {
+            const code = error?.code ?? '';
+            const msg = (error?.message ?? String(error || '')).toString();
+            const m = msg.toLowerCase();
+            // detect user-cancelled flows from various platforms
+            const isCancel = (
+                code === 'SIGN_IN_CANCELLED' ||
+                code === 'CANCELLED' ||
+                m.includes('cancel') ||
+                m.includes('cancelled') ||
+                m.includes('user cancelled') ||
+                m.includes('user canceled')
+            );
+
+            if (isCancel) {
+                const e = new Error('用户取消了登录');
+                (e as any).code = 'ERR_CANCELED';
+                throw e;
+            }
+
+            // log only non-cancel errors
             console.error('Google 登录凭据获取失败:', error);
-            
             throw error;
         }
     }
@@ -117,7 +151,12 @@ export class GoogleAuthService {
                 }
             };
         } catch (error: any) {
-            console.error('Firebase Google 登录失败:', error);
+            const code = error?.code ?? '';
+            const msg = (error?.message ?? String(error || '')).toString().toLowerCase();
+            const isCancel = code === 'ERR_CANCELED' || msg.includes('用户取消') || msg.includes('cancel');
+            if (!isCancel) {
+                console.error('Firebase Google 登录失败:', error);
+            }
             throw error;
         }
     }

@@ -75,13 +75,25 @@ export class AppleAuthService {
         const hashedNonce = await this.sha256(rawNonce);
 
         // 执行 Apple 登录，传入 hashed nonce
-        const credential = await AppleAuthentication.signInAsync({
-            requestedScopes: [
-                AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                AppleAuthentication.AppleAuthenticationScope.EMAIL,
-            ],
-            nonce: hashedNonce,
-        });
+        let credential: any;
+        try {
+            credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+                nonce: hashedNonce,
+            });
+        } catch (err: any) {
+            const code = err?.code ?? '';
+            const msg = (err?.message ?? String(err || '')).toString().toLowerCase();
+            if (code === 'ERR_CANCELED' || msg.includes('cancel') || msg.includes('canceled') || msg.includes('用户取消')) {
+                const e = new Error('用户取消了登录');
+                (e as any).code = 'ERR_CANCELED';
+                throw e;
+            }
+            throw err;
+        }
 
 
         if (!credential.identityToken) {

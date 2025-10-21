@@ -1,6 +1,7 @@
 import { playerDoc, userByEmailDoc } from "@/constants/namingVar";
 import { collection, getDocs, query, collectionGroup, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "./config";
+import { userHasRole } from '@/firebase/getUserProfile';
 
 export const fetchUsersByHostname = async (hostEmail: string) => {
     try {
@@ -47,6 +48,19 @@ export const addUserToHostnameIndex = async (
             registered: true,
             lastLinkedAt: now,
         };
+
+        // Only allow write when the referenced user has host role
+        const uidToCheck = userData?.uid;
+        if (!uidToCheck) {
+            console.warn(`addUserToHostnameIndex: missing uid for email ${email}, skipping write`);
+            return false;
+        }
+
+        const isHost = await userHasRole(uidToCheck, 'host');
+        if (!isHost) {
+            // Skip write if not host
+            return false;
+        }
 
         if (existing.exists()) {
             await updateDoc(targetRef, payload);

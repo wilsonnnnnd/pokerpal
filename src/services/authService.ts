@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { db } from '@/firebase/config';
 import { addUserToHostnameIndex } from '@/firebase/fetchUser';
+import { clearUserProfileCache } from '@/firebase/getUserProfile';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
 import { userDoc, CURRENT_USER_KEY } from '@/constants/namingVar';
 import storage from '@/services/storageService';
@@ -70,6 +71,12 @@ class AuthService {
     // 恢复用户状态（从持久化存储）
     static restoreUser(user: User | null) {
         currentUser = user;
+        try {
+            // clear cached profile for this uid so subsequent permission checks are fresh
+            if (user && user.uid) clearUserProfileCache(user.uid);
+        } catch (e) {
+            // ignore cache clear errors
+        }
         notify();
     }
 
@@ -330,6 +337,7 @@ class AuthService {
             // 更新本地认证状态
             currentUser = userProfile;
             notify();
+            try { if (currentUser?.uid) clearUserProfileCache(currentUser.uid); } catch (e) { /* ignore */ }
 
             try {
                 await storage.setLocal(CURRENT_USER_KEY, currentUser);
@@ -345,12 +353,17 @@ class AuthService {
                 user: userProfile,
             };
         } catch (error: any) {
-            console.error('Google 登录错误:', error);
+            const code = error?.code ?? '';
             const message = error?.message || error?.toString?.() || '未知错误';
+            const m = (message || '').toString().toLowerCase();
+            const isCancel = code === 'ERR_CANCELED' || m.includes('用户取消') || m.includes('cancel');
+            if (!isCancel) {
+                console.error('Google 登录错误:', error);
+            }
 
             return {
                 success: false,
-                error: message,
+                error: isCancel ? '用户取消了登录' : message,
             };
         }
     }

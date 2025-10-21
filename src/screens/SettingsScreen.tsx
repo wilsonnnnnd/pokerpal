@@ -315,25 +315,30 @@ export default function SettingsScreen() {
                 return;
             }
 
-            // Non-anonymous: attempt to delete; inform about re-auth requirement
+            // Non-anonymous: schedule server-side deletion (soft-delete) by writing a pending request
             try {
-                await current.delete();
+                // write a deletion request document that backend will act on after 7 days
+                const uid = String(current.uid ?? current?.uid);
+                try {
+                    const { requestAccountDeletion } = await import('@/firebase/requestAccountDeletion');
+                    await requestAccountDeletion(uid, 7);
+                } catch (e) {
+                    // fallback: try direct import if dynamic import fails
+                    const { requestAccountDeletion } = await import('@/firebase/requestAccountDeletion');
+                    await requestAccountDeletion(uid, 7);
+                }
 
-                // on success, optionally clear local history
+                // locally clear history and sign out user immediately
                 await clearLocalHistory();
                 try { await removeLocal(CURRENT_USER_KEY); } catch (e) { /* ignore */ }
                 try { await removeLocal(SETTINGS_KEY); } catch (e) { /* ignore */ }
                 await signOut();
 
-                await confirmPopup({ title, message: '账户已删除。远端数据与游戏历史将在 7 天内被清除；若您在 7 天内重新授权登录则会取消删除；否则数据将被永久清除。' });
+                await confirmPopup({ title, message: '已创建删除请求：您的账户将在 7 天后由服务器删除。若您在 7 天内重新授权登录，服务器可取消该删除。' });
                 return;
             } catch (err: any) {
-                const code = err?.code ?? '';
-                if (code === 'auth/requires-recent-login' || (err?.message && err.message.includes('recent'))) {
-                    await confirmPopup({ title, message: '删除账户需要您近期重新登录以确认身份，请先重新登录然后重试删除操作。', isWarning: true });
-                    return;
-                }
-                throw err;
+                await confirmPopup({ title, message: err?.message || String(err) || '删除请求失败', isWarning: true });
+                return;
             }
         } catch (e: any) {
             await confirmPopup({ title, message: e?.message || String(e) || '删除失败', isWarning: true });
