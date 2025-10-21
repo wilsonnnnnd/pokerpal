@@ -339,6 +339,46 @@ export const HomePagestyles = StyleSheet.create({
         color: color.mutedText,
         textAlign: 'center',
     },
+    // Settings specific styles
+    settingsSection: {
+        marginBottom: Spacing.lg,
+        width: '100%',
+    },
+    settingsTitle: {
+        fontWeight: '700',
+        marginBottom: Spacing.sm,
+        color: color.title,
+        fontSize: FontSize.body,
+    },
+    settingsBlock: {
+        marginTop: Spacing.md,
+        marginBottom: Spacing.sm,
+    },
+    settingsSubTitle: {
+        fontWeight: '600',
+        marginBottom: Spacing.sm,
+        color: color.title,
+    },
+    settingsSelectWrapper: {
+        paddingHorizontal: Spacing.md,
+    },
+    settingsSmallText: {
+        color: color.mutedText,
+        fontSize: FontSize.small,
+        marginTop: Spacing.xs,
+        paddingHorizontal: Spacing.md,
+    },
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: Spacing.md,
+    },
+    actionResetButton: {
+        marginLeft: Spacing.md,
+    },
+    actionSpacer: {
+        height: 40,
+    },
 });
 
 export const GamePlayerRankstyles = StyleSheet.create({

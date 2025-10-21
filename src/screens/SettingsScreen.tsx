@@ -5,26 +5,24 @@ import { getLocal, removeLocal, setLocal } from '@/services/storageService';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { onAuthStateChanged, signOut } from '@/services/authService';
-import { GoogleAuthService } from '@/services/googleAuthService';
+import { onAuthStateChanged } from '@/services/authService';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
-import SelectField from '@/components/SelectField';
-import { commonCurrencies, getCurrencySymbol } from '@/constants/currency';
-import { InfoRow } from '@/components/InfoRow';
 import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { useSettings } from '@/providers/SettingsProvider';
 import { simpleT } from '@/i18n/simpleT';
 import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDeviceTimezone, getTimezoneDisplayName, getCommonTimezones, autoDetectAndUpdateTimezone } from '@/utils/timezoneUtils';
-import UserInfoCard from '@/components/settings/UserInfoCard';
 import SoftwareSettings from '@/components/settings/SoftwareSettings';
 import ExchangeManagement from '@/components/settings/ExchangeManagement';
 import DataManagement from '@/components/settings/DataManagement';
 import { usePermission } from '@/hooks/usePermission';
 import { UserProfile } from '@/types';
 import { useCallback } from 'react';
+import { getAuth } from 'firebase/auth';
+import { auth as firebaseAuth } from '@/firebase/config';
+import { signOut } from '@/services/authService';
+import { usePopup } from '@/components/PopupProvider';
 
 // (use SelectField component for dropdowns)
 
@@ -39,13 +37,14 @@ export default function SettingsScreen() {
     const {
         language,
         setLanguage,
-        timezone,
-        setTimezone,
         currency,
     } = useSettings();
 
     // 权限检查 - 只有host用户可以看到汇率管理
     const { isHost, loading: permissionLoading } = usePermission();
+
+    // popup helper from provider
+    const { confirmPopup } = usePopup();
     // snapshot of saved language/currency to detect changes
     const [initialLanguage, setInitialLanguage] = useState<string | null>(null);
     const initialSetRef = React.useRef(false);
@@ -151,11 +150,9 @@ export default function SettingsScreen() {
             message: simpleT('reset_confirm_msg', language),
             isWarning: true,
             onConfirm: async () => {
-                // 使用设备时区作为默认值
-                const deviceTimezone = getDeviceTimezone();
-                const defaults = { language: 'zh', timezone: deviceTimezone, currency: 'AUD' };
+                // 使用默认设置（时区已移除）
+                const defaults = { language: 'zh', currency: 'AUD' };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
-                try { await setTimezone(defaults.timezone); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
                 setPopup(prev => ({ ...prev, visible: false }));
@@ -235,44 +232,133 @@ export default function SettingsScreen() {
         });
     };
 
-    // 自动检测并更新设备时区
-    const autoDetectTimezone = async () => {
+    const handleDeleteAccount = async () => {
+        // Decide message and behavior based on whether the user is anonymous
+        const isAnon = !!user?.isAnonymous;
+        const title = simpleT('delete_account', language) || '删除账户';
+        const anonMsg = '删除匿名账户将清除所有本地历史数据，操作不可恢复。是否继续？';
+        const nonAnonMsg = '删除账户将移除您的远端账户；删除后需要重新授权登录以恢复访问。数据库内的用户数据以及游戏历史将在 7 天内被删除。如果您在 7 天内重新授权登录，删除将被取消；否则数据将被永久清除。是否继续？';
+
+        // Use centralized confirm popup
+        const confirmed = await confirmPopup({
+            title,
+            message: isAnon ? anonMsg : nonAnonMsg,
+            isWarning: true,
+        });
+
+        if (!confirmed) return;
+
+        setLoading(true);
+
+        // helper: clear local DB and game-related AsyncStorage keys
+        const clearLocalHistory = async () => {
+            try {
+                const tables = ['players', 'games', 'game_players', 'actions'];
+                for (const table of tables) {
+                    try { await execSql(`DELETE FROM ${table}`); } catch (e) { /* ignore */ }
+                }
+
+                if ((global as any).__pokerpal_store) {
+                    (global as any).__pokerpal_store = {
+                        players: [],
+                        games: [],
+                        game_players: [],
+                        actions: [],
+                        _id: 1
+                    };
+                }
+
+                const keys = await AsyncStorage.getAllKeys();
+                const gameRelatedKeys = keys.filter(key =>
+                    key.includes('game') || key.includes('player') || key.includes('history') || key.includes('__pokerpal_store') || key.includes('GAME_') || key.includes('PLAYER_')
+                );
+
+                if (gameRelatedKeys.length > 0) {
+                    await AsyncStorage.multiRemove(gameRelatedKeys);
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+
         try {
-            setLoading(true);
-            const deviceTimezone = getDeviceTimezone();
+            const auth = getAuth();
+            const current = auth.currentUser as any | null;
 
-            // 使用 SettingsProvider 的 setTimezone 来更新时区
-            await setTimezone(deviceTimezone);
+            if (!current) {
+                await confirmPopup({ title, message: '未检测到登录用户', isWarning: true });
+                return;
+            }
 
-            setPopup({
-                visible: true,
-                title: simpleT('timezone_updated', language),
-                message: `${simpleT('timezone_detected', language)}: ${getTimezoneDisplayName(deviceTimezone)}`,
-                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-            });
+            // 获取 idToken（与 attachAuthHeader 相同的方式）用于后续需要鉴权的请求
+            const idToken = await getIdTokenForRequest(true);
+            const exampleAuthHeaders = idToken ? { Authorization: `Bearer ${idToken}` } : {};
+            console.debug('prepared auth headers for delete flow', !!exampleAuthHeaders.Authorization);
+
+            // Anonymous: delete account and clear local history immediately
+            if (isAnon) {
+                try {
+                    await current.delete();
+                } catch (err: any) {
+                    // deletion might still fail; report
+                    await confirmPopup({ title, message: err?.message || String(err) || '删除失败', isWarning: true });
+                    return;
+                }
+
+                // clear local history
+                await clearLocalHistory();
+                try { await removeLocal(CURRENT_USER_KEY); } catch (e) { /* ignore */ }
+                try { await removeLocal(SETTINGS_KEY); } catch (e) { /* ignore */ }
+                await signOut();
+
+                await confirmPopup({ title, message: '匿名账户已删除，本地历史已清除。' });
+                return;
+            }
+
+            // Non-anonymous: attempt to delete; inform about re-auth requirement
+            try {
+                await current.delete();
+
+                // on success, optionally clear local history
+                await clearLocalHistory();
+                try { await removeLocal(CURRENT_USER_KEY); } catch (e) { /* ignore */ }
+                try { await removeLocal(SETTINGS_KEY); } catch (e) { /* ignore */ }
+                await signOut();
+
+                await confirmPopup({ title, message: '账户已删除。远端数据与游戏历史将在 7 天内被清除；若您在 7 天内重新授权登录则会取消删除；否则数据将被永久清除。' });
+                return;
+            } catch (err: any) {
+                const code = err?.code ?? '';
+                if (code === 'auth/requires-recent-login' || (err?.message && err.message.includes('recent'))) {
+                    await confirmPopup({ title, message: '删除账户需要您近期重新登录以确认身份，请先重新登录然后重试删除操作。', isWarning: true });
+                    return;
+                }
+                throw err;
+            }
         } catch (e: any) {
-            setPopup({
-                visible: true,
-                title: simpleT('timezone_error', language),
-                message: e?.message || simpleT('timezone_error_msg', language),
-                isWarning: true,
-                onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
-                onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
-            });
+            await confirmPopup({ title, message: e?.message || String(e) || '删除失败', isWarning: true });
         } finally {
             setLoading(false);
         }
     };
 
-    // 手动设置时区
-    const handleTimezoneChange = async (newTimezone: string) => {
+    // Helper to get idToken similar to attachAuthHeader implementation
+    const getIdTokenForRequest = async (forceRefresh = false): Promise<string | null> => {
         try {
-            await setTimezone(newTimezone);
+            const auth = (firebaseAuth as any) ?? null;
+            const user = auth?.currentUser ?? null;
+            if (!user) return null;
+            try {
+                const token = await user.getIdToken(!!forceRefresh);
+                return token || null;
+            } catch (e) {
+                return null;
+            }
         } catch (e) {
-            console.warn('Failed to set timezone:', e);
+            return null;
         }
     };
+
 
     if (loading) return (
         <View style={styles.loadingContainer}>
@@ -284,9 +370,7 @@ export default function SettingsScreen() {
     return (
         <View style={{ flex: 1 }}>
             <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-                <UserInfoCard user={user} profile={profile} language={language} />
-
-                <SoftwareSettings language={language} timezone={timezone} currency={currency} setLanguage={setLanguage} setTimezone={setTimezone} />
+                <SoftwareSettings language={language} currency={currency} />
 
                 {/* 汇率管理部分 - 只有host用户可见 */}
                 {isHost && <ExchangeManagement language={language} setLastRateUpdate={setLastRateUpdate} />}
@@ -294,12 +378,18 @@ export default function SettingsScreen() {
                 {/* 数据管理部分 */}
                 <DataManagement language={language} onClear={clearDatabase} />
                 {(initialLanguage !== null && language !== initialLanguage) && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+                    <View style={styles.actionRow}>
                         <PrimaryButton title={simpleT('save', language)} icon="content-save" onPress={save} />
-                        <PrimaryButton title={simpleT('reset', language)} icon="restore" variant="outlined" onPress={reset} style={{ marginLeft: 12 }} iconColor={color.valueText} />
+                        <PrimaryButton title={simpleT('reset', language)} icon="restore" variant="outlined" onPress={reset} style={styles.actionResetButton} iconColor={color.valueText} />
                     </View>
                 )}
-                <View style={{ height: 40 }} />
+                {/* Delete account button - only show if a user is signed in */}
+                {user && (
+                    <View style={{ marginTop: 12 }}>
+                        <PrimaryButton title={simpleT('delete_account', language)} icon="delete" variant="outlined" onPress={handleDeleteAccount} style={{ borderColor: color.error }} iconColor={color.error} />
+                    </View>
+                )}
+                <View style={styles.actionSpacer} />
 
             </ScrollView>
 

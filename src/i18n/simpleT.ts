@@ -102,7 +102,7 @@ const dict: Record<string, Record<string, string>> = {
             confirm: '确定',
                 choose_language: '请选择语言',
                 logout: '退出登录',
-                delete_account: '注销登录',
+                delete_account: '注销账号',
             // 数据管理相关翻译
             data_management: '数据管理',
             clear_database: '清除数据库',

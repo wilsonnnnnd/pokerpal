@@ -1,14 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { getLocal, setLocal } from '@/services/storageService';
 import { SETTINGS_KEY } from '@/constants/namingVar';
-import { getDeviceTimezone } from '@/utils/timezoneUtils';
+// timezone support removed
 import { getExchangeRate } from '@/services/exchangeService';
 
 type Language = string;
 
 export interface AppSettings {
     language: string;
-    timezone?: string;
     currency?: string;
     // latestExchange 存储最近一条汇率记录（对象形式）
     latestExchange?: {
@@ -24,8 +23,6 @@ export interface AppSettings {
 interface SettingsContextType {
     language: Language;
     setLanguage: (l: Language) => Promise<void>;
-    timezone: string;
-    setTimezone: (t: string) => Promise<void>;
     currency: string;
     setCurrency: (c: string) => Promise<void>;
     formatCurrency: (v: number, code?: string) => string;
@@ -49,15 +46,11 @@ export const useSettings = () => {
 };
 
 const getDefaults = (): AppSettings => {
-    // 使用设备时区
-    let tz = getDeviceTimezone();
-
     // 默认汇率配置 - 最新单条汇率记录
     const defaultLatestExchange = { from: 'AUD', to: 'CNY', rate: 4.7, updated: new Date().toISOString(), source: 'default' };
 
     return {
         language: 'zh',
-        timezone: tz,
         currency: 'AUD',
         latestExchange: defaultLatestExchange,
     };
@@ -68,7 +61,7 @@ const EXCHANGE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const [language, setLanguageState] = useState<Language>('en');
-    const [timezone, setTimezoneState] = useState<string>('GMT+10');
+    // timezone removed
     const [currency, setCurrencyState] = useState<string>('AUD');
     // 内存中使用单一 latestExchange 对象作为单一数据源
     const [latestExchange, setLatestExchange] = useState<{ from: string; to: string; rate: number; updated?: string | null; source?: string } | null>(null);
@@ -92,17 +85,16 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                     await setLocal(SETTINGS_KEY, settings).catch(() => { });
                 } else {
                     const l = raw.language ?? defaults.language;
-                    const tz = raw.timezone ?? defaults.timezone;
-                    const currency = raw.currency ?? defaults.currency;
-                    const latestExchange = raw.latestExchange ?? defaults.latestExchange;
-                    settings = { language: l, timezone: tz, currency, latestExchange };
-                    if (!raw.language || !raw.timezone || !raw.currency || !raw.latestExchange) {
-                        await setLocal(SETTINGS_KEY, settings).catch(() => { });
-                    }
+                        const currency = raw.currency ?? defaults.currency;
+                        const latestExchange = raw.latestExchange ?? defaults.latestExchange;
+                        settings = { language: l, currency, latestExchange };
+                        if (!raw.language || !raw.currency || !raw.latestExchange) {
+                            await setLocal(SETTINGS_KEY, settings).catch(() => { });
+                        }
                 }
 
                 setLanguageState(settings.language);
-                setTimezoneState(settings.timezone ?? defaults.timezone ?? 'GMT+10');
+                // timezone removed, set currency and language only
                 setCurrencyState(settings.currency ?? 'AUD');
 
                 // 优先使用 settings.latestExchange 来设置内存中的 latestExchange（单一真相）
@@ -170,23 +162,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const setTimezone = async (t: string) => {
-        setTimezoneState(t);
-        try {
-            const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
-            const defaults = getDefaults();
-            const merged: AppSettings = {
-                language: existing?.language ?? defaults.language,
-                timezone: t,
-                currency: existing?.currency ?? defaults.currency,
-                latestExchange: existing?.latestExchange ?? defaults.latestExchange,
-            };
-            await setLocal(SETTINGS_KEY, merged).catch(() => { });
-            try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
-        } catch (e) {
-            // ignore
-        }
-    };
+    // timezone API removed
 
     const setCurrency = async (c: string) => {
         setCurrencyState(c);
@@ -195,7 +171,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             const defaults = getDefaults();
             const merged: AppSettings = {
                 language: existing?.language ?? defaults.language,
-                timezone: existing?.timezone ?? defaults.timezone,
                 currency: c ?? (existing?.currency ?? defaults.currency),
                 latestExchange: existing?.latestExchange ?? defaults.latestExchange,
             };
@@ -320,8 +295,6 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         <SettingsContext.Provider value={{
             language,
             setLanguage,
-            timezone,
-            setTimezone,
             currency,
             setCurrency,
             formatCurrency,

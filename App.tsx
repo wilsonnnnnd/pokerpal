@@ -22,8 +22,7 @@ import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
-import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
-import { getDeviceTimezone } from '@/utils/timezoneUtils';
+import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import { userHasRole } from '@/firebase/getUserProfile';
 
 
@@ -98,9 +97,6 @@ export default function App() {
         console.warn('local DB init failed', e);
       }
     })();
-
-    // load app setting object (language/timezone/currency) and attach for sync reads
-    // settings 初始化已委托给 SettingsProvider，避免重复异步读写 SETTINGS_KEY
 
     // restore persisted user (if any) into auth shim before subscribing
     (async () => {

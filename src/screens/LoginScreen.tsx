@@ -96,7 +96,20 @@ export default function LoginScreen() {
         }
         
         let hint = '';
-        
+
+        // Helper to detect user-cancelled messages (various providers and languages)
+        const isUserCancelled = (msg: string) => {
+            if (!msg) return false;
+            const m = msg.toLowerCase();
+            return m.includes('取消') || m.includes('cancel') || m.includes('user cancelled') || m.includes('user canceled') || m.includes('canceled by user');
+        };
+
+        // If user explicitly cancelled the auth flow, show an info toast instead of an error
+        if (isUserCancelled(message)) {
+            Toast.show({ type: 'info', text1: `${method} 登录已取消` });
+            return;
+        }
+
         if (method === 'Google') {
             if (message.includes('invalid_client') || message.includes('misconfigured')) {
                 hint = ' 请检查 Firebase/Google 客户端 ID 配置与 bundle id/package name 是否一致。';
@@ -104,10 +117,7 @@ export default function LoginScreen() {
                 hint = ' Android 需要在 Firebase 控制台配置正确的 SHA-1。';
             }
         } else if (method === 'Apple') {
-            if (message.includes('用户取消了登录')) {
-                // 用户主动取消，不显示错误
-                return;
-            } else if (message.includes('网络连接失败')) {
+            if (message.includes('网络连接失败')) {
                 hint = ' 请检查网络连接是否正常。';
             } else if (message.includes('Apple 服务器响应无效')) {
                 hint = ' Apple 服务暂时不可用，请稍后重试。';
@@ -115,7 +125,7 @@ export default function LoginScreen() {
                 hint = ' 可能是设备或网络问题，请确保已登录 Apple ID 并重试。';
             }
         }
-        
+
         Toast.show({ 
             type: 'error', 
             text1: `${method}登录失败`, 

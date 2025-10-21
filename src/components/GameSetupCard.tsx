@@ -69,7 +69,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                     setCurrencyInfo({ code: s.currency, symbol: getCurrencySymbol(s.currency) });
                 } else {
                     // no currency info found: write default settings and update global
-                    const defaults = { language: 'zh', timezone: 'GMT+10', currency: 'AUD' };
+                        const defaults = { language: 'zh', currency: 'AUD' };
                     try {
                         await storage.setLocal(SETTINGS_KEY, defaults);
                     } catch (e) {
