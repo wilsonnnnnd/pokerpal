@@ -232,8 +232,8 @@ class AuthService {
                     provider: user.provider || '',
                     isActive: true,
                     role: 'player',
-                    createdAt: now,
-                    updatedAt: now,
+                    created: now,
+                    updated: now,
                     isProvisioned: true,
                 };
 
@@ -257,7 +257,7 @@ class AuthService {
             } else {
                 // 用户已存在，仅更新时间戳
                 await setDoc(userRef, {
-                    updatedAt: new Date().toISOString()
+                    updated: new Date().toISOString()
                 }, { merge: true });
             }
         } catch (error) {

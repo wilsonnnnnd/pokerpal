@@ -5,8 +5,8 @@ export type PlayerLocal = {
     averageROI: number; // total ROI sum (not divided)
     gamesPlayed: number;
     photoURL?: string;
-    createdAt: string;
-    updatedAt?: string;
+    created: string;
+    updated?: string;
 };
 
 export type GamePlayerEntry = {

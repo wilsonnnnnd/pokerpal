@@ -149,7 +149,7 @@ const ProfileScreen = () => {
             const userEmailRef = user.email ? doc(db, userByEmailDoc, user.email, playerDoc,user.email) : null;
             const updateData: any = {
                 nickname: nickname.trim(),
-                updatedAt: new Date().toISOString(),
+                updated: new Date().toISOString(),
             };
 
             await updateDoc(userRef, updateData);
@@ -202,7 +202,7 @@ const ProfileScreen = () => {
                 profile: prev.profile ? {
                     ...prev.profile,
                     nickname: nickname.trim(),
-                    updatedAt: new Date().toISOString(),
+                    updated: new Date().toISOString(),
                 } : undefined
             } : null);
 

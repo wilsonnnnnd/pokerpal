@@ -31,10 +31,10 @@ async function savePlayers(list: PlayerLocal[]): Promise<void> {
 
 /**
  * 创建本地玩家记录
- * @param payload Omit<PlayerLocal, 'id' | 'createdAt' | 'updatedAt'> - 玩家初始属性（不包含 id/时间）
+ * @param payload Omit<PlayerLocal, 'id' | 'created' | 'updated'> - 玩家初始属性（不包含 id/时间）
  * @returns Promise<PlayerLocal> - 新创建的玩家对象（包含 id 与时间字段）
  */
-export async function createPlayer(payload: Omit<PlayerLocal, 'id' | 'createdAt' | 'updatedAt'>): Promise<PlayerLocal> {
+export async function createPlayer(payload: Omit<PlayerLocal, 'id' | 'created' | 'updated'>): Promise<PlayerLocal> {
     const list = await getPlayers();
     const id = uuidv4();
     const now = new Date().toISOString();
@@ -45,8 +45,8 @@ export async function createPlayer(payload: Omit<PlayerLocal, 'id' | 'createdAt'
         averageROI: typeof payload.averageROI === 'number' ? Number((payload.averageROI).toFixed(6)) : (payload.averageROI ?? 0),
         gamesPlayed: payload.gamesPlayed ?? 0,
         photoURL: payload.photoURL,
-        createdAt: now,
-        updatedAt: now,
+        created: now,
+        updated: now,
     };
     list.unshift(p);
     await savePlayers(list);
@@ -71,7 +71,7 @@ export async function updatePlayer(id: string, patch: Partial<PlayerLocal>): Pro
     if (typeof normalizedPatch.averageROI === 'number') {
         normalizedPatch.averageROI = Number((normalizedPatch.averageROI).toFixed(6));
     }
-    const updated = { ...list[idx], ...normalizedPatch, updatedAt: now };
+    const updated = { ...list[idx], ...normalizedPatch, updated: now };
     list[idx] = updated;
     await savePlayers(list);
     return updated;
