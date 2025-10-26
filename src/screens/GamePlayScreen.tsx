@@ -25,6 +25,7 @@ import { InfoRow } from '@/components/common/InfoRow';
 import { PlayerCard } from '@/components/gaming/PlayerCard';
 import { AddPlayerCard } from '@/components/gaming/AddPlayerCard';
 import { BuyInPopupCard } from '@/components/gaming/BuyInPopupCard';
+import TestLogModal from '@/components/TestLogModal';
 import { SettleChipPopupCard } from '@/components/gaming/SettleChipPopupCard';
 import { EditBuyInPopupCard } from '@/components/gaming/EditBuyInPopupCard';
 import CallTimer from '@/components/gaming/CallTimer';
@@ -129,10 +130,10 @@ export default function GamePlayScreen() {
             );
             setHeaderLeft(
                 <TouchableOpacity
-                    // onPress={() => setModalState({ type: 'log-viewer' })}
+                    onPress={() => setModalState({ type: 'log-viewer' })}
                     style={styles.headerButton}
                 >
-                    {/* <MaterialCommunityIcons name="history" size={28} color={color.highLighter} /> */}
+                    <MaterialCommunityIcons name="history" size={28} color={color.highLighter} />
                 </TouchableOpacity>
             );
             return () => clearHeader();
@@ -146,7 +147,7 @@ export default function GamePlayScreen() {
         if (unSettled.length > 0) {
             log('Game', '⚠️ 游戏结束失败，未结算玩家存在');
             showPopup({
-                title: simpleT('error_title'),
+                title: simpleT('load_game_error_title'),
                 isWarning: true,
                 message: simpleT('please_settle_all_players'),
             });
@@ -281,8 +282,8 @@ export default function GamePlayScreen() {
 
             Toast.show({
                 type: 'success',
-                text1: '🎉 已结束并上传',
-                text2: Math.abs(diffChips) > 0.01 ? `差额：${diffChips > 0 ? '+' : ''}${diffChips}` : undefined,
+                text1: simpleT('end_and_upload_title'),
+                text2: Math.abs(diffChips) > 0.01 ? simpleT('end_and_upload_diff', undefined, { diff: (diffChips > 0 ? '+' : '') + String(diffChips) }) : undefined,
                 position: 'bottom',
             });
         } catch (e: any) {
@@ -758,7 +759,24 @@ export default function GamePlayScreen() {
                             <BuyInPopupCard
                                 player={modalState.player}
                                 onSubmit={(amount) => {
+                                    // capture before state
+                                    try {
+                                        const prev = usePlayerStore.getState().players.find(p => p.id === modalState.player.id);
+                                        log('Debug', { action: 'buy-in', phase: 'before', playerId: modalState.player.id, before: prev, amount });
+                                    } catch (e) {
+                                        log('Error', `Failed to capture before state: ${String(e)}`);
+                                    }
+
                                     addBuyIn(modalState.player.id, amount);
+
+                                    // capture after state
+                                    try {
+                                        const after = usePlayerStore.getState().players.find(p => p.id === modalState.player.id);
+                                        log('Debug', { action: 'buy-in', phase: 'after', playerId: modalState.player.id, after, amount });
+                                    } catch (e) {
+                                        log('Error', `Failed to capture after state: ${String(e)}`);
+                                    }
+
                                     log('Player', `🪙 ${modalState.player.nickname} 追加买入 ${amount} 筹码`);
                                     setModalState(null);
                                 }}
@@ -807,14 +825,10 @@ export default function GamePlayScreen() {
                     </Modal>
                 )}
 
-                {/* 日志查看器 */}
-                {/* {modalState?.type === 'log-viewer' && (
-                    <Modal transparent animationType="fade">
-                        <View style={styles.overlay}>
-                            <LogViewer logs={logs} onClose={() => setModalState(null)} />
-                        </View>
-                    </Modal>
-                )} */}
+                {/* 日志查看器 / Test log modal */}
+                {modalState?.type === 'log-viewer' && (
+                    <TestLogModal visible={true} onClose={() => setModalState(null)} />
+                )}
             </View>
         </>
     );

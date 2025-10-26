@@ -7,6 +7,7 @@ export type Player = {
     joinAt: string; // ISO string (e.g. 2025-09-20T12:34:56.000Z)
     buyInChipsList: number[];
     totalBuyInChips: number;
+    totalBuyInCash?: number;
     endCashAmount?: number;
     settleChipCount?: number;       // 结算时筹码
     settleChipDiff?: number;        // 筹码盈亏

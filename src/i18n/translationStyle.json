@@ -19,7 +19,8 @@
     "friendly_examples": {
       "info_note": "No password needed — we'll save your nickname and avatar for stats and invites.",
       "save_success": "Saved",
-      "guest_login": "You're signed in as a guest"
+      "guest_login": "You're signed in as a guest",
+      "please_settle_all_players": "Please settle all active players before finishing the game."
     }
   },
   "chinese_rules": {
@@ -29,7 +30,8 @@
     "friendly_examples": {
       "info_note": "无需输入密码 — 我们会保存你的昵称与头像，用于统计和邀请。",
       "save_success": "已保存",
-      "guest_login": "你已以访客身份登录"
+      "guest_login": "你已以访客身份登录",
+      "please_settle_all_players": "请先对在场玩家完成结算后再结束游戏。"
     }
   },
   "terminology": {

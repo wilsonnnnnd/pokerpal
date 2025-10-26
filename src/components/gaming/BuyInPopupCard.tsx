@@ -22,22 +22,22 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
     const presetValues = [
         {
             value: baseChipAmount,
-            label: 'buyin.preset_standard',
+            label: 'buyin_preset_standard',
             subtitle: `${baseChipAmount}`
         },
         {
             value: baseChipAmount * 2,
-            label: 'buyin.preset_double',
+            label: 'buyin_preset_double',
             subtitle: `${baseChipAmount * 2}`
         },
         {
             value: baseChipAmount * 3,
-            label: 'buyin.preset_triple',
+            label: 'buyin_preset_triple',
             subtitle: `${baseChipAmount * 3}`
         },
         {
             value: baseChipAmount * 5,
-            label: 'buyin.preset_deep',
+            label: 'buyin_preset_deep',
             subtitle: `${baseChipAmount * 5}`
         }
     ];
@@ -55,7 +55,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
     const handleConfirm = () => {
         const value = parseInt(amount || '0', 10);
         if (isNaN(value) || value <= 0) {
-            alert(simpleT('buyin.invalid_amount_msg'));
+            alert(simpleT('buyin_invalid_amount_msg'));
             return;
         }
 
@@ -111,8 +111,8 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                                     <Text style={BuyInCardStyles.avatarText}>{initialLetter}</Text>
                                 </View>
                             )}
-                            <View style={BuyInCardStyles.headerTextContainer}>
-                                <Text style={BuyInCardStyles.title}>{simpleT('buyin.add_title')}</Text>
+                                            <View style={BuyInCardStyles.headerTextContainer}>
+                                                <Text style={BuyInCardStyles.title}>{simpleT('buyin_add_title')}</Text>
                                 <Text style={BuyInCardStyles.subtitle}>{player.nickname}</Text>
                             </View>
                         </View>
@@ -124,10 +124,10 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
 
                     <View style={BuyInCardStyles.body}>
                         <InputField
-                            label={simpleT('buyin.amount_label')}
+                            label={simpleT('buyin_amount_label')}
                             fieldName="amount"
                             value={amount}
-                            placeholder={simpleT('buyin.amount_placeholder')}
+                            placeholder={simpleT('buyin_amount_placeholder')}
                             icon="poker-chip"
                             keyboardType="number-pad"
                             onChangeText={(field, value) => setAmount(value)}
@@ -139,11 +139,11 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                         <View style={BuyInCardStyles.baseChipInfo}>
                             <MaterialCommunityIcons name="information-outline" size={16} color={color.info} />
                             <Text style={BuyInCardStyles.baseChipText}>
-                                {simpleT('buyin.base_chip_info', undefined, { baseChipAmount })}
+                                {simpleT('buyin_base_chip_info', undefined, { baseChipAmount })}
                             </Text>
                         </View>
 
-                        <Text style={BuyInCardStyles.presetLabel}>{simpleT('buyin.quick_add_label')}</Text>
+                        <Text style={BuyInCardStyles.presetLabel}>{simpleT('buyin_quick_add_label')}</Text>
                         <View style={BuyInCardStyles.quickButtons}>
                             {presetValues.map((item, index) => (
                                 <TouchableOpacity
@@ -160,15 +160,15 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                         </View>
 
                         <View style={BuyInCardStyles.currentBuyIn}>
-                            <Text style={BuyInCardStyles.currentBuyInLabel}>{simpleT('buyin.current_buyin_label')}</Text>
-                            <Text style={BuyInCardStyles.currentBuyInValue}>{player.totalBuyInChips} {simpleT('buyin.chips_suffix')}</Text>
+                            <Text style={BuyInCardStyles.currentBuyInLabel}>{simpleT('buyin_current_buyin_label')}</Text>
+                            <Text style={BuyInCardStyles.currentBuyInValue}>{player.totalBuyInChips} {simpleT('buyin_chips_suffix')}</Text>
                         </View>
 
                         {amount && (
                             <View style={BuyInCardStyles.summary}>
-                                <Text style={BuyInCardStyles.summaryLabel}>{simpleT('buyin.total_after_label')}</Text>
+                                <Text style={BuyInCardStyles.summaryLabel}>{simpleT('buyin_total_after_label')}</Text>
                                 <Text style={BuyInCardStyles.summaryValue}>
-                                    {player.totalBuyInChips + parseInt(amount || '0', 10)} {simpleT('buyin.chips_suffix')}
+                                    {player.totalBuyInChips + parseInt(amount || '0', 10)} {simpleT('buyin_chips_suffix')}
                                 </Text>
                             </View>
                         )}
@@ -193,7 +193,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                             disabled={!amount || parseInt(amount, 10) <= 0}
                         >
                             <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-                            <Text style={BuyInCardStyles.confirmButtonText}>{simpleT('buyin.confirm_buyin')}</Text>
+                            <Text style={BuyInCardStyles.confirmButtonText}>{simpleT('buyin_confirm_buyin')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

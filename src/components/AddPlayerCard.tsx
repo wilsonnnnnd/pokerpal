@@ -214,7 +214,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 return (
                     <View style={AddPlayerCardStyles.tabContent}>
                         <View style={AddPlayerCardStyles.qrContainer}>
-                            <Text style={AddPlayerCardStyles.qrTitle}>{simpleT('addplayer_qr_title')}</Text>
+                                <Text style={AddPlayerCardStyles.qrTitle}>{simpleT('addplayer_qr_title')}</Text>
                             <View style={AddPlayerCardStyles.qrWrapper}>
                                 <QRCode value={getQRCodeLink()} size={200} backgroundColor={color.lightBackground} />
                             </View>
@@ -308,7 +308,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         )}
 
                         <PrimaryButton
-                            title={simpleT('addplayer_add_selected_title', undefined, { count: selectedEmails.length })}
+                                title={simpleT('addplayer_add_selected_title', undefined, { count: selectedEmails.length })}
                             onPress={handleAddSelectedPlayers}
                             style={[
                                 AddPlayerCardStyles.addSelectedButton,
@@ -325,7 +325,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                     <View style={AddPlayerCardStyles.tabContent}>
                         <View style={AddPlayerCardStyles.manualAddContainer}>
                             <View style={AddPlayerCardStyles.inputContainer}>
-                                    <Text style={AddPlayerCardStyles.label}>{simpleT('addplayer_manual_label_nickname')}</Text>
+                                        <Text style={AddPlayerCardStyles.label}>{simpleT('addplayer_manual_label_nickname')}</Text>
                                 <TextInput
                                     style={[AddPlayerCardStyles.input, isFocused.nickname && AddPlayerCardStyles.inputFocused]}
                                     placeholder={simpleT('addplayer_manual_placeholder_nickname')}

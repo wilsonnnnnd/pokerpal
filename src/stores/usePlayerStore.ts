@@ -17,17 +17,23 @@ export const usePlayerStore = create<PlayerState>()(
                     })),
 
                 addBuyIn: (id, amount) =>
-                    set((state) => ({
-                        players: state.players.map((p) =>
-                            p.id === id
-                                ? {
-                                    ...p,
-                                    buyInChipsList: [...p.buyInChipsList, amount],
-                                    totalBuyInChips: p.totalBuyInChips + amount,
-                                }
-                                : p
-                        ),
-                    })),
+                    set((state) => {
+                        const { baseCashAmount, baseChipAmount } = useGameStore.getState();
+                        const rate = baseChipAmount ? baseCashAmount / baseChipAmount : 0;
+
+                        return {
+                            players: state.players.map((p) =>
+                                p.id === id
+                                    ? {
+                                        ...p,
+                                        buyInChipsList: [...p.buyInChipsList, amount],
+                                        totalBuyInChips: p.totalBuyInChips + amount,
+                                        totalBuyInCash: Number(((p.totalBuyInCash || 0) + amount * rate).toFixed(2)),
+                                    }
+                                    : p
+                            ),
+                        };
+                    }),
 
                 setFinalChips: (id, chips) => {
                     if (chips === null) {
