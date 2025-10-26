@@ -39,7 +39,7 @@ export default function SoftwareSettings({ language, currency }: any) {
     <View style={{ marginBottom: 18 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <Text style={{ fontWeight: '700', color: color.title }}>{simpleT('software_settings')}</Text>
-        <EditableHint textKey="click_to_edit" fallback="点击修改" icon="pencil-outline" onPress={() => setShowSelect((s) => !s)} />
+        <EditableHint textKey="click_to_edit" fallback="点击修改" icon="pencil-outline" onPress={() => { setShowSelect((s) => !s); setShowCurrencySelect((s) => !s); }} />
       </View>
       <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
         <TouchableOpacity onPress={() => setShowSelect((s) => !s)}>

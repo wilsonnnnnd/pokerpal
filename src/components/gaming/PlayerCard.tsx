@@ -8,6 +8,7 @@ import { PrimaryButton } from '../common/PrimaryButton';
 import { useLogger } from '@/utils/useLogger';
 import { PlayerCardStyles } from '@/assets/styles';
 import Avatar from '@/components/common/Avatar';
+import simpleT from '@/i18n/simpleT';
 
 
 // Use shared Avatar component instead of inline PlayerAvatar
@@ -23,7 +24,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                 </View>
                 <View style={PlayerCardStyles.detailTexts}>
                     <Text style={PlayerCardStyles.detailValue}>{player.totalBuyInChips}</Text>
-                    <Text style={PlayerCardStyles.detailLabel}>总买入</Text>
+                    <Text style={PlayerCardStyles.detailLabel}>{simpleT('player_total_buyin')}</Text>
                 </View>
             </View>
 
@@ -33,7 +34,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                 </View>
                 <View style={PlayerCardStyles.detailTexts}>
                     <Text style={PlayerCardStyles.detailValue}>{player.buyInCount}</Text>
-                    <Text style={PlayerCardStyles.detailLabel}>买入次数</Text>
+                    <Text style={PlayerCardStyles.detailLabel}>{simpleT('buyin_times_label')}</Text>
                 </View>
             </View>
         </View>
@@ -53,7 +54,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                         <Text style={PlayerCardStyles.detailValue}>
                             {player.settleChipCount}
                         </Text>
-                        <Text style={PlayerCardStyles.detailLabel}>结算筹码</Text>
+                        <Text style={PlayerCardStyles.detailLabel}>{simpleT('player_settle_amount')}</Text>
                     </View>
                 </View>
 
@@ -75,7 +76,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                         ]}>
                             {(profit >= 0 ? '+' : '') + profit}
                         </Text>
-                        <Text style={PlayerCardStyles.detailLabel}>盈亏</Text>
+                        <Text style={PlayerCardStyles.detailLabel}>{simpleT('player_profit')}</Text>
                     </View>
                 </View>
             </View>
@@ -89,7 +90,7 @@ PlayerDetails.displayName = 'PlayerDetails';
 const PlayerActions = React.memo<PlayerActionsProps>(({ player, finalized, onBuyIn, onToggle }) => (
     <View style={PlayerCardStyles.actions}>
         <PrimaryButton
-            title="追加买入"
+            title={simpleT('buyin_add_title')}
             icon="plus"
             iconColor={color.lightText}
             onPress={onBuyIn}
@@ -104,7 +105,7 @@ const PlayerActions = React.memo<PlayerActionsProps>(({ player, finalized, onBuy
         />
 
         <PrimaryButton
-            title={player.isActive ? '离开游戏' : '返回游戏'}
+            title={player.isActive ? simpleT('player_action_leave') : simpleT('player_action_return')}
             icon={player.isActive ? 'logout' : 'arrow-right'}
             iconColor={color.lightText}
             onPress={onToggle}
@@ -225,7 +226,7 @@ const PlayerDetailModal = React.memo<{
                                 <Avatar
                                     uri={player.photoURL}
                                     name={player.nickname}
-                                    size={80}
+                                    size={48}
                                     rounded
                                     backgroundColor={avatarColor}
                                     accessibilityLabel={player.photoURL ? `${player.nickname}的头像照片` : `${player.nickname}的头像，首字母${initialLetter}`}
@@ -239,7 +240,7 @@ const PlayerDetailModal = React.memo<{
                             <View style={PlayerCardStyles.modalTitleSection}>
                                 <Text style={PlayerCardStyles.modalTitle}>{player.nickname}</Text>
                                 <Text style={PlayerCardStyles.modalSubtitle}>
-                                    {player.isActive ? '在场玩家' : '已离场'}
+                                    {player.isActive ? simpleT('player_status_active') : simpleT('player_status_inactive')}
                                 </Text>
                             </View>
                         </View>
@@ -253,17 +254,17 @@ const PlayerDetailModal = React.memo<{
                         <View style={PlayerCardStyles.modalSection}>
                             <View style={PlayerCardStyles.modalSectionHeader}>
                                 <MaterialCommunityIcons name="account-circle" size={20} color={color.primary} />
-                                <Text style={PlayerCardStyles.modalSectionTitle}>基本信息</Text>
+                                <Text style={PlayerCardStyles.modalSectionTitle}>{simpleT('profile_basic_info')}</Text>
                             </View>
                             <View style={PlayerCardStyles.modalInfoItem}>
                                 <MaterialCommunityIcons name="account-plus" size={18} color={color.success} />
-                                <Text style={PlayerCardStyles.modalInfoLabel}>加入时间：</Text>
+                                <Text style={PlayerCardStyles.modalInfoLabel}>{simpleT('player_joined')}:</Text>
                                 <Text style={PlayerCardStyles.modalInfoValue}>{formatDate(player.joinAt)}</Text>
                             </View>
                             <View style={PlayerCardStyles.modalInfoItem}>
                                 <MaterialCommunityIcons name="email" size={18} color={color.primary} />
-                                <Text style={PlayerCardStyles.modalInfoLabel}>邮箱：</Text>
-                                <Text style={PlayerCardStyles.modalInfoValue}>{player.email || '未设置'}</Text>
+                                <Text style={PlayerCardStyles.modalInfoLabel}>{simpleT('email_label')}</Text>
+                                <Text style={PlayerCardStyles.modalInfoValue}>{player.email || simpleT('not_set')}</Text>
                             </View>
                         </View>
 
@@ -271,18 +272,18 @@ const PlayerDetailModal = React.memo<{
                         <View style={PlayerCardStyles.modalSection}>
                             <View style={PlayerCardStyles.modalSectionHeader}>
                                 <MaterialCommunityIcons name="cash-multiple" size={20} color={color.info} />
-                                <Text style={PlayerCardStyles.modalSectionTitle}>买入历史</Text>
+                                <Text style={PlayerCardStyles.modalSectionTitle}>{simpleT('buyin_history_title')}</Text>
                             </View>
                             <View style={PlayerCardStyles.modalStatsRow}>
                                 <View style={PlayerCardStyles.modalStatCard}>
                                     <MaterialCommunityIcons name="sigma" size={24} color={color.info} />
                                     <Text style={PlayerCardStyles.modalStatValue}>{player.totalBuyInChips}</Text>
-                                    <Text style={PlayerCardStyles.modalStatLabel}>总买入筹码</Text>
+                                    <Text style={PlayerCardStyles.modalStatLabel}>{simpleT('total_buyin_chips')}</Text>
                                 </View>
                                 <View style={PlayerCardStyles.modalStatCard}>
                                     <MaterialCommunityIcons name="format-list-numbered" size={24} color={color.info} />
                                     <Text style={PlayerCardStyles.modalStatValue}>{getBuyInHistory.length}</Text>
-                                    <Text style={PlayerCardStyles.modalStatLabel}>买入次数</Text>
+                                    <Text style={PlayerCardStyles.modalStatLabel}>{simpleT('buyin_times_label')}</Text>
                                 </View>
                             </View>
 
@@ -291,7 +292,7 @@ const PlayerDetailModal = React.memo<{
                                 <View style={PlayerCardStyles.buyInHistory}>
                                     <View style={PlayerCardStyles.buyInHistoryHeader}>
                                         <MaterialCommunityIcons name="history" size={16} color={color.mutedText} />
-                                        <Text style={PlayerCardStyles.buyInHistoryTitle}>买入明细</Text>
+                                            <Text style={PlayerCardStyles.buyInHistoryTitle}>{simpleT('buyin_history_title')}</Text>
                                     </View>
                                     {getBuyInHistory.map((buyIn, index) => (
                                         <View key={index} style={PlayerCardStyles.buyInHistoryItem}>
@@ -302,9 +303,9 @@ const PlayerDetailModal = React.memo<{
                                                         size={12}
                                                         color={buyIn.isInitial ? color.warning : color.info}
                                                     />
-                                                    <Text style={PlayerCardStyles.buyInHistoryIndex}>
-                                                        {buyIn.isInitial ? '初始买入' : `第${index}次追加`}
-                                                    </Text>
+                                                                    <Text style={PlayerCardStyles.buyInHistoryIndex}>
+                                                                        {buyIn.isInitial ? simpleT('buyin_tag_initial') : simpleT('buyin_added_nth', undefined, { n: index })}
+                                                                    </Text>
                                                 </View>
                                                 <Text style={PlayerCardStyles.buyInHistoryTime}>
                                                     {buyIn.timestamp.toLocaleString('zh-CN', {
@@ -317,7 +318,7 @@ const PlayerDetailModal = React.memo<{
                                             </View>
                                             <View style={PlayerCardStyles.buyInHistoryRight}>
                                                 <Text style={PlayerCardStyles.buyInHistoryAmount}>{buyIn.amount}</Text>
-                                                <Text style={PlayerCardStyles.buyInHistoryUnit}>筹码</Text>
+                                                <Text style={PlayerCardStyles.buyInHistoryUnit}>{simpleT('buyin_chips_suffix')}</Text>
                                             </View>
                                         </View>
                                     ))}
@@ -330,13 +331,13 @@ const PlayerDetailModal = React.memo<{
                             <View style={PlayerCardStyles.modalSection}>
                                 <View style={PlayerCardStyles.modalSectionHeader}>
                                     <MaterialCommunityIcons name="calculator-variant" size={20} color={color.highLighter} />
-                                    <Text style={PlayerCardStyles.modalSectionTitle}>结算信息</Text>
+                                        <Text style={PlayerCardStyles.modalSectionTitle}>{simpleT('settlement_info')}</Text>
                                 </View>
                                 <View style={PlayerCardStyles.modalStatsRow}>
                                     <View style={PlayerCardStyles.modalStatCard}>
                                         <MaterialCommunityIcons name="calculator-variant" size={24} color={color.highLighter} />
                                         <Text style={PlayerCardStyles.modalStatValue}>{player.settleChipCount}</Text>
-                                        <Text style={PlayerCardStyles.modalStatLabel}>结算筹码</Text>
+                                            <Text style={PlayerCardStyles.modalStatLabel}>{simpleT('player_settle_amount')}</Text>
                                     </View>
                                     {player.settleChipDiff !== undefined && (
                                         <View style={[
@@ -359,7 +360,7 @@ const PlayerDetailModal = React.memo<{
                                             ]}>
                                                 {player.settleChipDiff >= 0 ? '+' : ''}{player.settleChipDiff}
                                             </Text>
-                                            <Text style={PlayerCardStyles.modalStatLabel}>筹码盈亏</Text>
+                                            <Text style={PlayerCardStyles.modalStatLabel}>{simpleT('chip_profit')}</Text>
                                         </View>
                                     )}
                                 </View>
@@ -436,7 +437,7 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                                         { backgroundColor: player.isActive ? color.success : color.error }
                                     ]} />
                                     <Text style={PlayerCardStyles.statusText}>
-                                        {player.isActive ? '在场' : '已离场'}
+                                        {player.isActive ? simpleT('player_status_active') : simpleT('player_status_inactive')}
                                     </Text>
                                 </View>
                             </View>

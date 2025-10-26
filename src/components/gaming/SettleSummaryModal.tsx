@@ -575,7 +575,7 @@ export function SettleSummaryModal({
                                             </Text>
                                         </View>
                                     </View>
-                                    {shouldShowRMB && currentCurrency.toUpperCase() !== DEFAULT_TO_CURRENCY && currentCurrency.toUpperCase() !== 'CN' && (
+                                        {shouldShowRMB && currentCurrency.toUpperCase() !== DEFAULT_TO_CURRENCY && currentCurrency.toUpperCase() !== 'CN' && (
                                         <Text style={{
                                             fontSize: FontSize.small - 2,
                                             color: Palette.mutedText,
@@ -614,13 +614,13 @@ export function SettleSummaryModal({
                             >
                                 <MaterialCommunityIcons name="close" size={20} color={Palette.strongGray} />
                                     <Text style={{
-                                    fontWeight: '600',
-                                    fontSize: FontSize.body,
-                                    color: Palette.strongGray,
-                                    marginLeft: Spacing.xs,
-                                }}>
+                                        fontWeight: '600',
+                                        fontSize: FontSize.body,
+                                        color: Palette.strongGray,
+                                        marginLeft: Spacing.xs,
+                                    }}>
                                     {simpleT('cancel')}
-                                </Text>
+                                    </Text>
                             </LinearGradient>
                         </TouchableOpacity>
 
@@ -652,13 +652,13 @@ export function SettleSummaryModal({
                                     color="white"
                                 />
                                     <Text style={{
-                                    fontWeight: '600',
-                                    fontSize: FontSize.body,
-                                    color: 'white',
-                                    marginLeft: Spacing.xs,
-                                }}>
-                                    {isLoading ? simpleT('saving') : simpleT('confirm_save')}
-                                </Text>
+                                        fontWeight: '600',
+                                        fontSize: FontSize.body,
+                                        color: 'white',
+                                        marginLeft: Spacing.xs,
+                                    }}>
+                                        {isLoading ? simpleT('saving') : simpleT('confirm_save')}
+                                    </Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
