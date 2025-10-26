@@ -2,14 +2,25 @@
 
 一个现代化的扑克筹码管理应用，基于 React Native + Expo 开发，支持实时游戏跟踪、玩家统计和历史记录管理。
 
+## 项目摘要（简短）
+
+PokerPal 是一款面向线下/线上扑克活动的筹码与结算管理工具。应用使用 Expo + React Native 开发，数据在本地通过 SQLite 和 AsyncStorage 持久化，同时可选地同步到 Firebase（Firestore / Auth），以支持跨设备历史与统计。项目使用 TypeScript、Zustand 做状态管理，并优先保证离线优先与恢复同步的健壮性。
+
+主要设计目标：
+- 本地优先：在无网络时仍能完整记录与恢复游戏数据。
+- 多存储层：内存（Zustand）、AsyncStorage 缓存、本地 SQLite 备份、以及可选的 Firebase 同步。
+- 易用的玩家与结算界面，以及详细的玩家统计（盈利、ROI、曲线等）。
+
+## 关键文件快速导航
+
+下面是开发者第一次接触代码时最值得打开的文件，用于理解入口、状态与持久化：
+- `App.tsx` — 应用入口，导航与全局初始化（settings、local DB、auth 恢复）。
+- `src/screens/GamePlayScreen.tsx` — 游戏进行/结算主流程（保存历史、本地 sqlite 写入、Firebase 写入与 finalize 流）。
+- `src/stores/useGameStore.ts` — 游戏状态管理与持久化策略（partialize/migrations）。
+- `src/firebase/config.ts` — Firebase 初始化与 React Native persistence 的兼容处理。
+- `src/services/localGameService.ts` — 本地游戏读写与与 SQLite 的交互逻辑。
 ## ✨ 功能特点
 
-- 🎯 **实时游戏管理** - 创建游戏、添加玩家、跟踪买入和结算
-- 📊 **玩家统计** - ROI 计算、盈利曲线、历史表现分析
-- 💾 **多重持久化** - 本地 SQLite + Firebase 云同步 + AsyncStorage 缓存
-- 🔄 **离线支持** - 本地优先架构，网络恢复时自动同步
-- 🎨 **现代 UI** - 响应式设计，支持深色模式
-- 🌐 **多语言** - 支持中英文界面
 
 ## 🏗️ 技术架构
 
