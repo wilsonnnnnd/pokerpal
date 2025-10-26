@@ -9,6 +9,7 @@ import { usePopup } from '@/providers/PopupProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { Palette as color } from '@/constants';
 import { GameDetailstyles as styles } from '@/assets/styles';
+import Avatar from '@/components/common/Avatar';
 import { handleCopyToClipboard, handleSendEmail } from '@/utils/exportHandlers';
 import simpleT from '@/i18n/simpleT';
 
@@ -48,18 +49,7 @@ const avatarUtils = {
     }
 };
 
-// Avatar 组件
-const Avatar = ({ photoURL, nickname, style }: { photoURL?: string | null; nickname: string; style?: any }) => (
-    <View style={[styles.avatar, style]}>
-        {photoURL ? (
-            <Image source={{ uri: photoURL }} style={styles.avatarImage} />
-        ) : (
-            <View style={[StyleSheet.absoluteFill, styles.avatarFallback, { backgroundColor: avatarUtils.generateColor(nickname) }]}>
-                <Text style={styles.avatarText}>{avatarUtils.getInitial(nickname)}</Text>
-            </View>
-        )}
-    </View>
-);
+// Use shared Avatar component
 
 export default function GameDetailScreen() {
     const route = useRoute<any>();
@@ -433,7 +423,7 @@ export default function GameDetailScreen() {
                                     <Text style={styles.highlightTitle}>{simpleT('top_winner')}</Text>
                                 </View>
                             <View style={styles.highlightContent}>
-                                <Avatar photoURL={topWinner.photoURL} nickname={topWinner.nickname} />
+                                <Avatar uri={topWinner.photoURL} name={topWinner.nickname} size={48} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={topWinner.photoURL ? `${topWinner.nickname}的头像照片` : `${topWinner.nickname}的头像`} />
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topWinner.nickname}</Text>
                                     <Text style={styles.highlightProfit}>(+{formatUtils.money(topWinner.settleCashDiff * (game.rate || 1), formatCurrency)})</Text>
@@ -447,7 +437,7 @@ export default function GameDetailScreen() {
                                 <Text style={styles.highlightTitle}>{simpleT('top_loser')}</Text>
                             </View>
                             <View style={styles.highlightContent}>
-                                <Avatar photoURL={topLoser.photoURL} nickname={topLoser.nickname} />
+                                <Avatar uri={topLoser.photoURL} name={topLoser.nickname} size={48} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={topLoser.photoURL ? `${topLoser.nickname}的头像照片` : `${topLoser.nickname}的头像`} />
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topLoser.nickname}</Text>
                                     <Text style={[styles.highlightProfit, { color: color.error }]}>
@@ -472,7 +462,7 @@ export default function GameDetailScreen() {
                             <View style={styles.playerCard} key={`${p.id || 'row'}-${idx}`}>
                                 <View style={styles.playerCardHeader}>
                                     <View style={styles.playerIdentity}>
-                                        <Avatar photoURL={(p as any).photoUrl} nickname={p.nickname} />
+                                        <Avatar uri={(p as any).photoURL} name={p.nickname} size={40} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={(p as any).photoURL ? `${p.nickname}的头像照片` : `${p.nickname}的头像`} />
                                         <Text style={styles.playerName}>{p.nickname}</Text>
                                     </View>
 

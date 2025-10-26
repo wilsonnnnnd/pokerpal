@@ -1,36 +1,16 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Player, PlayerActionsProps, PlayerAvatarProps, PlayerCardProps, PlayerDetailsProps } from '@/types';
+import { Player, PlayerActionsProps, PlayerCardProps, PlayerDetailsProps } from '@/types';
 import { Palette as color } from '@/constants';
 import { Gradients } from '@/constants/gradients';
 import { PrimaryButton } from '../common/PrimaryButton';
 import { useLogger } from '@/utils/useLogger';
 import { PlayerCardStyles } from '@/assets/styles';
+import Avatar from '@/components/common/Avatar';
 
 
-const PlayerAvatar = React.memo<PlayerAvatarProps>(({ player, avatarColor, initialLetter }) => (
-    <View
-        style={PlayerCardStyles.avatar}
-        accessible={true}
-        accessibilityRole="image"
-        accessibilityLabel={player.photoURL ? `${player.nickname}的头像照片` : `${player.nickname}的头像，首字母${initialLetter}`}
-    >
-        {player.photoURL ? (
-            <Image
-                source={{ uri: player.photoURL }}
-                style={PlayerCardStyles.avatarImage}
-                accessible={false}
-            />
-        ) : (
-            <View style={[StyleSheet.absoluteFill, PlayerCardStyles.avatarFallback, { backgroundColor: avatarColor }]}>
-                <Text style={PlayerCardStyles.avatarText}>{initialLetter}</Text>
-            </View>
-        )}
-    </View>
-));
-
-PlayerAvatar.displayName = 'PlayerAvatar';
+// Use shared Avatar component instead of inline PlayerAvatar
 
 // 详情组件
 const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettled }) => (
@@ -52,7 +32,7 @@ const PlayerDetails = React.memo<PlayerDetailsProps>(({ player, profit, isSettle
                     <MaterialCommunityIcons name="format-list-numbered" size={24} color={color.highLighter} />
                 </View>
                 <View style={PlayerCardStyles.detailTexts}>
-                    <Text style={PlayerCardStyles.detailValue}>{player.buyInChipsList.length}</Text>
+                    <Text style={PlayerCardStyles.detailValue}>{player.buyInCount}</Text>
                     <Text style={PlayerCardStyles.detailLabel}>买入次数</Text>
                 </View>
             </View>
@@ -242,16 +222,14 @@ const PlayerDetailModal = React.memo<{
                         {/* 头像和标题区域 */}
                         <View style={PlayerCardStyles.modalHeaderContent}>
                             <View style={PlayerCardStyles.modalAvatar}>
-                                {player.photoURL ? (
-                                    <Image
-                                        source={{ uri: player.photoURL }}
-                                        style={PlayerCardStyles.modalAvatarImage}
-                                    />
-                                ) : (
-                                    <View style={[PlayerCardStyles.modalAvatarFallback, { backgroundColor: avatarColor }]}>
-                                        <Text style={PlayerCardStyles.modalAvatarText}>{initialLetter}</Text>
-                                    </View>
-                                )}
+                                <Avatar
+                                    uri={player.photoURL}
+                                    name={player.nickname}
+                                    size={80}
+                                    rounded
+                                    backgroundColor={avatarColor}
+                                    accessibilityLabel={player.photoURL ? `${player.nickname}的头像照片` : `${player.nickname}的头像，首字母${initialLetter}`}
+                                />
                                 {/* 状态指示器 */}
                                 <View style={[
                                     PlayerCardStyles.modalStatusIndicator,
@@ -443,10 +421,12 @@ export const PlayerCard = React.memo<PlayerCardProps>(({
                     {/* 卡片头部 - 玩家信息 */}
                     <View style={PlayerCardStyles.cardHeader}>
                         <View style={PlayerCardStyles.playerInfo}>
-                            <PlayerAvatar
-                                player={player}
-                                avatarColor={playerData.avatarColor}
-                                initialLetter={playerData.initialLetter}
+                            <Avatar
+                                uri={player.photoURL}
+                                name={player.nickname}
+                                size={48}
+                                backgroundColor={playerData.avatarColor}
+                                accessibilityLabel={player.photoURL ? `${player.nickname}的头像照片` : `${player.nickname}的头像，首字母${playerData.initialLetter}`}
                             />
                             <View style={PlayerCardStyles.nameAndStatus}>
                                 <Text style={PlayerCardStyles.playerName}>{player.nickname}</Text>

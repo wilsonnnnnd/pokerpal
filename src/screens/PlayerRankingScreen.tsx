@@ -19,6 +19,7 @@ import { playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import Toast from 'react-native-toast-message';
 import { getHosterId } from '@/utils/hostInfo';
 import { GamePlayerRankstyles as styles } from '@/assets/styles';
+import Avatar from '@/components/common/Avatar';
 import { usePaginatedPageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
 import simpleT from '@/i18n/simpleT';
@@ -75,15 +76,15 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
             <View style={styles.playerHeader}>
                 {renderRankBadge()}
 
-                <View style={styles.avatar}>
-                    {item.photoURL ? (
-                        <Image source={{ uri: item.photoURL }} style={styles.avatarImage} />
-                    ) : (
-                        <View style={[styles.avatarFallback, { backgroundColor: avatarColor }]}>
-                            <Text style={styles.avatarText}>{safeName.charAt(0).toUpperCase()}</Text>
-                        </View>
-                    )}
-                </View>
+                <Avatar
+                    uri={item.photoURL}
+                    name={item.nickname}
+                    size={56}
+                    style={styles.avatar}
+                    imageStyle={styles.avatarImage}
+                    textStyle={styles.avatarText}
+                    accessibilityLabel={item.photoURL ? `${safeName}的头像照片` : `${safeName}的头像`}
+                />
 
                 <View style={styles.nameContainer}>
                     <Text style={styles.playerName}>{safeName}</Text>

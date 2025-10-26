@@ -1,34 +1,25 @@
 import { collection, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Player } from '@/types';
+import normalizePlayer from '@/utils/normalizePlayer';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useLogger } from '@/utils/useLogger';
 import Toast from 'react-native-toast-message';
 import { gameDoc, playerDoc } from '@/constants/namingVar';
 
 function sanitizeRemotePlayer(remote: Partial<Player>, baseChipAmount: number): Player {
+    // Use central normalizer; pass rate=0 (no cash derivation here) and baseChipAmount
+    const normalized = normalizePlayer(remote, 0, baseChipAmount);
+    // Ensure email casing and keep settle fields from remote if present
     return {
-        id: remote.id!,
-        nickname: remote.nickname || '未命名',
+        ...normalized,
         email: (remote.email || '').toLowerCase(),
-        photoURL: remote.photoURL || '',
-        buyInChipsList: Array.isArray(remote.buyInChipsList) ? remote.buyInChipsList : [],
-        totalBuyInChips: baseChipAmount,
-        isActive: remote.isActive ?? true,
-        joinAt: remote.joinAt || '',
-        isSyncing: remote.isSyncing ?? false,
-
-
-
-
-
-        // 🆕 统一 settle 命名字段
-        settleChipCount: remote.settleChipCount ?? undefined,
-        settleChipDiff: remote.settleChipDiff ?? undefined,
-        settleCashDiff: remote.settleCashDiff ?? undefined,
-        settleCashAmount: remote.settleCashAmount ?? undefined,
-        settleROI: remote.settleROI ?? undefined,
-        finalized: remote.finalized ?? false,
+        settleChipCount: remote.settleChipCount ?? normalized.settleChipCount,
+        settleChipDiff: remote.settleChipDiff ?? normalized.settleChipDiff,
+        settleCashDiff: remote.settleCashDiff ?? normalized.settleCashDiff,
+        settleCashAmount: remote.settleCashAmount ?? normalized.settleCashAmount,
+        settleROI: remote.settleROI ?? normalized.settleROI,
+        finalized: remote.finalized ?? normalized.finalized,
     };
 }
 

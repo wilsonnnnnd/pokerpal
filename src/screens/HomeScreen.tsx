@@ -27,6 +27,7 @@ import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
+import Avatar from '@/components/common/Avatar';
 import { onAuthStateChanged, signOut } from '@/services/authService';
 import storage from '@/services/storageService';
 import { fetchUserProfile } from '@/firebase/getUserProfile';
@@ -200,24 +201,17 @@ const HomeScreen = () => {
                         <View style={[styles.userCard, styles.userCardExtra]}>
                             <View style={styles.userInfoContainer}>
                                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                                    {user.photoURL ? (
-                                        <View style={styles.avatarWrapper}>
-                                            <Image
-                                                source={{ uri: user.photoURL }}
-                                                style={[styles.userAvatar, styles.userAvatarRound]}
-                                            />
-                                        </View>
-                                    ) : (
-                                        <View style={[styles.userAvatar, styles.userAvatarPrimary]}>
-                                            <Text style={{
-                                                color: color.lightText,
-                                                fontWeight: '800',
-                                                fontSize: FontSize.h2
-                                            }}>
-                                                {(user.displayName || '访客').slice(0, 1)}
-                                            </Text>
-                                        </View>
-                                    )}
+                                    <View style={styles.avatarWrapper}>
+                                        <Avatar
+                                            uri={user.photoURL ?? undefined}
+                                            name={user.displayName ?? (user.isAnonymous ? '访客' : '未命名')}
+                                            size={64}
+                                            style={styles.userAvatar}
+                                            imageStyle={styles.userAvatarRound}
+                                            textStyle={{ color: color.lightText, fontWeight: '800', fontSize: FontSize.h2 }}
+                                            accessibilityLabel={user.photoURL ? `${user.displayName}的头像照片` : `${(user.displayName || '访客').slice(0,1)} 的头像`}
+                                        />
+                                    </View>
                                 </TouchableOpacity>
 
                                 <View style={styles.userInfo}>

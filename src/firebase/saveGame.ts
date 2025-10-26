@@ -1,5 +1,6 @@
 import { db } from '@/firebase/config'
 import { useGameStore } from '@/stores/useGameStore'
+import { usePlayerStore } from '@/stores/usePlayerStore'
 import { Player } from '@/types'
 import Toast from 'react-native-toast-message'
 import { cacheGameForRetry } from '@/utils/gameCache'
@@ -14,6 +15,7 @@ import {
 	ensureUserGameHistory,
 	collectGraphWrites,
 } from './gameWriters'
+import normalizePlayer from '@/utils/normalizePlayer'
 import { BatchBuilder } from './batchBuilder'
 import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { gameDoc, hostGameDoc } from '@/constants/namingVar'
@@ -33,9 +35,29 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 		? (Number(game.baseCashAmount ?? 0) / Number(game.baseChipAmount))
 		: 1;
 
-	// compute game-level aggregates from players
-	const totalBuyInChips = players.reduce((acc, p) => acc + (Number(p.totalBuyInChips) || 0), 0);
-	const totalEndingChips = players.reduce((acc, p) => acc + (Number((p as any).settleChipCount) || 0), 0);
+	// Normalize players same as saveGameToFirebase to ensure consistency
+	const normalizedPlayers = players.map((p) => {
+		const chipsList = Array.isArray(p.buyInChipsList) ? p.buyInChipsList : [];
+		const totalBuyInChips = typeof p.totalBuyInChips === 'number' && p.totalBuyInChips > 0
+			? p.totalBuyInChips
+			: chipsList.reduce((s, v) => s + Number(v || 0), 0);
+		const buyInCount = chipsList.length;
+		const totalBuyInCash = typeof p.totalBuyInCash === 'number'
+			? Number((p.totalBuyInCash as any).toFixed ? (p.totalBuyInCash as any).toFixed(2) : p.totalBuyInCash)
+			: Number((totalBuyInChips * rate).toFixed(2));
+
+		return {
+			...p,
+			buyInChipsList: chipsList,
+			buyInCount,
+			totalBuyInChips,
+			totalBuyInCash,
+		} as Player;
+	});
+
+	// compute game-level aggregates from normalized players
+	const totalBuyInChips = normalizedPlayers.reduce((acc, p) => acc + (Number(p.totalBuyInChips) || 0), 0);
+	const totalEndingChips = normalizedPlayers.reduce((acc, p) => acc + (Number((p as any).settleChipCount) || 0), 0);
 
 	const totalBuyInCash = Number((totalBuyInChips * rate).toFixed(2));
 	const totalEndingCash = Number((totalEndingChips * rate).toFixed(2));
@@ -53,10 +75,10 @@ export async function saveGameToLocalSql(gameId: string, players: Player[]) {
 		totalBuyInCash,
 		totalEndingChips,
 		totalEndingCash,
-		players: players.map((p: Player) => ({
+		players: normalizedPlayers.map((p: Player) => ({
 			id: p.id,
 			nickname: p.nickname,
-			buyInCount: p.buyInChipsList?.length ?? 0,
+			buyInCount: p.buyInCount ?? (p.buyInChipsList?.length ?? 0),
 			// convert chips to cash using rate (cash fields use 2 decimal places)
 			totalBuyInCash: Number(((Number(p.totalBuyInChips) || 0) * rate).toFixed(2)),
 			// settleCashAmount should be derived from settleChipCount * rate
@@ -89,7 +111,6 @@ export async function createGameOnServer(game: {
 	finalized?: boolean;
 	token?: string | null;
 	createdBy?: string;
-	playerCount?: number;
 }) {
 
 	const ref = doc(db, gameDoc, game.gameId);
@@ -161,13 +182,29 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 		throw new Error('基础筹码为 0 导致汇率为 0，请检查游戏设置')
 	}
 
-	// 获取当前 hostname 用于分组索引
-	const hostname = await getHosterId()
 
 	const bb = new BatchBuilder(db, 450)
 	const gameRef = doc(db, gameDoc, gameId)
 	const snap = await getDoc(gameRef)
 	const isCreate = !snap.exists()
+
+	// Normalize players before any writes: ensure buyInCount and totals are present and consistent
+	const normalizedPlayers = players.map((p) => normalizePlayer(p, rate, game.baseChipAmount));
+
+	// Sync normalized fields back into local store so UI/state remains consistent with writes
+	try {
+		const updatePlayer = usePlayerStore.getState().updatePlayer;
+		normalizedPlayers.forEach((p) => {
+			updatePlayer(p.id, {
+				buyInChipsList: p.buyInChipsList,
+				buyInCount: p.buyInCount,
+				totalBuyInChips: p.totalBuyInChips,
+				totalBuyInCash: p.totalBuyInCash,
+			});
+		});
+	} catch (e) {
+		console.warn('Failed to sync normalized players back to store:', e);
+	}
 
 
 
@@ -180,7 +217,7 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 			baseChipAmount: game.baseChipAmount,
 			finalized: !!game.finalized,
 			token: game.token ?? null,
-			playerCount: players.length,
+			playerCount: normalizedPlayers.length,
 		})
 		: makeUpdateGamePayload({
 			smallBlind: game.smallBlind,
@@ -190,7 +227,7 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 			finalized: !!game.finalized,
 			status: game.finalized ? 'finalized' : 'open',
 			token: game.token ?? null,
-			playerCount: players.length,
+			playerCount: normalizedPlayers.length,
 		})
 
 	if (isCreate) {
@@ -202,7 +239,7 @@ export async function saveGameToFirebase(gameId: string, players: Player[] = [])
 	const graphWrites: { ref: any, history: any[] }[] = []
 
 	try {
-		for (const player of players) {
+		for (const player of normalizedPlayers) {
 			const { totalBuyInCash } = queuePlayerGameWrite(bb, db, gameId, player, rate)
 
 			if (!hasValidEmail(player.email)) {

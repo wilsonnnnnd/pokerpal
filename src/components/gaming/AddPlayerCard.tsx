@@ -16,6 +16,7 @@ import { Palette as color } from '@/constants';
 import simpleT from '@/i18n/simpleT';
 import { useGameStore } from '@/stores/useGameStore';
 import { logInfo } from '@/utils/useLogger';
+import Avatar from '@/components/common/Avatar';
 import QRCode from 'react-native-qrcode-svg';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { startPlayerSyncListener, stopPlayerSyncListener } from '@/hooks/useSyncNewPlayersToStore';
@@ -127,7 +128,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             email: email.trim().toLowerCase(),
             joinAt: new Date().toISOString(),
             photoURL: undefined,
-            buyInChipsList: [],
+            buyInChipsList: [getGame().baseChipAmount],
             buyInCount: 1,
             totalBuyInChips: getGame().baseChipAmount,
             totalBuyInCash: getGame().baseCashAmount,
@@ -280,18 +281,15 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                         ]}
                                     >
                                         <View style={AddPlayerCardStyles.userItemContent}>
-                                            <View style={AddPlayerCardStyles.userAvatar}>
-                                                {user.photoURL ? (
-                                                    <Image
-                                                        source={{ uri: user.photoURL }}
-                                                        style={AddPlayerCardStyles.avatarImage}
-                                                    />
-                                                ) : (
-                                                    <Text style={AddPlayerCardStyles.avatarText}>
-                                                        {user.nickname?.charAt(0)?.toUpperCase() || 'U'}
-                                                    </Text>
-                                                )}
-                                            </View>
+                                            <Avatar
+                                                uri={user.photoURL}
+                                                name={user.nickname}
+                                                size={40}
+                                                style={AddPlayerCardStyles.userAvatar}
+                                                imageStyle={AddPlayerCardStyles.avatarImage}
+                                                textStyle={AddPlayerCardStyles.avatarText}
+                                                accessibilityLabel={user.photoURL ? `${user.nickname}的头像照片` : `${user.nickname}的头像`}
+                                            />
                                             <View style={AddPlayerCardStyles.userInfo}>
                                                 <Text style={AddPlayerCardStyles.userNickname}>{user.nickname}</Text>
                                                 <Text style={AddPlayerCardStyles.userEmail}>{user.email}</Text>

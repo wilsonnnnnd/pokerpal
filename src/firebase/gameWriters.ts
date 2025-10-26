@@ -100,7 +100,8 @@ export function queuePlayerGameWrite(
     bb.set(playerRef, {
         playerId: player.id,
         nickname: player.nickname,
-        buyInCount: (player.buyInChipsList || []).length,
+        // use formatted.buyInCount from formatPlayerSnapshot (writer computes from canonical snapshot)
+        buyInCount: Number((formatted as any).buyInCount || 0),
         totalBuyInCash: formatted.totalBuyInCash,
         settleCashAmount: formatted.settleCashAmount,
         settleCashDiff: formatted.settleCashDiff,

@@ -8,10 +8,9 @@ import { PopupProvider } from '@/providers/PopupProvider';
 import { SettingsProvider } from '@/providers/SettingsProvider';
 import { setSimpleTLocale } from '@/i18n/simpleT';
 import AuthProvider from '@/providers/AuthProvider';
-import AuthInspector from '@/screens/AuthInspector';
 import Toast from 'react-native-toast-message';
 import { onAuthStateChanged, restoreUser } from '@/services/authService';
-import { getLocal, setLocal } from '@/services/storageService';
+import { getLocal } from '@/services/storageService';
 import localDb from '@/services/localDb';
 import { Header } from '@/components/Header';
 import HomeScreen from '@/screens/HomeScreen';
@@ -35,7 +34,7 @@ export type RootStackParamList = {
   GameHistory: undefined;
   GameDetail: { game: any };
   GamePlayerRank: undefined;
-  
+
   Profile: undefined;
   Settings: undefined;
   AuthInspector: undefined;
@@ -69,7 +68,7 @@ function MainNavigator() {
       <Stack.Screen name="GamePlay" component={GamePlayScreen} />
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
-  <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
+      <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>

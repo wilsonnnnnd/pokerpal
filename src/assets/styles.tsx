@@ -2027,6 +2027,10 @@ export const BuyInCardStyles = StyleSheet.create({
     quickBtnDisabled: {
         opacity: 0.6,
     },
+    quickBtnSelected: {
+        borderColor: color.primary,
+        borderWidth: 2,
+    },
     quickText: {
         fontSize: 12,
         fontWeight: '600',

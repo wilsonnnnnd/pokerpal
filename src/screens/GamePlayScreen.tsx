@@ -211,7 +211,6 @@ export default function GamePlayScreen() {
             // 现金口径校验
             const game = useGameStore.getState();
             const gameId = game.gameId;
-            const rate = calcRate(game.baseCashAmount, game.baseChipAmount);
 
             const totalBuyInChips = players.reduce((sum, p) => sum + p.totalBuyInChips, 0);
             const totalEndingChips = players.reduce((sum, p) => sum + (p.settleChipCount || 0), 0);
@@ -813,10 +812,14 @@ export default function GamePlayScreen() {
                                 onSubmit={(buyInAmount) => {
                                     const updatedPlayer = {
                                         ...modalState.player,
-                                        totalBuyInChips: buyInAmount
+                                        // normalize edited total as a single buy-in entry
+                                        buyInChipsList: [buyInAmount],
+                                        buyInCount: 1,
+                                        totalBuyInChips: buyInAmount,
+                                        totalBuyInCash: Number((buyInAmount * rate).toFixed(2)),
                                     };
                                     updatePlayer(modalState.player.id, updatedPlayer);
-                                    log('Player', `✏️ 编辑玩家 ${updatedPlayer.nickname} 总买入修改为 ${buyInAmount}`);
+                                    log('Player', `✏️ 编辑玩家 ${updatedPlayer.nickname} 总买入修改为 ${buyInAmount} （重写为 single entry）`);
                                     setModalState(null);
                                 }}
                                 onCancel={() => setModalState(null)}

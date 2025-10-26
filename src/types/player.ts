@@ -6,6 +6,7 @@ export type Player = {
     isActive?: boolean;
     joinAt: string; // ISO string (e.g. 2025-09-20T12:34:56.000Z)
     buyInChipsList: number[];
+    buyInCount?: number;
     totalBuyInChips: number;
     totalBuyInCash?: number;
     endCashAmount?: number;

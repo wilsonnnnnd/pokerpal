@@ -24,12 +24,19 @@ export const usePlayerStore = create<PlayerState>()(
                         return {
                             players: state.players.map((p) =>
                                 p.id === id
-                                    ? {
-                                        ...p,
-                                        buyInChipsList: [...p.buyInChipsList, amount],
-                                        totalBuyInChips: p.totalBuyInChips + amount,
-                                        totalBuyInCash: Number(((p.totalBuyInCash || 0) + amount * rate).toFixed(2)),
-                                    }
+                                    ? (() => {
+                                        const newBuyInChipsList = [...p.buyInChipsList, amount];
+                                        const prevBuyInCount = typeof p.buyInCount === 'number' ? p.buyInCount : p.buyInChipsList.length;
+                                        const newBuyInCount = prevBuyInCount + 1;
+
+                                        return {
+                                            ...p,
+                                            buyInChipsList: newBuyInChipsList,
+                                            buyInCount: newBuyInCount,
+                                            totalBuyInChips: p.totalBuyInChips + amount,
+                                            totalBuyInCash: Number(((p.totalBuyInCash || 0) + amount * rate).toFixed(2)),
+                                        };
+                                    })()
                                     : p
                             ),
                         };

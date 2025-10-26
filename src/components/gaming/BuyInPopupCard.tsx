@@ -7,6 +7,7 @@ import { BuyInProps, Player } from '@/types';
 import { useGameStore } from '@/stores/useGameStore';
 import { InputField } from '../common/InputField';
 import { BuyInCardStyles } from '@/assets/styles';
+import Avatar from '@/components/common/Avatar';
 
 
 export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCancel }) => {
@@ -14,9 +15,10 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
     const [isFocused, setIsFocused] = useState(false);
     // 防止连续快速点击快捷按钮
     const [quickDisabled, setQuickDisabled] = useState(false);
+    const [selectedPresetIndex, setSelectedPresetIndex] = useState<number | null>(null);
     // 根据当前游戏的基础筹码金额生成快速买入选项
     const baseChipAmount = useGameStore.getState().baseChipAmount ?? 1000;
-    
+
     // 基于基础筹码金额的专业买入选项：1x, 2x, 3x, 5x
     // label 使用 i18n key，以便在渲染时通过 simpleT 解析（避免导入时翻译）
     const presetValues = [
@@ -68,13 +70,21 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
         });
     };
 
-    const appendPreset = (value: number) => {
+    const appendPreset = (value: number, index: number) => {
         if (quickDisabled) return;
+
         setQuickDisabled(true);
         try {
-            const current = parseInt(amount || '0', 10);
-            const sum = isNaN(current) ? value : current + value;
-            setAmount(sum.toString());
+            // 如果点了同一个已选的 preset，则取消选择并清空输入
+            if (selectedPresetIndex === index) {
+                setSelectedPresetIndex(null);
+                setAmount('');
+                return;
+            }
+
+            setSelectedPresetIndex(index);
+            // 直接替换为选中的 preset 值（而不是累加）
+            setAmount(String(value));
         } finally {
             // 短暂解锁，防止连续点击（300ms）
             setTimeout(() => setQuickDisabled(false), 300);
@@ -104,13 +114,16 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                 <View style={BuyInCardStyles.card}>
                     <View style={BuyInCardStyles.header}>
                         <View style={BuyInCardStyles.headerContent}>
-                            {avatarUrl ? (
-                                <Image source={{ uri: avatarUrl }} style={BuyInCardStyles.avatarImage} />
-                            ) : (
-                                <View style={[BuyInCardStyles.avatar, { backgroundColor: avatarColor }]}>
-                                    <Text style={BuyInCardStyles.avatarText}>{initialLetter}</Text>
-                                </View>
-                            )}
+                            <Avatar
+                                uri={avatarUrl ?? undefined}
+                                name={player.nickname}
+                                size={48}
+                                style={BuyInCardStyles.avatar}
+                                imageStyle={BuyInCardStyles.avatarImage}
+                                textStyle={BuyInCardStyles.avatarText}
+                                backgroundColor={avatarColor}
+                                accessibilityLabel={avatarUrl ? `${player.nickname}的头像照片` : `${player.nickname}的头像`}
+                            />
                                             <View style={BuyInCardStyles.headerTextContainer}>
                                                 <Text style={BuyInCardStyles.title}>{simpleT('buyin_add_title')}</Text>
                                 <Text style={BuyInCardStyles.subtitle}>{player.nickname}</Text>
@@ -130,7 +143,10 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                             placeholder={simpleT('buyin_amount_placeholder')}
                             icon="poker-chip"
                             keyboardType="number-pad"
-                            onChangeText={(field, value) => setAmount(value)}
+                            onChangeText={(field, value) => {
+                                setSelectedPresetIndex(null);
+                                setAmount(value);
+                            }}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
                             returnKeyType="done"
@@ -148,8 +164,12 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                             {presetValues.map((item, index) => (
                                 <TouchableOpacity
                                     key={index}
-                                    style={[BuyInCardStyles.quickBtn, quickDisabled && BuyInCardStyles.quickBtnDisabled]}
-                                    onPress={() => appendPreset(item.value)}
+                                    style={[
+                                        BuyInCardStyles.quickBtn,
+                                        quickDisabled && BuyInCardStyles.quickBtnDisabled,
+                                        selectedPresetIndex === index ? { borderColor: color.primary, borderWidth: 2 } : null,
+                                    ]}
+                                    onPress={() => appendPreset(item.value, index)}
                                     activeOpacity={0.7}
                                     disabled={quickDisabled}
                                 >
