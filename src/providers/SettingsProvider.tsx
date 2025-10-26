@@ -3,6 +3,8 @@ import { getLocal, setLocal } from '@/services/storageService';
 import { SETTINGS_KEY } from '@/constants/namingVar';
 // timezone support removed
 import { getExchangeRate } from '@/services/exchangeService';
+import { setSimpleTLocale } from '@/i18n/simpleT';
+import { DEFAULT_FROM_CURRENCY, DEFAULT_TO_CURRENCY, DEFAULT_EXCHANGE_RATE, DEFAULT_EXCHANGE_SOURCE, DEFAULT_UI_LANGUAGE, DEFAULT_CURRENCY } from '@/constants/appConfig';
 
 type Language = string;
 
@@ -47,11 +49,11 @@ export const useSettings = () => {
 
 const getDefaults = (): AppSettings => {
     // 默认汇率配置 - 最新单条汇率记录
-    const defaultLatestExchange = { from: 'AUD', to: 'CNY', rate: 4.7, updated: new Date().toISOString(), source: 'default' };
+    const defaultLatestExchange = { from: DEFAULT_FROM_CURRENCY, to: DEFAULT_TO_CURRENCY, rate: DEFAULT_EXCHANGE_RATE, updated: new Date().toISOString(), source: DEFAULT_EXCHANGE_SOURCE };
 
     return {
-        language: 'zh',
-        currency: 'AUD',
+        language: DEFAULT_UI_LANGUAGE,
+        currency: DEFAULT_FROM_CURRENCY,
         latestExchange: defaultLatestExchange,
     };
 };
@@ -60,15 +62,12 @@ const getDefaults = (): AppSettings => {
 const EXCHANGE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-    const [language, setLanguageState] = useState<Language>('en');
+    const [language, setLanguageState] = useState<Language>(DEFAULT_UI_LANGUAGE);
     // timezone removed
-    const [currency, setCurrencyState] = useState<string>('AUD');
+    const [currency, setCurrencyState] = useState<string>(DEFAULT_FROM_CURRENCY);
     // 内存中使用单一 latestExchange 对象作为单一数据源
     const [latestExchange, setLatestExchange] = useState<{ from: string; to: string; rate: number; updated?: string | null; source?: string } | null>(null);
     const [isUpdatingRates, setIsUpdatingRates] = useState<boolean>(false);
-
-    // 派生的兼容性字段（为兼容旧接口）
-    // 不再暴露旧的 exchangeRates map；直接使用 latestExchange
 
     useEffect(() => {
         (async () => {
@@ -94,26 +93,29 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 }
 
                 setLanguageState(settings.language);
-                // timezone removed, set currency and language only
-                setCurrencyState(settings.currency ?? 'AUD');
+                // sync simpleT default locale with provider's language
+                try { setSimpleTLocale(settings.language); } catch (e) { /* ignore */ }
+                // 已移除时区，仅设置语言和货币
+                const initialFromCurrency = settings.currency ?? DEFAULT_FROM_CURRENCY;
+                setCurrencyState(initialFromCurrency);
 
                 // 优先使用 settings.latestExchange 来设置内存中的 latestExchange（单一真相）
                 try {
                     const latest = (settings as any).latestExchange ?? null;
                     if (latest && latest.from && latest.to && typeof latest.rate === 'number') {
                         const last = latest.updated ?? null;
-                        // if has timestamp and fresh, use it
+                        // 若有时间戳且未过期则使用
                         if (last) {
                             const elapsed = Date.now() - Date.parse(last);
                             if (!isNaN(elapsed) && elapsed < EXCHANGE_TTL_MS) {
                                 setLatestExchange({ from: latest.from, to: latest.to, rate: latest.rate, updated: last, source: latest.source });
                             } else {
-                                // stale: try to refresh from backend, but keep cached as fallback
-                                try {
-                                    const r = await getExchangeRate('AUD', 'CNY');
-                                    const now = new Date().toISOString();
-                                    setLatestExchange({ from: 'AUD', to: 'CNY', rate: r.rate, updated: now });
-                                } catch (e) {
+                                // 数据过期：尝试从后端刷新，失败则回退使用缓存
+                try {
+                    const r = await getExchangeRate(initialFromCurrency, DEFAULT_TO_CURRENCY);
+                    const now = new Date().toISOString();
+                    setLatestExchange({ from: initialFromCurrency, to: DEFAULT_TO_CURRENCY, rate: r.rate, updated: now });
+                } catch (e) {
                                     setLatestExchange({ from: latest.from, to: latest.to, rate: latest.rate, updated: last, source: latest.source });
                                 }
                             }
@@ -121,31 +123,32 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                             setLatestExchange({ from: latest.from, to: latest.to, rate: latest.rate, updated: null, source: latest.source });
                         }
                     } else {
-                        const r = await getExchangeRate('AUD', 'CNY');
-                        const now = new Date().toISOString();
-                        setLatestExchange({ from: 'AUD', to: 'CNY', rate: r.rate, updated: now });
+                            const r = await getExchangeRate(initialFromCurrency, DEFAULT_TO_CURRENCY);
+                            const now = new Date().toISOString();
+                            setLatestExchange({ from: initialFromCurrency, to: DEFAULT_TO_CURRENCY, rate: r.rate, updated: now });
                     }
                 } catch (e) {
-                    // on any error while restoring exchange info, attempt to use latestExchange if present
+                    // 恢复汇率信息时出错，尝试使用 settings.latestExchange
                     try {
                         const le = (settings as any).latestExchange;
                         if (le && le.to && typeof le.rate === 'number') {
                             setLatestExchange({ from: le.from, to: le.to, rate: le.rate, updated: le.updated ?? null, source: le.source });
                         }
                     } catch (err) {
-                        // ignore
+                        // 忽略错误
                     }
                 }
 
                 try { (global as any).__pokerpal_settings = settings; } catch (e) { /* ignore */ }
             } catch (e) {
-                // ignore
+                // 忽略错误
             }
         })();
     }, []);
 
     const setLanguage = async (l: Language) => {
         setLanguageState(l);
+        try { setSimpleTLocale(l); } catch (e) { /* ignore */ }
         try {
             const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
             const defaults = getDefaults();
@@ -158,11 +161,11 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             await setLocal(SETTINGS_KEY, merged).catch(() => { });
             try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
         } catch (e) {
-            // ignore
+            // 忽略错误
         }
     };
 
-    // timezone API removed
+    // 已移除时区相关 API
 
     const setCurrency = async (c: string) => {
         setCurrencyState(c);
@@ -177,18 +180,19 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             await setLocal(SETTINGS_KEY, merged).catch(() => { });
             try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
         } catch (e) {
-            // ignore
+            // 忽略错误
         }
     };
 
-    const setExchangeRate = async (currency: string, rate: number) => {
-        // update latestExchange (single source of truth)
+    const setExchangeRate = async (toCurrency: string, rate: number) => {
+    // 更新 latestExchange（单一真相）
         const now = new Date().toISOString();
-        setLatestExchange({ from: 'AUD', to: currency, rate, updated: now });
+        const baseFrom = currency ?? DEFAULT_FROM_CURRENCY;
+        setLatestExchange({ from: baseFrom, to: toCurrency, rate, updated: now });
         try {
             const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
             const defaults = getDefaults();
-            const mergedLatest = { from: 'AUD', to: currency, rate, updated: now };
+            const mergedLatest = { from: baseFrom, to: toCurrency, rate, updated: now };
             const merged: AppSettings = {
                 language: existing?.language ?? defaults.language,
                 timezone: existing?.timezone ?? defaults.timezone,
@@ -197,23 +201,23 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
             };
             await setLocal(SETTINGS_KEY, merged).catch(() => { });
             try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
-        } catch (e) {
-            // ignore
+            } catch (e) {
+            // 忽略错误
         }
     };
 
     const convertToRMB = (amount: number, fromCurrency: string): number => {
-        // Use single latestExchange as source of truth.
-        // If converting from AUD, use latestExchange.rate (AUD -> latestExchange.to, typically CNY).
+    // 使用 latestExchange 作为单一数据源。
+    // 若来源为默认货币，则使用 latestExchange.rate（通常转换为 CNY）。
         const fromUpper = fromCurrency.toUpperCase();
-        if (fromUpper === 'AUD') {
+        if (fromUpper === DEFAULT_FROM_CURRENCY) {
             const rate = latestExchange?.rate ?? 4.7;
             return amount * rate;
-        } else if (fromUpper === 'CNY') {
+        } else if (fromUpper === DEFAULT_TO_CURRENCY) {
             return amount;
         } else {
-            // Without a full map we can't reliably convert other currencies.
-            // Fall back to returning the original amount (previous code also returned original when missing).
+            // 没有完整映射时无法可靠转换其他货币。
+            // 回退为返回原值（与之前逻辑一致）。
             return amount;
         }
     };
@@ -236,24 +240,25 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                     const elapsed = Date.now() - Date.parse(le.updated);
                     if (!isNaN(elapsed) && elapsed < EXCHANGE_TTL_MS) {
                         // 本地数据仍然新鲜，直接使用并返回
-                        setLatestExchange({ from: le.from ?? 'AUD', to: le.to ?? 'CNY', rate: le.rate, updated: le.updated, source: le.source });
+                        setLatestExchange({ from: le.from ?? DEFAULT_FROM_CURRENCY, to: le.to ?? DEFAULT_TO_CURRENCY, rate: le.rate, updated: le.updated, source: le.source });
                         return;
                     }
                 }
             } catch (e) {
-                // ignore local read errors and fallthrough to backend fetch
+                // 忽略本地读取错误，继续调用后端获取
             }
 
-            // 本地没有新鲜数据，使用 backend 接口获取 AUD -> CNY
-            const r = await getExchangeRate('AUD', 'CNY');
+            // 本地没有新鲜数据，调用后端接口获取最新汇率
+            const fromCurrency = currency ?? DEFAULT_FROM_CURRENCY;
+            const r = await getExchangeRate(fromCurrency, DEFAULT_TO_CURRENCY);
             const now = new Date().toISOString();
             // 更新 latestExchange
-            setLatestExchange({ from: 'AUD', to: 'CNY', rate: r.rate, updated: now, source: r.source });
+            setLatestExchange({ from: fromCurrency, to: DEFAULT_TO_CURRENCY, rate: r.rate, updated: now, source: r.source });
 
             // 保存 latestExchange 对象到本地存储
             const existing = await getLocal<Partial<AppSettings> | null>(SETTINGS_KEY);
             const defaults = getDefaults();
-            const mergedLatest = { from: 'AUD', to: 'CNY', rate: r.rate, updated: now, source: r.source };
+            const mergedLatest = { from: currency ?? DEFAULT_FROM_CURRENCY, to: DEFAULT_TO_CURRENCY, rate: r.rate, updated: now, source: r.source };
             const merged: AppSettings = {
                 language: existing?.language ?? defaults.language,
                 timezone: existing?.timezone ?? defaults.timezone,
@@ -281,7 +286,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
     const formatCurrency = (v: number, code?: string) => {
         if (!Number.isFinite(v)) return '-';
-        const currencyCode = code ?? currency ?? (global as any).__pokerpal_settings?.currency ?? 'AUD';
+    const currencyCode = code ?? currency ?? (global as any).__pokerpal_settings?.currency ?? DEFAULT_CURRENCY;
         try {
             return new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode }).format(v);
         } catch (e) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Modal } from 'react-native';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { MsgPopUpProps } from '@/types';
 import { Palette as color } from '@/constants';
 import { MessageStyles } from '@/assets/styles';

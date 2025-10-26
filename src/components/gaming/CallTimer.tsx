@@ -21,6 +21,7 @@ import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { CallTimerStyles } from '@/assets/styles';
 import { CallTimerHandle, CallTimerProps } from '@/types';
+import simpleT from '@/i18n/simpleT';
 
 const RADIUS = 40;
 const STROKE_WIDTH = 8;
@@ -78,7 +79,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             setIsLoadingSound(true);
             try {
                 if (audioPlayer) {
-                    audioPlayer.replace(require('../assets/sounds/clock-alarm.mp3'));
+                    audioPlayer.replace(require('@/assets/sounds/clock-alarm.mp3'));
                     setSoundsLoaded(true);
                 } else {
                     setSoundsLoaded(false);
@@ -297,12 +298,12 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
             const inputSeconds = parseInt(timeInput);
 
             if (isNaN(inputSeconds) || inputSeconds <= 0) {
-                Alert.alert('提示', '请输入有效的时间（秒）');
+                Alert.alert(simpleT('calltimer_alert_title'), simpleT('calltimer_invalid_time_msg'));
                 return;
             }
 
             if (inputSeconds > 600) { // 最大10分钟
-                Alert.alert('提示', '时间不能超过10分钟（600秒）');
+                Alert.alert(simpleT('calltimer_alert_title'), simpleT('calltimer_exceed_max_msg'));
                 return;
             }
 
@@ -353,7 +354,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                                     {formatTime(secondsLeft)}
                                 </Text>
                             </TouchableOpacity>
-                            <Text style={CallTimerStyles.timeUnit}>秒</Text>
+                            <Text style={CallTimerStyles.timeUnit}>{simpleT('calltimer_seconds_unit')}</Text>
                         </View>
                     </View>
                 </View>
@@ -381,7 +382,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                                         initialDuration === time && CallTimerStyles.activePresetButtonText
                                     ]}
                                 >
-                                    {time}s
+                                    {simpleT('preset_label', undefined, { n: time })}
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>
@@ -413,7 +414,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                                 color={color.lightText}
                             />
                             <Text style={CallTimerStyles.controlButtonText}>
-                                {running ? '暂停' : '继续'}
+                                {running ? simpleT('calltimer_pause') : simpleT('calltimer_resume')}
                             </Text>
                         </LinearGradient>
                     </TouchableOpacity>
@@ -430,7 +431,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                             style={CallTimerStyles.controlButton}
                         >
                             <Ionicons name="refresh" size={24} color={color.lightText} />
-                            <Text style={CallTimerStyles.controlButtonText}>重置</Text>
+                            <Text style={CallTimerStyles.controlButtonText}>{simpleT('calltimer_reset')}</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
@@ -443,7 +444,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     >
                         <View style={CallTimerStyles.settingButtonInner}>
                             <Ionicons name="add-circle-outline" size={20} color={color.primary} />
-                            <Text style={CallTimerStyles.settingButtonText}>+5秒</Text>
+                            <Text style={CallTimerStyles.settingButtonText}>{simpleT('add_seconds', undefined, { n: 5 })}</Text>
                         </View>
                     </TouchableOpacity>
 
@@ -453,7 +454,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     >
                         <View style={CallTimerStyles.settingButtonInner}>
                             <Ionicons name="add-circle-outline" size={20} color={color.primary} />
-                            <Text style={CallTimerStyles.settingButtonText}>+15秒</Text>
+                            <Text style={CallTimerStyles.settingButtonText}>{simpleT('add_seconds', undefined, { n: 15 })}</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -463,7 +464,7 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
         // 渲染编辑时间UI
         const renderTimeEdit = () => (
             <View style={CallTimerStyles.timeInputContainer}>
-                <Text style={CallTimerStyles.timeInputLabel}>设置时间（秒）</Text>
+                <Text style={CallTimerStyles.timeInputLabel}>{simpleT('calltimer_set_time_label')}</Text>
                 <TextInput
                     style={CallTimerStyles.timeInput}
                     value={timeInput}
@@ -471,20 +472,20 @@ const CallTimer = forwardRef<CallTimerHandle, CallTimerProps>(
                     keyboardType="number-pad"
                     maxLength={3}
                     autoFocus
-                    placeholder="输入秒数"
+                    placeholder={simpleT('calltimer_enter_seconds_placeholder')}
                 />
                 <View style={CallTimerStyles.timeInputButtons}>
                     <TouchableOpacity
                         style={[CallTimerStyles.timeInputButton, CallTimerStyles.cancelButton]}
                         onPress={() => setEditingTime(false)}
                     >
-                        <Text style={CallTimerStyles.cancelButtonText}>取消</Text>
+                        <Text style={CallTimerStyles.cancelButtonText}>{simpleT('cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[CallTimerStyles.timeInputButton, CallTimerStyles.confirmButton]}
                         onPress={confirmTimeInput}
                     >
-                        <Text style={CallTimerStyles.confirmButtonText}>确定</Text>
+                        <Text style={CallTimerStyles.confirmButtonText}>{simpleT('confirm')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

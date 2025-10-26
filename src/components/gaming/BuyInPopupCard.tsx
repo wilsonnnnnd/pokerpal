@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Animated, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
+import simpleT from '@/i18n/simpleT';
 import { BuyInProps, Player } from '@/types';
 import { useGameStore } from '@/stores/useGameStore';
-import { InputField } from './InputField';
+import { InputField } from '../common/InputField';
 import { BuyInCardStyles } from '@/assets/styles';
 
 
@@ -17,25 +18,26 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
     const baseChipAmount = useGameStore.getState().baseChipAmount ?? 1000;
     
     // 基于基础筹码金额的专业买入选项：1x, 2x, 3x, 5x
+    // label 使用 i18n key，以便在渲染时通过 simpleT 解析（避免导入时翻译）
     const presetValues = [
         {
             value: baseChipAmount,
-            label: '标准买入',
+            label: 'buyin.preset_standard',
             subtitle: `${baseChipAmount}`
         },
         {
             value: baseChipAmount * 2,
-            label: '双倍买入',
+            label: 'buyin.preset_double',
             subtitle: `${baseChipAmount * 2}`
         },
         {
             value: baseChipAmount * 3,
-            label: '三倍买入',
+            label: 'buyin.preset_triple',
             subtitle: `${baseChipAmount * 3}`
         },
         {
             value: baseChipAmount * 5,
-            label: '深筹码',
+            label: 'buyin.preset_deep',
             subtitle: `${baseChipAmount * 5}`
         }
     ];
@@ -53,7 +55,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
     const handleConfirm = () => {
         const value = parseInt(amount || '0', 10);
         if (isNaN(value) || value <= 0) {
-            alert('请输入大于 0 的有效整数');
+            alert(simpleT('buyin.invalid_amount_msg'));
             return;
         }
 
@@ -110,7 +112,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                                 </View>
                             )}
                             <View style={BuyInCardStyles.headerTextContainer}>
-                                <Text style={BuyInCardStyles.title}>追加买入</Text>
+                                <Text style={BuyInCardStyles.title}>{simpleT('buyin.add_title')}</Text>
                                 <Text style={BuyInCardStyles.subtitle}>{player.nickname}</Text>
                             </View>
                         </View>
@@ -122,10 +124,10 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
 
                     <View style={BuyInCardStyles.body}>
                         <InputField
-                            label="筹码数量"
+                            label={simpleT('buyin.amount_label')}
                             fieldName="amount"
                             value={amount}
-                            placeholder="输入筹码数"
+                            placeholder={simpleT('buyin.amount_placeholder')}
                             icon="poker-chip"
                             keyboardType="number-pad"
                             onChangeText={(field, value) => setAmount(value)}
@@ -137,11 +139,11 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                         <View style={BuyInCardStyles.baseChipInfo}>
                             <MaterialCommunityIcons name="information-outline" size={16} color={color.info} />
                             <Text style={BuyInCardStyles.baseChipText}>
-                                当前游戏基础筹码: {baseChipAmount}
+                                {simpleT('buyin.base_chip_info', undefined, { baseChipAmount })}
                             </Text>
                         </View>
 
-                        <Text style={BuyInCardStyles.presetLabel}>快速添加：</Text>
+                        <Text style={BuyInCardStyles.presetLabel}>{simpleT('buyin.quick_add_label')}</Text>
                         <View style={BuyInCardStyles.quickButtons}>
                             {presetValues.map((item, index) => (
                                 <TouchableOpacity
@@ -151,22 +153,22 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                                     activeOpacity={0.7}
                                     disabled={quickDisabled}
                                 >
-                                    <Text style={BuyInCardStyles.quickText}>{item.label}</Text>
+                                    <Text style={BuyInCardStyles.quickText}>{simpleT(item.label)}</Text>
                                     <Text style={BuyInCardStyles.quickSubtext}>{item.subtitle}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
                         <View style={BuyInCardStyles.currentBuyIn}>
-                            <Text style={BuyInCardStyles.currentBuyInLabel}>当前已买入：</Text>
-                            <Text style={BuyInCardStyles.currentBuyInValue}>{player.totalBuyInChips} 筹码</Text>
+                            <Text style={BuyInCardStyles.currentBuyInLabel}>{simpleT('buyin.current_buyin_label')}</Text>
+                            <Text style={BuyInCardStyles.currentBuyInValue}>{player.totalBuyInChips} {simpleT('buyin.chips_suffix')}</Text>
                         </View>
 
                         {amount && (
                             <View style={BuyInCardStyles.summary}>
-                                <Text style={BuyInCardStyles.summaryLabel}>追加后总计：</Text>
+                                <Text style={BuyInCardStyles.summaryLabel}>{simpleT('buyin.total_after_label')}</Text>
                                 <Text style={BuyInCardStyles.summaryValue}>
-                                    {player.totalBuyInChips + parseInt(amount || '0', 10)} 筹码
+                                    {player.totalBuyInChips + parseInt(amount || '0', 10)} {simpleT('buyin.chips_suffix')}
                                 </Text>
                             </View>
                         )}
@@ -178,7 +180,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                             onPress={onCancel}
                             activeOpacity={0.7}
                         >
-                            <Text style={BuyInCardStyles.cancelButtonText}>取消</Text>
+                            <Text style={BuyInCardStyles.cancelButtonText}>{simpleT('cancel')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -191,7 +193,7 @@ export const BuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onCance
                             disabled={!amount || parseInt(amount, 10) <= 0}
                         >
                             <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-                            <Text style={BuyInCardStyles.confirmButtonText}>确认买入</Text>
+                            <Text style={BuyInCardStyles.confirmButtonText}>{simpleT('buyin.confirm_buyin')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

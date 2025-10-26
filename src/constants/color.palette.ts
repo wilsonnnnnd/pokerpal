@@ -1,4 +1,4 @@
-import { PrimaryButton } from "@/components/PrimaryButton";
+import { PrimaryButton } from "@/components/common/PrimaryButton";
 
 export const Palette = {
     background: '#FFFFF0',

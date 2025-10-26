@@ -1,4 +1,5 @@
 import { auth as firebaseAuth } from '@/firebase/config';
+import { getFreshIdToken, tokenWillExpireWithin } from './authToken';
 import { API_BASE } from '@/constants/Url';
 import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS } from '@/constants/rateLimit';
 
@@ -24,22 +25,21 @@ function allowRequest(windowMs = RATE_LIMIT_WINDOW_MS, maxRequests = RATE_LIMIT_
 
 async function attachAuthHeader(headers: Record<string, string> = {}): Promise<Record<string, string>> {
   try {
-    const auth = (firebaseAuth as any) ?? null;
-    const user = auth?.currentUser ?? null;
-    if (!user) return headers;
+    // If token is near expiry, force refresh before attaching
     try {
-      const token = await user.getIdToken();
-      if (token) {
-        return { ...headers, Authorization: `Bearer ${token}` };
+      const willExpire = tokenWillExpireWithin(300); // 5 minutes
+      if (willExpire) {
+        await getFreshIdToken({ force: true });
       }
     } catch (e) {
-      // ignore token attach errors; return original headers
-      return headers;
+      // ignore
     }
+    const token = await getFreshIdToken();
+    if (token) return { ...headers, Authorization: `Bearer ${token}` };
+    return headers;
   } catch (e) {
     return headers;
   }
-  return headers;
 }
 
 function buildUrlWithParams(url: string, params?: Record<string, string | number | boolean>) {
@@ -67,7 +67,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeout =
 
 export async function apiGet<T = any>(
   url: string,
-  options?: { params?: Record<string, any>; headers?: Record<string, string>; timeout?: number; disableRateLimit?: boolean }
+  options?: { params?: Record<string, any>; headers?: Record<string, string>; timeout?: number; disableRateLimit?: boolean; autoRetryOn401?: boolean }
 ) {
   try {
     // Rate limiting: allow callers to opt-out via options.disableRateLimit
@@ -80,19 +80,22 @@ export async function apiGet<T = any>(
     const finalUrl = options?.params ? buildUrlWithParams(url, options.params) : (url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`);
     let headers = await attachAuthHeader(options?.headers ?? {});
     let res = await fetchWithTimeout(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT);
-    // If 401, try to refresh token and retry once
+    // If 401, optionally force-refresh token and retry once
     if (res.status === 401) {
-      try {
-        // force refresh token
-        const auth = (firebaseAuth as any) ?? null;
-        const user = auth?.currentUser ?? null;
-        if (user) {
-          try { await user.getIdToken(true); } catch (_) { /* ignore */ }
+      if (options?.autoRetryOn401 !== false) {
+        try {
+          await getFreshIdToken({ force: true });
           headers = await attachAuthHeader(options?.headers ?? {});
           res = await fetchWithTimeout(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT);
+        } catch (e) {
+          // ignore and fallthrough to error handling
         }
-      } catch (e) {
-        // ignore retry errors
+      }
+      if (res.status === 401) {
+        return Promise.reject({ status: 401, data: await (async () => {
+          const text = await res.text();
+          try { return JSON.parse(text || '{}'); } catch { return text; }
+        })() });
       }
     }
 
@@ -108,7 +111,7 @@ export async function apiGet<T = any>(
   }
 }
 
-export async function apiPost<T = any>(url: string, body?: any, options?: { headers?: Record<string, string>; timeout?: number }) {
+export async function apiPost<T = any>(url: string, body?: any, options?: { headers?: Record<string, string>; timeout?: number; autoRetryOn401?: boolean }) {
   try {
     // For POST, allow callers to disable the rate limiter via options.disableRateLimit
     const opt = options as any;
@@ -122,18 +125,22 @@ export async function apiPost<T = any>(url: string, body?: any, options?: { head
     let headers = await attachAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) });
     const finalUrl = url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
     let res = await fetchWithTimeout(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT);
-    // If 401, try refresh and retry once
+    // If 401, optionally force-refresh token and retry once
     if (res.status === 401) {
-      try {
-        const auth = (firebaseAuth as any) ?? null;
-        const user = auth?.currentUser ?? null;
-        if (user) {
-          try { await user.getIdToken(true); } catch (_) { /* ignore */ }
+      if ((options as any)?.autoRetryOn401 !== false) {
+        try {
+          await getFreshIdToken({ force: true });
           headers = await attachAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) });
           res = await fetchWithTimeout(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT);
+        } catch (e) {
+          // ignore and fallthrough
         }
-      } catch (e) {
-        // ignore
+      }
+      if (res.status === 401) {
+        return Promise.reject({ status: 401, data: await (async () => {
+          const text = await res.text();
+          try { return JSON.parse(text || '{}'); } catch { return text; }
+        })() });
       }
     }
 

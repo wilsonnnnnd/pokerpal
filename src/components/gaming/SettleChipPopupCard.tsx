@@ -5,8 +5,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
 import { Palette as color } from '@/constants';
+import simpleT from '@/i18n/simpleT';
 import { BuyInProps, Player } from '@/types';
-import { PrimaryButton } from './PrimaryButton';
+import { PrimaryButton } from '../common/PrimaryButton';
 import { SettleChipsStyles } from '@/assets/styles';
 
 
@@ -17,7 +18,7 @@ export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, on
     const handleConfirm = () => {
         const value = parseInt(chipInput || '0', 10);
         if (isNaN(value) || value < 0) {
-            setError('请输入有效的筹码数（不能为负数）');
+            setError(simpleT('chip_input_invalid'));
             return;
         }
         setError('');
@@ -48,15 +49,15 @@ export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, on
                         color={color.primary} 
                         style={SettleChipsStyles.headerIcon}
                     />
-                    <Text style={SettleChipsStyles.title}>玩家离场结算</Text>
+                    <Text style={SettleChipsStyles.title}>{simpleT('settle_player_exit_title')}</Text>
                     <Text style={SettleChipsStyles.subtitle}>
-                        <Text style={SettleChipsStyles.playerName}>{player.nickname}</Text> 离场
+                        {simpleT('player_exit_subtitle', undefined, { name: player.nickname })}
                     </Text>
                 </View>
 
                 {/* 输入区域 */}
                 <View style={SettleChipsStyles.inputSection}>
-                    <Text style={SettleChipsStyles.inputLabel}>请输入剩余筹码数：</Text>
+                    <Text style={SettleChipsStyles.inputLabel}>{simpleT('input_enter_remaining_chips')}</Text>
                     
                     <View style={[SettleChipsStyles.inputContainer, error ? SettleChipsStyles.inputError : null]}>
                         <MaterialCommunityIcons 
@@ -70,7 +71,7 @@ export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, on
                             value={chipInput}
                             onChangeText={handleInputChange}
                             keyboardType="number-pad"
-                            placeholder="输入筹码数"
+                            placeholder={simpleT('chip_input_placeholder')}
                             placeholderTextColor={color.weakGray}
                         />
                     </View>
@@ -99,7 +100,7 @@ export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, on
                             style={SettleChipsStyles.buttonGradient}
                         >
                             <MaterialCommunityIcons name="close" size={20} color={color.strongGray} />
-                            <Text style={SettleChipsStyles.cancelButtonText}>取消</Text>
+                            <Text style={SettleChipsStyles.cancelButtonText}>{simpleT('cancel')}</Text>
                         </LinearGradient>
                     </TouchableOpacity>
 
@@ -113,7 +114,7 @@ export const SettleChipPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, on
                             style={SettleChipsStyles.buttonGradient}
                         >
                             <MaterialCommunityIcons name="check" size={20} color="white" />
-                            <Text style={SettleChipsStyles.confirmButtonText}>确认结算</Text>
+                            <Text style={SettleChipsStyles.confirmButtonText}>{simpleT('confirm_settlement')}</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>

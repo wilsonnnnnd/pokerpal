@@ -4,8 +4,9 @@ import { NavigationContainer, useNavigationContainerRef } from '@react-navigatio
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PopupProvider } from '@/components/PopupProvider';
+import { PopupProvider } from '@/providers/PopupProvider';
 import { SettingsProvider } from '@/providers/SettingsProvider';
+import { setSimpleTLocale } from '@/i18n/simpleT';
 import AuthProvider from '@/providers/AuthProvider';
 import AuthInspector from '@/screens/AuthInspector';
 import Toast from 'react-native-toast-message';
@@ -17,12 +18,11 @@ import HomeScreen from '@/screens/HomeScreen';
 import GamePlayScreen from '@/screens/GamePlayScreen';
 import GameHistoryScreen from '@/screens/GameHistoryScreen';
 import GameDetailScreen from '@/screens/GameDetailScreen';
-import LocalhistoryScreen from '@/screens/LocalHistoryScreen';
 import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
-import { CURRENT_USER_KEY } from '@/constants/namingVar';
+import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { userHasRole } from '@/firebase/getUserProfile';
 
 
@@ -35,7 +35,7 @@ export type RootStackParamList = {
   GameHistory: undefined;
   GameDetail: { game: any };
   GamePlayerRank: undefined;
-  LocalHistory: undefined;
+  
   Profile: undefined;
   Settings: undefined;
   AuthInspector: undefined;
@@ -44,6 +44,16 @@ export type RootStackParamList = {
 
 // Opt-in to native screens for improved memory and performance
 enableScreens();
+
+// If app was resumed and global settings were restored synchronously, seed simpleT
+try {
+  const seedLang = (global as any).__pokerpal_settings?.language;
+  if (seedLang) {
+    try { setSimpleTLocale(seedLang); } catch (e) { /* ignore */ }
+  }
+} catch (e) {
+  // ignore
+}
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -55,13 +65,11 @@ function MainNavigator() {
         header: () => <Header />,
       }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AuthInspector" component={AuthInspector} />
       <Stack.Screen name="HealthCheck" component={require('@/screens/HealthCheckScreen').default} />
       <Stack.Screen name="GamePlay" component={GamePlayScreen} />
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />
-      <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
-      <Stack.Screen name="LocalHistory" component={LocalhistoryScreen} />
+  <Stack.Screen name="GamePlayerRank" component={PlayerRankingScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
@@ -82,8 +90,24 @@ export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const [initializing, setInitializing] = useState(true);
   const [authUser, setAuthUser] = useState<any | null>(null);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
+    // Cold-start: read persisted settings before rendering providers so simpleT has correct locale
+    (async () => {
+      try {
+        const s = await getLocal(SETTINGS_KEY);
+        if (s) {
+          try { setSimpleTLocale(s.language); } catch (e) { /* ignore */ }
+          try { (global as any).__pokerpal_settings = s; } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        setBootstrapped(true);
+      }
+    })();
+
     // initialize local DB (expo-sqlite)
     (async () => {
       try {
@@ -149,6 +173,16 @@ export default function App() {
       }
     };
   }, []);
+
+  if (!bootstrapped) {
+    return (
+      <SafeAreaProvider>
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>

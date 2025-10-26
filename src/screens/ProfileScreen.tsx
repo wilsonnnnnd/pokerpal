@@ -22,13 +22,14 @@ import storage from '@/services/storageService';
 import { CURRENT_USER_KEY, playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
 import { UserProfile } from '@/types';
 import Toast from 'react-native-toast-message';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
+import simpleT from '@/i18n/simpleT';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { updateProfile } from 'firebase/auth';
 import { getAuth } from 'firebase/auth';
-import { usePopup } from '@/components/PopupProvider';
+import { usePopup } from '@/providers/PopupProvider';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
@@ -125,8 +126,8 @@ const ProfileScreen = () => {
         if (!user?.uid) {
             Toast.show({
                 type: 'error',
-                text1: '保存失败',
-                text2: '用户信息无效',
+                text1: simpleT('profile_save_failed_title'),
+                text2: simpleT('user_info_invalid'),
             });
             return;
         }
@@ -138,8 +139,8 @@ const ProfileScreen = () => {
             if (!nickname.trim()) {
                 Toast.show({
                     type: 'error',
-                    text1: '保存失败',
-                    text2: '昵称不能为空',
+                    text1: simpleT('profile_save_failed_title'),
+                    text2: simpleT('nickname_required'),
                 });
                 return;
             }
@@ -173,9 +174,9 @@ const ProfileScreen = () => {
                 }
                     // 提示用户重新登录以刷新会话（使用应用统一弹窗）
                     try {
-                        const confirmed = await showPopup({
-                            title: '需要重新登录',
-                            message: '为了确保所有服务使用新的昵称，建议您重新登录。是否现在退出登录并重新登录？',
+                const confirmed = await showPopup({
+                    title: simpleT('profile_relogin_title'),
+                    message: simpleT('profile_relogin_message'),
                             note: '',
                             isWarning: true,
                         });
@@ -184,9 +185,9 @@ const ProfileScreen = () => {
                             try {
                                 // 直接导航到登录页面，让认证状态变化自动处理
                                 (navigation as any).navigate('Login');
-                                Toast.show({ type: 'success', text1: '已退出登录' });
+                                Toast.show({ type: 'success', text1: simpleT('signout_success') });
                             } catch (e) {
-                                Toast.show({ type: 'error', text1: '退出失败' });
+                                Toast.show({ type: 'error', text1: simpleT('signout_failed') });
                             }
                         }
                     } catch (popupError) {
@@ -223,8 +224,8 @@ const ProfileScreen = () => {
 
             Toast.show({
                 type: 'success',
-                text1: '档案已更新',
-                text2: '您的个人信息已成功保存',
+                text1: simpleT('profile_saved_title'),
+                text2: simpleT('profile_saved_msg'),
             });
             setEditing(false);
         } catch (error: any) {
@@ -241,7 +242,7 @@ const ProfileScreen = () => {
 
             Toast.show({
                 type: 'error',
-                text1: '更新失败',
+                text1: simpleT('profile_save_failed_title'),
                 text2: errorMessage,
             });
         }
@@ -253,7 +254,7 @@ const ProfileScreen = () => {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color={color.primary} />
-                <Text style={[styles.loadingText, { marginTop: Spacing.md }]}>加载用户信息...</Text>
+                <Text style={[styles.loadingText, { marginTop: Spacing.md }]}>{simpleT('loading_user_info')}</Text>
             </View>
         );
     }
@@ -340,7 +341,7 @@ const ProfileScreen = () => {
                                     fontWeight: '800',
                                     color: color.lightText,
                                 }}>
-                                    {(user.displayName || '用户').slice(0, 1)}
+                                    {(user.displayName || simpleT('player_unknown')).slice(0, 1)}
                                 </Text>
                             </View>
                         )}
@@ -367,7 +368,7 @@ const ProfileScreen = () => {
                         color: color.lightText,
                         textAlign: 'center',
                     }}>
-                        {user.displayName || '未命名用户'}
+                        {user.displayName || simpleT('player_unknown')}
                     </Text>
 
                     <Text style={{
@@ -376,7 +377,7 @@ const ProfileScreen = () => {
                         textAlign: 'center',
                         marginTop: Spacing.xs,
                     }}>
-                        {user.profile?.role || 'player'}
+                        {user.profile?.role || simpleT('player_unknown')}
                     </Text>
                 </View>
             </LinearGradient>
@@ -407,7 +408,7 @@ const ProfileScreen = () => {
                             fontWeight: '700',
                             color: color.title,
                         }}>
-                            基本信息
+                            {simpleT('profile_basic_info')}
                         </Text>
 
                         {!editing && (
@@ -433,7 +434,7 @@ const ProfileScreen = () => {
                                     color: color.primary,
                                     fontWeight: '600',
                                 }}>
-                                    编辑
+                                    {simpleT('edit')}
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -447,7 +448,7 @@ const ProfileScreen = () => {
                             color: color.mutedText,
                             marginBottom: Spacing.xs,
                         }}>
-                            昵称
+                            {simpleT('nickname_label')}
                         </Text>
                         <TextInput
                             value={editData.nickname}
@@ -460,7 +461,7 @@ const ProfileScreen = () => {
                                 fontSize: FontSize.body,
                                 color: color.text,
                             }}
-                            placeholder="请输入昵称"
+                            placeholder={simpleT('enter_nickname_placeholder')}
                             editable={editing}
                         />
 
@@ -474,14 +475,14 @@ const ProfileScreen = () => {
                             color: color.mutedText,
                             marginBottom: Spacing.xs,
                         }}>
-                            邮箱
+                            {simpleT('email_label')}
                         </Text>
                         <Text style={{
                             fontSize: FontSize.small,
                             color: color.mutedText,
                             fontFamily: 'monospace',
                         }}>
-                            {user.email || '未设置'}
+                            {user.email || simpleT('not_set')}
                         </Text>
 
                     </View>
@@ -494,7 +495,7 @@ const ProfileScreen = () => {
                             color: color.mutedText,
                             marginBottom: Spacing.xs,
                         }}>
-                            用户ID
+                            {simpleT('user_id_label')}
                         </Text>
                         <Text style={{
                             fontSize: FontSize.small,
@@ -511,7 +512,7 @@ const ProfileScreen = () => {
                   <>
                     <View style={{ marginTop: Spacing.md, marginBottom: Spacing.md }}>
                         <PrimaryButton
-                            title={showInspector ? '隐藏 Auth Inspector' : '显示 Auth Inspector'}
+                            title={showInspector ? simpleT('hide_auth_inspector') : simpleT('show_auth_inspector')}
                             onPress={() => setShowInspector((s) => !s)}
                         />
                     </View>
@@ -548,7 +549,7 @@ const ProfileScreen = () => {
                             color: color.title,
                             marginBottom: Spacing.md,
                         }}>
-                            游戏统计
+                            {simpleT('game_stats_title')}
                         </Text>
 
                         <View style={{
@@ -568,7 +569,7 @@ const ProfileScreen = () => {
                                     fontSize: FontSize.small,
                                     color: color.mutedText,
                                 }}>
-                                    总游戏数
+                                    {simpleT('profile_total_games')}
                                 </Text>
                             </View>
 
@@ -584,7 +585,7 @@ const ProfileScreen = () => {
                                     fontSize: FontSize.small,
                                     color: color.mutedText,
                                 }}>
-                                    胜局
+                                    {simpleT('wins_label')}
                                 </Text>
                             </View>
 
@@ -600,7 +601,7 @@ const ProfileScreen = () => {
                                     fontSize: FontSize.small,
                                     color: color.mutedText,
                                 }}>
-                                    负局
+                                    {simpleT('losses_label')}
                                 </Text>
                             </View>
                         </View>
@@ -627,7 +628,7 @@ const ProfileScreen = () => {
                                         fontSize: FontSize.small,
                                         color: color.mutedText,
                                     }}>
-                                        总收益
+                                        {simpleT('profile_total_profit')}
                                     </Text>
                                 </View>
 
@@ -643,7 +644,7 @@ const ProfileScreen = () => {
                                         fontSize: FontSize.small,
                                         color: color.mutedText,
                                     }}>
-                                        ROI
+                                        {simpleT('profile_roi_label')}
                                     </Text>
                                 </View>
                             </View>
@@ -677,7 +678,7 @@ const ProfileScreen = () => {
                                 fontWeight: '700',
                                 color: color.title,
                             }}>
-                                最近游戏
+                                {simpleT('recent_games')}
                             </Text>
                             
                             <View style={{
@@ -691,7 +692,7 @@ const ProfileScreen = () => {
                                     color: color.primary,
                                     fontWeight: '600',
                                 }}>
-                                    {gameHistory.length} 局
+                                    {simpleT('games_count', undefined, { count: gameHistory.length })}
                                 </Text>
                             </View>
                         </View>
@@ -707,7 +708,7 @@ const ProfileScreen = () => {
                                     color: color.mutedText,
                                     marginTop: Spacing.xs,
                                 }}>
-                                    加载游戏历史...
+                                    {simpleT('loading_game_history')}
                                 </Text>
                             </View>
                         ) : gameHistory.length === 0 ? (
@@ -726,7 +727,7 @@ const ProfileScreen = () => {
                                     color: color.mutedText,
                                     textAlign: 'center',
                                 }}>
-                                    还没有游戏记录
+                                    {simpleT('profile_history_empty_title')}
                                 </Text>
                                 <Text style={{
                                     fontSize: FontSize.small,
@@ -734,7 +735,7 @@ const ProfileScreen = () => {
                                     textAlign: 'center',
                                     marginTop: Spacing.xs,
                                 }}>
-                                    开始您的第一局游戏吧！
+                                    {simpleT('profile_history_empty_subtitle')}
                                 </Text>
                             </View>
                         ) : (
@@ -810,7 +811,7 @@ const ProfileScreen = () => {
                                                 fontSize: FontSize.small,
                                                 color: color.mutedText,
                                             }}>
-                                                ROI: {(((game.settleROI ?? 0) * 100).toFixed(1))}%
+                                                {simpleT('profile_roi_label')}: {(((game.settleROI ?? 0) * 100).toFixed(1))}%
                                             </Text>
                                         </View>
                                     </View>
@@ -833,7 +834,7 @@ const ProfileScreen = () => {
                                             color: color.primary,
                                             fontWeight: '600',
                                         }}>
-                                            查看全部 {gameHistory.length} 局游戏
+                                            {simpleT('profile_view_all_games', undefined, { count: gameHistory.length })}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
@@ -885,7 +886,7 @@ const ProfileScreen = () => {
                                     color: color.mutedText,
                                     fontWeight: '600',
                                 }}>
-                                    取消
+                                    {simpleT('cancel')}
                                 </Text>
                             </TouchableOpacity>
 
@@ -903,7 +904,7 @@ const ProfileScreen = () => {
                                     color: color.lightText,
                                     fontWeight: '600',
                                 }}>
-                                    保存
+                                    {simpleT('save')}
                                 </Text>
                             </TouchableOpacity>
                         </View>

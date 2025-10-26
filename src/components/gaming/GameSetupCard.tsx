@@ -11,19 +11,21 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '@/stores/useGameStore';
-import { PrimaryButton } from './PrimaryButton';
+import simpleT from '@/i18n/simpleT';
+import { PrimaryButton } from '../common/PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import * as yup from 'yup';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
-import { InputField } from './InputField';
+import { InputField } from '../common/InputField';
 import Toast from 'react-native-toast-message';
 import { generateToken } from '@/utils/getSecureNumber';
 import { createGameOnServer } from '@/firebase/saveGame';
 import storage from '@/services/storageService';
 import { SETTINGS_KEY } from '@/constants/namingVar';
 import { getCurrencySymbol } from '@/constants/currency';
+import { DEFAULT_CURRENCY, DEFAULT_UI_LANGUAGE } from '@/constants/appConfig';
 import { CURRENT_USER_KEY } from '@/constants/namingVar';
 import usePermission from '@/hooks/usePermission';
 import { useLogger } from '@/utils/useLogger';
@@ -69,7 +71,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                     setCurrencyInfo({ code: s.currency, symbol: getCurrencySymbol(s.currency) });
                 } else {
                     // no currency info found: write default settings and update global
-                        const defaults = { language: 'zh', currency: 'AUD' };
+                            const defaults = { language: DEFAULT_UI_LANGUAGE, currency: DEFAULT_CURRENCY };
                     try {
                         await storage.setLocal(SETTINGS_KEY, defaults);
                     } catch (e) {
@@ -88,19 +90,19 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
     const gameSchema = yup.object().shape({
         smallBlind: yup
             .number()
-            .typeError('请输入有效的数字')
-            .positive('小盲注必须为正数')
-            .integer('小盲注必须为整数')
-            .required('请输入小盲注'),
+            .typeError(simpleT('validation_invalid_number'))
+            .positive(simpleT('validation_positive'))
+            .integer(simpleT('validation_integer'))
+            .required(simpleT('validation_required')),
         bigBlind: yup
             .number()
-            .typeError('请输入有效的数字')
-            .positive('大盲注必须为正数')
-            .integer('大盲注必须为整数')
-            .required('请输入大盲注')
+            .typeError(simpleT('validation_invalid_number'))
+            .positive(simpleT('validation_positive'))
+            .integer(simpleT('validation_integer'))
+            .required(simpleT('validation_required'))
             .test(
                 'is-greater-than-small-blind',
-                '大盲注必须大于或等于小盲注',
+                simpleT('validation_bigblind_min'),
                 function (value) {
                     const { smallBlind } = this.parent;
                     return !value || !smallBlind || value >= smallBlind;
@@ -108,15 +110,15 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
             ),
         baseChipAmount: yup
             .number()
-            .typeError('请输入有效的数字')
-            .positive('买入筹码必须为正数')
-            .integer('买入筹码必须为整数')
-            .required('请输入初始买入筹码'),
+            .typeError(simpleT('validation_invalid_number'))
+            .positive(simpleT('validation_positive'))
+            .integer(simpleT('validation_integer'))
+            .required(simpleT('validation_required')),
         baseCashAmount: yup
             .number()
-            .typeError('请输入有效的数字')
-            .positive('兑换金额必须为正数')
-            .required('请输入兑换金额'),
+            .typeError(simpleT('validation_invalid_number'))
+            .positive(simpleT('validation_positive'))
+            .required(simpleT('validation_required')),
     });
 
     // 处理表单输入变化
@@ -246,8 +248,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
 
                 Toast.show({
                     type: 'error',
-                    text1: '输入错误',
-                    text2: '请检查输入的值',
+                    text1: simpleT('input_error'),
+                    text2: simpleT('input_error_check_values'),
                     visibilityTime: 2000,
                     position: 'bottom',
                 });
@@ -255,8 +257,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                 onConfirm();
                 Toast.show({
                     type: 'error',
-                    text1: '未知错误',
-                    text2: error instanceof Error ? error.message : '发生未知错误，请稍后再试',
+                    text1: simpleT('unknown_error'),
+                    text2: error instanceof Error ? error.message : simpleT('unknown_error'),
                     visibilityTime: 2000,
                     position: 'bottom',
                 });
@@ -286,8 +288,8 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                     color={color.lightText}
                                 />
                             </View>
-                            <Text style={GameSetUpStyles.title}>游戏设置</Text>
-                            <Text style={GameSetUpStyles.subtitle}>配置你的德州扑克游戏</Text>
+                            <Text style={GameSetUpStyles.title}>{simpleT('game_setup_title')}</Text>
+                            <Text style={GameSetUpStyles.subtitle}>{simpleT('game_setup_subtitle')}</Text>
                         </LinearGradient>
 
                         {/* Form Section */}
@@ -300,13 +302,13 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                         size={20}
                                         color={color.primary}
                                     />
-                                    <Text style={GameSetUpStyles.sectionTitle}>盲注设置</Text>
+                                    <Text style={GameSetUpStyles.sectionTitle}>{simpleT('blind_settings')}</Text>
                                 </View>
 
                                 <View style={GameSetUpStyles.inputRow}>
                                     <View style={GameSetUpStyles.halfWidth}>
                                         <InputField
-                                            label="小盲注"
+                                            label={simpleT('small_blind_label')}
                                             fieldName="smallBlind"
                                             value={formValues.smallBlind}
                                             placeholder="50"
@@ -320,7 +322,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                     </View>
                                     <View style={GameSetUpStyles.halfWidth}>
                                         <InputField
-                                            label="大盲注"
+                                            label={simpleT('big_blind_label')}
                                             fieldName="bigBlind"
                                             value={formValues.bigBlind}
                                             placeholder="100"
@@ -343,11 +345,11 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                         size={20}
                                         color={color.primary}
                                     />
-                                    <Text style={GameSetUpStyles.sectionTitle}>买入设置</Text>
+                                    <Text style={GameSetUpStyles.sectionTitle}>{simpleT('buyin_settings')}</Text>
                                 </View>
 
                                 <InputField
-                                    label="初始买入筹码"
+                                    label={simpleT('initial_buyin_chips')}
                                     fieldName="baseChipAmount"
                                     value={formValues.baseChipAmount}
                                     placeholder="1000"
@@ -360,10 +362,10 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                 />
 
                                 <InputField
-                                    label={`兑换金额 ${currencyInfo.symbol ? `(${currencyInfo.symbol})` : ''}`}
+                                    label={`${simpleT('exchange_amount_label')} ${currencyInfo.symbol ? `(${currencyInfo.symbol})` : ''}`}
                                     fieldName="baseCashAmount"
                                     value={formValues.baseCashAmount}
-                                    placeholder={currencyInfo.symbol ? `例如: 100${currencyInfo.symbol}` : '100'}
+                                    placeholder={currencyInfo.symbol ? simpleT('example_amount', undefined, { symbol: currencyInfo.symbol }) : '100'}
                                     icon="cash"
                                     keyboardType="number-pad"
                                     error={errors.baseCashAmount}
@@ -379,7 +381,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                             <View style={GameSetUpStyles.buttonGroup}>
                                 {onCancel && (
                                     <PrimaryButton
-                                        title="取消"
+                                        title={simpleT('cancel')}
                                         icon="close"
                                         iconPosition="left"
                                         iconColor={color.mutedText}
@@ -389,7 +391,7 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
                                     />
                                 )}
                                 <PrimaryButton
-                                    title="开始游戏"
+                                    title={simpleT('start_new_game')}
                                     icon="play-circle"
                                     iconPosition="right"
                                     onPress={handleStartGame}

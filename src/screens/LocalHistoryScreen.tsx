@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { GameHistorystyles as styles, DatabaseStyles } from '@/assets/styles';
+import simpleT from '@/i18n/simpleT';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GameCard } from '@/components/GameCard';
@@ -69,7 +70,7 @@ export default function LocalhistoryScreen() {
 		return (
 			<PageStateView
 				loading={false}
-				error="本地数据库不可用"
+				error={simpleT('local_db_unavailable')}
 				onRetry={handleRetry}
 			>
 				<></>
@@ -81,9 +82,9 @@ export default function LocalhistoryScreen() {
 		<PageStateView
 			loading={pageState.loading}
 			error={pageState.error}
-			isEmpty={!pageState.loading && !pageState.error && items.length === 0}
-			emptyTitle="暂无本地记录"
-			emptySubtitle="完成一局游戏后，可在此查看本地快照。本地记录独立于云端数据存储。"
+        		isEmpty={!pageState.loading && !pageState.error && items.length === 0}
+        		emptyTitle={simpleT('local_history_empty_title')}
+        		emptySubtitle={simpleT('local_history_empty_subtitle')}
 			onRetry={handleRetry}
 		>
 			<LinearGradient
@@ -100,7 +101,7 @@ export default function LocalhistoryScreen() {
 					<View style={DatabaseStyles.headerContent}>
 						<View style={DatabaseStyles.headerLeft}>
 							<MaterialCommunityIcons name="database" size={24} color={color.lightText} />
-							<Text style={DatabaseStyles.headerTitle}>本地数据库</Text>
+							<Text style={DatabaseStyles.headerTitle}>{simpleT('local_db_title')}</Text>
 						</View>
 						<View style={DatabaseStyles.headerRight}>
 							<TouchableOpacity
@@ -113,7 +114,7 @@ export default function LocalhistoryScreen() {
 							{pageState.error && (
 								<TouchableOpacity
 									style={[DatabaseStyles.headerButton, { marginLeft: Spacing.xs }]}
-									onPress={() => Alert.alert('错误详情', pageState.error || '未知错误')}
+									onPress={() => Alert.alert(simpleT('error_details'), pageState.error || simpleT('unknown_error'))}
 									activeOpacity={0.7}
 								>
 									<MaterialCommunityIcons name="alert-circle" size={20} color="#FFE57F" />
@@ -126,7 +127,7 @@ export default function LocalhistoryScreen() {
 					<View style={DatabaseStyles.statsRow}>
 						<View style={DatabaseStyles.statChip}>
 							<MaterialCommunityIcons name="file-document" size={16} color="rgba(255, 255, 255, 0.8)" />
-							<Text style={DatabaseStyles.statChipText}>{items.length} 条记录</Text>
+							<Text style={DatabaseStyles.statChipText}>{simpleT('records_count', undefined, { count: items.length })}</Text>
 						</View>
 					</View>
 				</LinearGradient>

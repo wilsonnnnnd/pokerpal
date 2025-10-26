@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { Palette as color } from '@/constants';
-import { simpleT } from '@/i18n/simpleT';
+import simpleT from '@/i18n/simpleT';
+import { DEFAULT_FROM_CURRENCY, DEFAULT_TO_CURRENCY } from '@/constants/appConfig';
 import { getExchangeRate } from '@/services/exchangeService';
 import { useSettings } from '@/providers/SettingsProvider';
 
@@ -13,7 +14,7 @@ interface CardProps {
   to?: string;
 }
 
-function SettingsExchangeCardInline({ language, setLastRateUpdate, from = 'AUD', to = 'CNY' }: CardProps) {
+function SettingsExchangeCardInline({ language, setLastRateUpdate, from = DEFAULT_FROM_CURRENCY, to = DEFAULT_TO_CURRENCY }: CardProps) {
   const { latestExchange, isExchangeRatesFresh, isUpdatingRates, updateExchangeRates, setExchangeRate } = useSettings();
   const [rateData, setRateData] = useState<any | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
@@ -30,7 +31,7 @@ function SettingsExchangeCardInline({ language, setLastRateUpdate, from = 'AUD',
       try {
         const fromUpper = String(from).toUpperCase();
         const toUpper = String(to).toUpperCase();
-        if (fromUpper === 'AUD' && res && typeof res.rate === 'number') {
+  if (fromUpper === DEFAULT_FROM_CURRENCY && res && typeof res.rate === 'number') {
           await setExchangeRate(toUpper, res.rate);
         }
       } catch (e) {
@@ -47,7 +48,7 @@ function SettingsExchangeCardInline({ language, setLastRateUpdate, from = 'AUD',
     const key = String(to).toUpperCase();
     const fromUpper = String(from).toUpperCase();
 
-    if (fromUpper === 'AUD' && latestExchange && latestExchange.to === key && typeof latestExchange.rate === 'number' && isExchangeRatesFresh()) {
+  if (fromUpper === DEFAULT_FROM_CURRENCY && latestExchange && latestExchange.to === key && typeof latestExchange.rate === 'number' && isExchangeRatesFresh()) {
       setRateData({ from: fromUpper, to: key, rate: latestExchange.rate, updated: latestExchange.updated ?? null, source: latestExchange.source ?? null });
       if (setLastRateUpdate) setLastRateUpdate(latestExchange.updated ?? null);
       return;
@@ -73,22 +74,22 @@ function SettingsExchangeCardInline({ language, setLastRateUpdate, from = 'AUD',
           </Text>
           {rateData.updated && (
             <Text style={{ color: color.mutedText, fontSize: 11, marginTop: 2 }}>
-              {simpleT('last_update', language)}: {new Date(rateData.updated).toLocaleString()}
+              {simpleT('last_update')}: {new Date(rateData.updated).toLocaleString()}
             </Text>
           )}
           {rateData.source && (
-            <Text style={{ color: color.mutedText, fontSize: 11 }}>{`来源: ${rateData.source}`}</Text>
+            <Text style={{ color: color.mutedText, fontSize: 11 }}>{simpleT('rate_source')}: {rateData.source}</Text>
           )}
         </View>
       ) : rateData && 'error' in rateData ? (
         <Text style={{ color: color.mutedText }}>{String((rateData as any).error)}</Text>
       ) : (
-        <Text style={{ color: color.mutedText }}>{simpleT('loading_rates', language)}</Text>
+  <Text style={{ color: color.mutedText }}>{simpleT('loading_rates')}</Text>
       )}
 
       <View style={{ marginTop: 8 }}>
         <PrimaryButton
-          title={simpleT('update_rates', language)}
+          title={simpleT('update_rates')}
           icon="refresh"
           variant="outlined"
           onPress={handleManualRefresh}
@@ -105,11 +106,11 @@ function SettingsExchangeCardInline({ language, setLastRateUpdate, from = 'AUD',
 export default function ExchangeManagement({ language, setLastRateUpdate }: { language: string; setLastRateUpdate: (s: string | null) => void }) {
   return (
     <View style={{ marginBottom: 18 }}>
-      <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('exchange_rate_management', language)}</Text>
+  <Text style={{ fontWeight: '700', marginBottom: 8, color: color.title }}>{simpleT('exchange_rate_management')}</Text>
       <View style={{ padding: 12, backgroundColor: color.lightBackground, borderRadius: 8, borderWidth: 1, borderColor: color.borderColor }}>
-        <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description', language)}</Text>
+  <Text style={{ color: color.text, marginBottom: 12 }}>{simpleT('exchange_rate_description')}</Text>
         <View style={{ marginBottom: 16 }}>
-          <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates', language)}:</Text>
+          <Text style={{ fontWeight: '600', marginBottom: 8, color: color.title }}>{simpleT('current_rates')}:</Text>
           <SettingsExchangeCardInline language={language} setLastRateUpdate={setLastRateUpdate} from="AUD" to="CNY" />
         </View>
       </View>

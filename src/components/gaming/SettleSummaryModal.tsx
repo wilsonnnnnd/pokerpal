@@ -8,8 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useGameStore } from "@/stores/useGameStore";
 import { useSettings } from '@/providers/SettingsProvider';
+import { DEFAULT_TO_CURRENCY } from '@/constants/appConfig';
 import { Palette } from '@/constants/color.palette';
-import { simpleT } from '@/i18n/simpleT';
+import simpleT from '@/i18n/simpleT';
+import { DEFAULT_CURRENCY } from '@/constants/appConfig';
 import { usePermission } from '@/hooks/usePermission';
 import { getExchangeRate } from '@/services/exchangeService';
 
@@ -47,7 +49,7 @@ export function SettleSummaryModal({
     // 手动修改汇率状态
     const [isEditingRate, setIsEditingRate] = useState(false);
     const [tempRate, setTempRate] = useState('');
-    const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? 'AUD';
+    const currentCurrency = (global as any).__pokerpal_settings?.currency ?? currency ?? DEFAULT_CURRENCY;
     
     // 处理汇率更新 - 优先使用 provider 的 updateExchangeRates，之后从 exchangeRates 中读取最新值
     const handleUpdateRates = async () => {
@@ -67,14 +69,14 @@ export function SettleSummaryModal({
     // 处理汇率编辑
     const handleEditRate = async () => {
         try {
-            // 优先从 provider 的 latestExchange 读取缓存（若目标为 CNY）
-            const cached = latestExchange && String(latestExchange.to).toUpperCase() === 'CNY' ? latestExchange.rate : undefined;
+            // 优先从 provider 的 latestExchange 读取缓存（若目标为 DEFAULT_TO_CURRENCY）
+                const cached = latestExchange && String(latestExchange.to).toUpperCase() === DEFAULT_TO_CURRENCY ? latestExchange.rate : undefined;
             if (typeof cached === 'number' && cached > 0) {
                 setTempRate(String(cached));
             } else {
                 // fallback: 请求后台最新值
                 try {
-                    const res = await getExchangeRate(currentCurrency, 'CNY');
+                    const res = await getExchangeRate(currentCurrency, DEFAULT_TO_CURRENCY);
                     setTempRate(String(res.rate));
                 } catch (e) {
                     // 如果请求失败，则使用默认值
@@ -111,7 +113,7 @@ export function SettleSummaryModal({
 
                 // as last resort, call backend for this pair
                 try {
-                    const res = await getExchangeRate(currentCurrency, 'CNY');
+                    const res = await getExchangeRate(currentCurrency, DEFAULT_TO_CURRENCY);
                     setCurrentExchangeRate(res.rate);
                 } catch (e) {
                     console.error('Failed to load exchange rate from backend:', e);
@@ -132,16 +134,16 @@ export function SettleSummaryModal({
             try {
                 const curr = currentCurrency.toUpperCase();
                 
-                if (curr === 'CNY' || curr === 'CN') {
+                if (curr === DEFAULT_TO_CURRENCY || curr === 'CN') {
                     // CNY 不需要设置汇率
                     setIsEditingRate(false);
                     return;
                 }
                 
                 // 注意：目前只支持直接修改AUD基础的汇率结构
-                // 对于其他货币，这里设置的是对CNY的直接汇率覆盖
+                // 对于其他货币，这里设置的是对 DEFAULT_TO_CURRENCY 的直接汇率覆盖
                 // 更完整的实现需要重新计算整个汇率结构
-                await setExchangeRate('CNY', newRate);
+                await setExchangeRate(DEFAULT_TO_CURRENCY, newRate);
                 
                 // 更新本地显示的汇率
                 setCurrentExchangeRate(newRate);
@@ -176,7 +178,7 @@ export function SettleSummaryModal({
                                 color={Palette.primary}
                                 style={{ marginRight: Spacing.sm }}
                             />
-                            <Text style={modalStyles.headerTitle}>{simpleT('settlement_summary', language)}</Text>
+                            <Text style={modalStyles.headerTitle}>{simpleT('settlement_summary')}</Text>
                         </View>
                         <View style={modalStyles.playersBadge}>
                             <Text style={{
@@ -184,7 +186,7 @@ export function SettleSummaryModal({
                                 fontSize: FontSize.small,
                                 fontWeight: '600',
                             }}>
-                                {players.length} {simpleT('players', language)}
+                                {players.length} {simpleT('players')}
                             </Text>
                         </View>
                     </View>
@@ -201,8 +203,8 @@ export function SettleSummaryModal({
                                         color={Palette.primary}
                                         style={{ marginRight: Spacing.xs }}
                                     />
-                                    <Text style={modalStyles.currencyLabelText}>
-                                        {simpleT('show_rmb', language)}
+                                        <Text style={modalStyles.currencyLabelText}>
+                                        {simpleT('show_rmb')}
                                     </Text>
                                 </View>
                                 <Switch
@@ -216,7 +218,7 @@ export function SettleSummaryModal({
                             </View>
                             
                             {/* 汇率显示和编辑区域 */}
-                            {showRMB && currentCurrency.toUpperCase() !== 'CNY' && (
+                            {showRMB && currentCurrency.toUpperCase() !== DEFAULT_TO_CURRENCY && (
                                 <View style={{
                                     backgroundColor: Palette.lightBackground,
                                     borderRadius: Radius.md,
@@ -242,7 +244,7 @@ export function SettleSummaryModal({
                                             color: Palette.text,
                                             marginLeft: Spacing.xs,
                                         }}>
-                                            汇率设置
+                                            {simpleT('exchange_rate_settings')}
                                         </Text>
                                         {!isExchangeRateValid(latestExchange?.rate) && (
                                             <MaterialCommunityIcons
@@ -278,7 +280,7 @@ export function SettleSummaryModal({
                                                         color: Palette.text,
                                                         fontWeight: '500',
                                                     }}>
-                                                        1 {currentCurrency.toUpperCase()} = ¥
+                                                        {simpleT('rate_edit_prefix', undefined, { currency: currentCurrency.toUpperCase() })}
                                                     </Text>
                                                     <TextInput
                                                         style={{
@@ -294,14 +296,14 @@ export function SettleSummaryModal({
                                                         keyboardType="numeric"
                                                         autoFocus
                                                         selectTextOnFocus
-                                                        placeholder="0.0000"
+                                                        placeholder={simpleT('rate_placeholder')}
                                                     />
                                                     <Text style={{
                                                         fontSize: FontSize.small,
                                                         color: Palette.text,
                                                         fontWeight: '500',
                                                     }}>
-                                                        CNY
+                                                        {DEFAULT_TO_CURRENCY}
                                                     </Text>
                                                 </View>
                                             ) : (
@@ -325,7 +327,7 @@ export function SettleSummaryModal({
                                                         fontWeight: '600',
                                                         flex: 1,
                                                     }}>
-                                                        1 {currentCurrency.toUpperCase()} ≈ ¥{currentExchangeRate.toFixed(4)}
+                                                        {simpleT('rate_display', undefined, { currency: currentCurrency.toUpperCase(), rate: currentExchangeRate.toFixed(4) })}
                                                     </Text>
                                                     <MaterialCommunityIcons
                                                         name="pencil-outline"
@@ -482,7 +484,7 @@ export function SettleSummaryModal({
                                                 color: Palette.mutedText,
                                                 marginTop: 2,
                                             }}>
-                                                {simpleT('buy_in', language)}: {buyIn} → {simpleT('settlement', language)}: {chipCount}
+                                                {simpleT('buy_in')}: {buyIn} → {simpleT('settlement')}: {chipCount}
                                             </Text>
                                         </View>
                                     </View>
@@ -513,13 +515,13 @@ export function SettleSummaryModal({
                                                 {positive ? '+' : '-'}{shouldShowRMB ? formatAsRMBLocal(Math.abs(cashDiff)) : formatCurrency(Math.abs(cashDiff), currentCurrency)}
                                             </Text>
                                         </View>
-                                            {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                            {shouldShowRMB && currentCurrency.toUpperCase() !== DEFAULT_TO_CURRENCY && currentCurrency.toUpperCase() !== 'CN' && (
                                             <Text style={{
                                                 fontSize: FontSize.small - 2,
                                                 color: Palette.mutedText,
                                                 marginTop: 2,
                                             }}>
-                                                {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(cashDiff), currentCurrency)}
+                                                {simpleT('original')}: {positive ? '+' : '-'}{formatCurrency(Math.abs(cashDiff), currentCurrency)}
                                             </Text>
                                         )}
                                     </View>
@@ -549,10 +551,10 @@ export function SettleSummaryModal({
                                     />
                                     <View>
                                         <Text style={modalStyles.summaryText}>
-                                            {simpleT('total', language)}
+                                            {simpleT('total')}
                                         </Text>
                                         <Text style={modalStyles.summarySubText}>
-                                            {simpleT('difference', language)}: {totalBuyIn - totalChips}
+                                            {simpleT('difference')}: {totalBuyIn - totalChips}
                                         </Text>
                                     </View>
                                 </View>
@@ -573,14 +575,14 @@ export function SettleSummaryModal({
                                             </Text>
                                         </View>
                                     </View>
-                                    {shouldShowRMB && currentCurrency.toUpperCase() !== 'CNY' && currentCurrency.toUpperCase() !== 'CN' && (
+                                    {shouldShowRMB && currentCurrency.toUpperCase() !== DEFAULT_TO_CURRENCY && currentCurrency.toUpperCase() !== 'CN' && (
                                         <Text style={{
                                             fontSize: FontSize.small - 2,
                                             color: Palette.mutedText,
                                             marginTop: 2,
                                             textAlign: 'right',
                                         }}>
-                                            {simpleT('original', language)}: {positive ? '+' : '-'}{formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
+                                            {simpleT('original')}: {positive ? '+' : '-'}{formatCurrency(Math.abs(totalCashDiff), currentCurrency)}
                                         </Text>
                                     )}
                                 </View>
@@ -611,13 +613,13 @@ export function SettleSummaryModal({
                                 }}
                             >
                                 <MaterialCommunityIcons name="close" size={20} color={Palette.strongGray} />
-                                <Text style={{
+                                    <Text style={{
                                     fontWeight: '600',
                                     fontSize: FontSize.body,
                                     color: Palette.strongGray,
                                     marginLeft: Spacing.xs,
                                 }}>
-                                    {simpleT('cancel', language)}
+                                    {simpleT('cancel')}
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>
@@ -649,13 +651,13 @@ export function SettleSummaryModal({
                                     size={20}
                                     color="white"
                                 />
-                                <Text style={{
+                                    <Text style={{
                                     fontWeight: '600',
                                     fontSize: FontSize.body,
                                     color: 'white',
                                     marginLeft: Spacing.xs,
                                 }}>
-                                    {isLoading ? simpleT('saving', language) : simpleT('confirm_save', language)}
+                                    {isLoading ? simpleT('saving') : simpleT('confirm_save')}
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>

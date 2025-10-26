@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Animated, Keyboard
 import { BuyInProps, Player } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
+import simpleT from '@/i18n/simpleT';
 import { ExitBuyInStyles } from '@/assets/styles';
 
 
@@ -22,7 +23,7 @@ export const EditBuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onC
     const handleConfirm = () => {
         const value = parseInt(amount, 10);
         if (isNaN(value) || value < 0) {
-            alert('请输入一个有效的整数（可为0）');
+            alert(simpleT('enter_valid_integer'));
             return;
         }
         Animated.timing(fadeAnim, {
@@ -40,13 +41,13 @@ export const EditBuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onC
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <View style={ExitBuyInStyles.card}>
                     <View style={ExitBuyInStyles.header}>
-                        <Text style={ExitBuyInStyles.title}>编辑总买入</Text>
-                        <TouchableOpacity onPress={onCancel}>
-                            <MaterialCommunityIcons name="close" size={22} color="#95a5a6" />
-                        </TouchableOpacity>
-                    </View>
+                            <Text style={ExitBuyInStyles.title}>{simpleT('edit_buyin_title')}</Text>
+                            <TouchableOpacity onPress={onCancel}>
+                                <MaterialCommunityIcons name="close" size={22} color="#95a5a6" />
+                            </TouchableOpacity>
+                        </View>
 
-                    <Text style={ExitBuyInStyles.label}>当前玩家：{player.nickname}</Text>
+                        <Text style={ExitBuyInStyles.label}>{simpleT('current_player_label', undefined, { name: player.nickname })}</Text>
 
                     <View style={ExitBuyInStyles.inputContainer}>
                         <TextInput
@@ -54,14 +55,14 @@ export const EditBuyInPopupCard: React.FC<BuyInProps> = ({ player, onSubmit, onC
                             value={amount}
                             onChangeText={setAmount}
                             keyboardType="number-pad"
-                            placeholder="输入总买入筹码"
+                            placeholder={simpleT('enter_total_buyin_placeholder')}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
                         />
                     </View>
 
                     <TouchableOpacity style={ExitBuyInStyles.button} onPress={handleConfirm}>
-                        <Text style={ExitBuyInStyles.buttonText}>确认修改</Text>
+                        <Text style={ExitBuyInStyles.buttonText}>{simpleT('confirm_edit_button')}</Text>
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

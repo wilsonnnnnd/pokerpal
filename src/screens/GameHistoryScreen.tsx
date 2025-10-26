@@ -33,6 +33,9 @@ import usePermission from '@/hooks/usePermission';
 import { GameCard } from '@/components/GameCard';
 import { getHosterId } from '@/utils/hostInfo';
 import { usePaginatedPageState } from '@/hooks/usePageState';
+import { usePageState } from '@/hooks/usePageState';
+import simpleT from '@/i18n/simpleT';
+import gameHistoryService from '@/services/gameHistoryService';
 import { PageStateView } from '@/components/PageState';
 
 // ---- 导航类型 ----
@@ -52,6 +55,53 @@ export default function GameHistoryScreen() {
     // 使用统一的分页状态管理
     const pageState = usePaginatedPageState();
     const [items, setItems] = useState<GameHistoryItem[]>([]);
+    // Local tab state & pageState
+    const [tab, setTab] = useState<'cloud' | 'local'>('cloud');
+    const localPageState = usePageState();
+    const [localItems, setLocalItems] = useState<any[]>([]);
+    // segmented control styles with improved design consistency
+    const segStyles: any = {
+        container: {
+            flexDirection: 'row',
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            padding: 3,
+            borderRadius: 14,
+            alignItems: 'center',
+            marginLeft: Spacing.md,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+        button: {
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 11,
+            minWidth: 60,
+            alignItems: 'center',
+        },
+        activeButton: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.15,
+            shadowRadius: 3,
+            elevation: 3,
+        },
+        activeText: {
+            color: color.primary,
+            fontWeight: '700',
+            fontSize: 13,
+        },
+        inactiveText: {
+            color: 'rgba(255, 255, 255, 0.85)',
+            fontWeight: '600',
+            fontSize: 13,
+        },
+    };
 
     // 分页相关refs
     const nextCursorRef = useRef<QueryDocumentSnapshot | null>(null);
@@ -79,6 +129,25 @@ export default function GameHistoryScreen() {
         }
 
         return map;
+    };
+
+    // ---- 本地历史加载 (来自 LocalHistoryScreen) ----
+    const loadLocalHistory = async () => {
+        localPageState.setError(null);
+        localPageState.setLoading(true);
+        try {
+            const result = await gameHistoryService.loadGameHistory();
+            setLocalItems(result.historyItems || []);
+            if (result.error) {
+                localPageState.setError(result.error);
+            }
+        } catch (e: any) {
+            console.warn('load db error', e);
+            localPageState.setError(e?.message ?? String(e));
+            setLocalItems([]);
+        } finally {
+            localPageState.setLoading(false);
+        }
     };
 
     // ...existing code...
@@ -255,15 +324,19 @@ export default function GameHistoryScreen() {
     useEffect(() => {
         console.log('[useEffect] permLoading:', permLoading, 'isHost:', isHost, 'initializedRef.current:', initializedRef.current); // 添加日志
         
-        // 权限检查：非 host 用户直接返回首页
+        // 权限检查：如果不是 host，则不自动跳转 —— 切换到本地历史 tab
         if (!permLoading && isHost === false) {
-            console.log('[useEffect] Not a host, navigating to Home'); // 添加日志
-            navigation.navigate('Home');
+            console.log('[useEffect] Not a host, switching to local tab');
+            setTab('local');
+        }
+
+        // 只在 cloud tab 并且为 host 时初始化 cloud 的首屏
+        if (tab !== 'cloud') {
             return;
         }
 
         if (permLoading || isHost === false || initializedRef.current) {
-            console.log('[useEffect] Skipping initialization - permLoading:', permLoading, 'isHost:', isHost, 'initialized:', initializedRef.current); // 添加日志
+            console.log('[useEffect] Skipping cloud initialization - permLoading:', permLoading, 'isHost:', isHost, 'initialized:', initializedRef.current);
             return;
         }
 
@@ -286,11 +359,11 @@ export default function GameHistoryScreen() {
                     fetchedSetRef.current.clear();
                     await fetchPage('initial');
                 } catch (e) {
-                    pageState.setError('加载游戏历史失败，请检查网络或稍后重试');
+                    pageState.setError(simpleT('err_loading_game_history'));
                     Toast.show({
                         type: 'error',
-                        text1: '加载游戏历史失败',
-                        text2: '请检查网络或稍后重试',
+                        text1: simpleT('err_loading_title'),
+                        text2: simpleT('err_loading_msg'),
                         position: 'bottom',
                         visibilityTime: 2000,
                     });
@@ -337,7 +410,12 @@ export default function GameHistoryScreen() {
 
             // 添加小延迟确保 UI 状态正确更新
             await new Promise(resolve => setTimeout(resolve, 50));
-            await fetchPage('refresh');
+            // 根据当前 tab 执行刷新
+            if (tab === 'cloud') {
+                await fetchPage('refresh');
+            } else {
+                await loadLocalHistory();
+            }
         } finally {
             pageState.setRefreshing(false);
         }
@@ -356,8 +434,10 @@ export default function GameHistoryScreen() {
             if (pageState.isLoadingMore) return; // 防止重复加载
 
             try {
-                pageState.setIsLoadingMore(true);
-                await fetchPage('append');
+                if (tab === 'cloud') {
+                    pageState.setIsLoadingMore(true);
+                    await fetchPage('append');
+                }
             } catch {
                 // 忽略
             } finally {
@@ -374,6 +454,19 @@ export default function GameHistoryScreen() {
             onPress={(game) => navigation.navigate('GameDetail', { game })}
         />
     );
+
+    // 本地历史渲染：LocalHistory 中 item.__history 为实际 game
+    const renderLocalCard = ({ item, index }: { item: any; index: number }) => {
+        const historyData = item.__history;
+        if (!historyData) return null;
+        return (
+            <GameCard
+                item={historyData}
+                index={index}
+                onPress={(selected) => (navigation as any).navigate('GameDetail', { game: selected, isLocal: true })}
+            />
+        );
+    };
 
     // 处理重试
     const handleRetry = useCallback(() => {
@@ -402,16 +495,23 @@ export default function GameHistoryScreen() {
         }, 100);
     }, []); // 移除所有依赖
 
+    // 根据 tab 决定当前 pageState / items / empty 文案
+    const currentLoading = tab === 'cloud' ? pageState.loading : localPageState.loading;
+    const currentError = tab === 'cloud' ? pageState.error : localPageState.error;
+    const currentIsEmpty = tab === 'cloud'
+        ? (!pageState.loading && !pageState.error && !permLoading && isHost !== null && items.length === 0 && initializedRef.current)
+        : (!localPageState.loading && !localPageState.error && localItems.length === 0);
+
     return (
         <PageStateView
-            loading={pageState.loading}
-            error={pageState.error}
+            loading={currentLoading}
+            error={currentError}
             permLoading={permLoading}
             isHost={isHost}
-            isEmpty={!pageState.loading && !pageState.error && !permLoading && isHost !== null && items.length === 0 && initializedRef.current}
-            emptyTitle="暂无游戏记录"
-            emptySubtitle="开始一局新游戏，创造精彩回忆！"
-            emptyActionText="开始新游戏"
+            isEmpty={currentIsEmpty}
+            emptyTitle={tab === 'cloud' ? simpleT('game_history_empty_title') : simpleT('local_history_empty_title')}
+            emptySubtitle={tab === 'cloud' ? simpleT('game_history_empty_subtitle') : simpleT('local_history_empty_subtitle')}
+            emptyActionText={simpleT('start_new_game')}
             onEmptyAction={() => navigation.navigate('Home')}
             onRetry={handleRetry}
             onNavigateHome={() => navigation.navigate('Home')}
@@ -424,66 +524,198 @@ export default function GameHistoryScreen() {
                 <LinearGradient
                     colors={[color.primary, color.primary]}
                     start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={styles.header}
                 >
                     <View style={styles.headerContent}>
-                        <View style={styles.headerLeft}>
-                            <MaterialCommunityIcons name="history" size={24} color={color.lightText} />
-                            <Text style={styles.headerTitle}>游戏历史</Text>
+                        {/* Tab control - segmented */}
+                        <View style={segStyles.container}>
+                            <TouchableOpacity
+                                onPress={async () => {
+                                    if (tab === 'cloud') return;
+                                    setTab('cloud');
+                                    // force refresh cloud data when switching to cloud
+                                    if (isHost === false) {
+                                        // not a host: nothing to load
+                                        return;
+                                    }
+                                    pageState.setLoading(true);
+                                    try {
+                                        // reset pagination to force a fresh load
+                                        initializedRef.current = false;
+                                        reachedEndRef.current = false;
+                                        nextCursorRef.current = null;
+                                        fetchedSetRef.current.clear();
+                                        await fetchPage('refresh');
+                                    } catch (e) {
+                                        pageState.setError(simpleT('err_loading_game_history'));
+                                    } finally {
+                                        pageState.setLoading(false);
+                                    }
+                                }}
+                                style={[segStyles.button, tab === 'cloud' ? segStyles.activeButton : undefined]}
+                            >
+                                <Text style={tab === 'cloud' ? segStyles.activeText : segStyles.inactiveText}>{simpleT('menu_history')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={async () => {
+                                    if (tab === 'local') return;
+                                    setTab('local');
+                                    await loadLocalHistory();
+                                }}
+                                style={[segStyles.button, tab === 'local' ? segStyles.activeButton : undefined]}
+                            >
+                                <Text style={tab === 'local' ? segStyles.activeText : segStyles.inactiveText}>{simpleT('menu_local_history')}</Text>
+                            </TouchableOpacity>
                         </View>
                         <View style={styles.headerRight}>
                             <TouchableOpacity
-                                style={styles.headerButton}
+                                style={[
+                                    styles.headerButton,
+                                    {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        borderRadius: 8,
+                                        padding: 8,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    }
+                                ]}
                                 onPress={onRefresh}
                                 activeOpacity={0.7}
                                 disabled={pageState.refreshing}
                             >
                                 <MaterialCommunityIcons
                                     name={pageState.refreshing ? "loading" : "refresh"}
-                                    size={20}
+                                    size={18}
                                     color={color.lightText}
                                 />
                             </TouchableOpacity>
                         </View>
                     </View>
-
-                    {/* 统计信息 */}
-                    <View style={styles.statsRow}>
-                        <View style={styles.statChip}>
-                            <MaterialCommunityIcons name="cards-variant" size={16} color="rgba(255, 255, 255, 0.8)" />
-                            <Text style={styles.statChipText}>{items.length} 场游戏</Text>
-                        </View>
-                        {items.length > 0 && (
-                            <View style={[styles.statChip, { marginLeft: Spacing.sm }]}>
-                                <MaterialCommunityIcons name="currency-usd" size={16} color="rgba(255, 255, 255, 0.8)" />
-                                <Text style={styles.statChipText}>
-                                    总流水 ${Math.abs(items.reduce((sum, item) => sum + item.totalBuyInCash, 0)).toFixed(0)}
-                                </Text>
-                            </View>
+                    {/* 统计信息 - 针对不同 tab 显示 */}
+                    <View style={[
+                        styles.statsRow,
+                        {
+                            paddingHorizontal: Spacing.lg,
+                            paddingTop: Spacing.sm,
+                        }
+                    ]}>
+                        {tab === 'cloud' ? (
+                            <>
+                                <View style={[
+                                    styles.statChip,
+                                    {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        borderRadius: 20,
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 6,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    }
+                                ]}>
+                                    <MaterialCommunityIcons name="cards-variant" size={14} color="rgba(255, 255, 255, 0.9)" style={{ marginRight: 4 }} />
+                                    <Text style={[styles.statChipText, { fontSize: 12, fontWeight: '600' }]}>{items.length} {simpleT('games_stat_suffix')}</Text>
+                                </View>
+                                {items.length > 0 && (
+                                    <View style={[
+                                        styles.statChip,
+                                        {
+                                            marginLeft: Spacing.sm,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                            borderRadius: 20,
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 6,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        }
+                                    ]}>
+                                        <MaterialCommunityIcons name="currency-usd" size={14} color="rgba(255, 255, 255, 0.9)" style={{ marginRight: 4 }} />
+                                        <Text style={[styles.statChipText, { fontSize: 12, fontWeight: '600' }]}>
+                                            {simpleT('total_flow')}: ${Math.abs(items.reduce((sum, item) => sum + item.totalBuyInCash, 0)).toFixed(0)}
+                                        </Text>
+                                    </View>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <View style={[
+                                    styles.statChip,
+                                    {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                        borderRadius: 20,
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 6,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    }
+                                ]}>
+                                    <MaterialCommunityIcons name="file-document" size={14} color="rgba(255, 255, 255, 0.9)" style={{ marginRight: 4 }} />
+                                    <Text style={[styles.statChipText, { fontSize: 12, fontWeight: '600' }]}>{simpleT('records_count', undefined, { count: localItems.length })}</Text>
+                                </View>
+                            </>
                         )}
                     </View>
                 </LinearGradient>
 
                 <FlatList
-                    data={items}
-                    keyExtractor={(item) => item.id}
+                    data={tab === 'cloud' ? items : localItems}
+                    keyExtractor={(item) => tab === 'cloud' ? item.id : String(item.id)}
                     contentContainerStyle={styles.list}
-                    renderItem={renderGameCard}
-                    refreshControl={<RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} tintColor={color.primary} />}
+                    renderItem={tab === 'cloud' ? renderGameCard : renderLocalCard}
+                    refreshControl={<RefreshControl refreshing={(tab === 'cloud' ? pageState.refreshing : localPageState.refreshing) || false} onRefresh={onRefresh} colors={[color.primary]} tintColor={color.primary} />}
                     onEndReachedThreshold={0.3}
                     onEndReached={onEndReached}
                     showsVerticalScrollIndicator={false}
                     ListFooterComponent={
-                        !reachedEndRef.current ? (
-                            <View style={styles.footerLoader}>
-                                <ActivityIndicator size="small" color={color.primary} />
-                                <Text style={styles.footerLoaderText}>加载更多...</Text>
-                            </View>
-                        ) : items.length > 0 ? (
-                            <View style={styles.footerEnd}>
-                                <Text style={styles.footerEndText}>已显示全部记录</Text>
-                            </View>
+                        tab === 'cloud' ? (
+                            !reachedEndRef.current ? (
+                                <View style={[
+                                    styles.footerLoader,
+                                    {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        marginHorizontal: Spacing.lg,
+                                        marginVertical: Spacing.md,
+                                        borderRadius: 12,
+                                        paddingVertical: Spacing.lg,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                                    }
+                                ]}>
+                                    <ActivityIndicator size="small" color={color.primary} style={{ marginBottom: Spacing.xs }} />
+                                    <Text style={[
+                                        styles.footerLoaderText,
+                                        {
+                                            color: color.mutedText,
+                                            fontSize: 13,
+                                            fontWeight: '500',
+                                        }
+                                    ]}>{simpleT('loading_more')}</Text>
+                                </View>
+                            ) : items.length > 0 ? (
+                                <View style={[
+                                    styles.footerEnd,
+                                    {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                        marginHorizontal: Spacing.lg,
+                                        marginVertical: Spacing.md,
+                                        borderRadius: 12,
+                                        paddingVertical: Spacing.md,
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255, 255, 255, 0.08)',
+                                    }
+                                ]}>
+                                    <MaterialCommunityIcons name="check-circle" size={16} color={color.mutedText} style={{ marginBottom: 4 }} />
+                                    <Text style={[
+                                        styles.footerEndText,
+                                        {
+                                            color: color.mutedText,
+                                            fontSize: 12,
+                                            fontWeight: '500',
+                                        }
+                                    ]}>{simpleT('footer_all_records')}</Text>
+                                </View>
+                            ) : null
                         ) : null
                     }
                 />

@@ -1,13 +1,10 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, Modal, TouchableOpacity, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { GradientCard } from './GradientCard';
 import { Player, PlayerActionsProps, PlayerAvatarProps, PlayerCardProps, PlayerDetailsProps } from '@/types';
 import { Palette as color } from '@/constants';
-import { Spacing, Radius, FontSize, Elevation } from '@/constants/designTokens';
 import { Gradients } from '@/constants/gradients';
-import { PrimaryButton } from './PrimaryButton';
+import { PrimaryButton } from '../common/PrimaryButton';
 import { useLogger } from '@/utils/useLogger';
 import { PlayerCardStyles } from '@/assets/styles';
 

@@ -20,22 +20,21 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useHeaderSlot } from '@/stores/useHeaderSlotStore';
 
 // 组件
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { InfoRow } from '@/components/InfoRow';
-import { PlayerCard } from '@/components/PlayerCard';
-import { AddPlayerCard } from '@/components/AddPlayerCard';
-import { BuyInPopupCard } from '@/components/BuyInPopupCard';
-import { SettleChipPopupCard } from '@/components/SettleChipPopupCard';
-import { EditBuyInPopupCard } from '@/components/EditBuyInPopupCard';
-import { LogViewer } from '@/components/LogViewer';
-import CallTimer from '@/components/CallTimer';
-import DecisionWheel from '@/components/DecisionWheel';
-import { SettleSummaryModal } from '@/components/SettleSummaryModal';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
+import { InfoRow } from '@/components/common/InfoRow';
+import { PlayerCard } from '@/components/gaming/PlayerCard';
+import { AddPlayerCard } from '@/components/gaming/AddPlayerCard';
+import { BuyInPopupCard } from '@/components/gaming/BuyInPopupCard';
+import { SettleChipPopupCard } from '@/components/gaming/SettleChipPopupCard';
+import { EditBuyInPopupCard } from '@/components/gaming/EditBuyInPopupCard';
+import CallTimer from '@/components/gaming/CallTimer';
+import DecisionWheel from '@/components/gaming/DecisionWheel';
+import { SettleSummaryModal } from '@/components/gaming/SettleSummaryModal';
 
 // 工具/常量
 import { useLogger } from '@/utils/useLogger';
 import { finalizeGameOnServer, saveGameToFirebase, saveGameToLocalSql } from '@/firebase/saveGame';         // 统一远端保存入口
-import { usePopup } from '@/components/PopupProvider';
+import { usePopup } from '@/providers/PopupProvider';
 import { useGameStats } from '@/hooks/useGameStats';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
@@ -47,6 +46,7 @@ import { CallTimerHandle, Player } from '@/types';
 import { GamePlaystyles as styles } from '@/assets/styles';
 import Toast from 'react-native-toast-message';
 import usePermission from '@/hooks/usePermission';
+import simpleT from '@/i18n/simpleT';
 
 
 type HomeScreenNav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -146,9 +146,9 @@ export default function GamePlayScreen() {
         if (unSettled.length > 0) {
             log('Game', '⚠️ 游戏结束失败，未结算玩家存在');
             showPopup({
-                title: '错误',
+                title: simpleT('error_title'),
                 isWarning: true,
-                message: '请先结算所有玩家的筹码',
+                message: simpleT('please_settle_all_players'),
             });
             return;
         }
@@ -182,13 +182,13 @@ export default function GamePlayScreen() {
 
             Toast.show({
                 type: 'success',
-                text1: '✅ 完成提交成功',
+                text1: simpleT('finalize_success_title'),
                 position: 'bottom',
             });
         } catch (e: any) {
             Toast.show({
                 type: 'error',
-                text1: '重试失败',
+                text1: simpleT('retry_failed'),
                 text2: e?.message || '',
                 position: 'bottom',
             });
@@ -226,8 +226,8 @@ export default function GamePlayScreen() {
                 // 延迟显示popup确保结算总览完全关闭
                 setTimeout(async () => {
                     const shouldContinue = await showPopup({
-                        title: '结算差额提醒',
-                        message: `检测到结算差额：${diffChips > 0 ? '+' : ''}${diffChips}\n\n这可能是由于筹码丢失、找零或其他原因造成的。\n\n是否继续结账？`,
+                        title: simpleT('settle_diff_title'),
+                        message: simpleT('settle_diff_message', undefined, { diff: (diffChips > 0 ? '+' : '') + String(diffChips) }),
                         isWarning: true,
                     });
 
@@ -242,8 +242,8 @@ export default function GamePlayScreen() {
                         // 用户取消，显示提示
                         Toast.show({
                             type: 'info',
-                            text1: '结账已取消',
-                            text2: '请检查结算数据后重试',
+                            text1: simpleT('checkout_cancelled_title'),
+                            text2: simpleT('checkout_cancelled_msg'),
                             position: 'bottom',
                         });
                     }
@@ -291,14 +291,14 @@ export default function GamePlayScreen() {
                 setPendingFinalize(true); // 进入可“补 finalize”状态
                 Toast.show({
                     type: 'error',
-                    text1: '已保存，但未完成提交',
-                    text2: '网络波动导致完成提交失败，请点击“重试完成提交”。',
+                    text1: simpleT('saved_but_not_finalized_title'),
+                    text2: simpleT('saved_but_not_finalized_msg'),
                     position: 'bottom',
                 });
             } else {
                 Toast.show({
                     type: 'error',
-                    text1: '上传失败',
+                    text1: simpleT('upload_failed_title'),
                     text2: e?.message || '',
                     position: 'bottom',
                 });
@@ -339,8 +339,8 @@ export default function GamePlayScreen() {
     // ===== 长按玩家卡片的操作：编辑 or 删除 =====
     const handleLongPressPlayer = useCallback(async (player: Player) => {
         const action = await showPopup({
-            title: '编辑玩家总买入操作',
-            message: `请选择对 ${player.nickname} 的操作`,
+            title: simpleT('edit_player_title'),
+            message: simpleT('edit_player_message', undefined, { name: player.nickname }),
             isWarning: false,
         });
 
@@ -349,8 +349,8 @@ export default function GamePlayScreen() {
             log('Player', `✏️ 编辑玩家 ${player.nickname}`);
         } else if (action === false) {
             const confirmDelete = await showPopup({
-                title: '删除玩家',
-                message: `确定要删除 ${player.nickname} 吗？`,
+                title: simpleT('delete_player_title'),
+                message: simpleT('delete_player_message', undefined, { name: player.nickname }),
                 isWarning: true,
             });
 
@@ -416,15 +416,15 @@ export default function GamePlayScreen() {
                             onPress={() => timerRef.current?.show()}
                             activeOpacity={0.8}
                         >
-                            <LinearGradient
-                                colors={[color.info, '#7FB8D4']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.toolButtonGradient}
-                            >
-                                <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
-                                <Text style={styles.toolButtonText}>计时器</Text>
-                            </LinearGradient>
+                                <LinearGradient
+                                    colors={[color.info, '#7FB8D4']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.toolButtonGradient}
+                                >
+                                    <MaterialCommunityIcons name="timer-outline" size={22} color="#fff" />
+                                    <Text style={styles.toolButtonText}>{simpleT('timer_label')}</Text>
+                                </LinearGradient>
                         </TouchableOpacity>
 
                         {/* 保险计算器功能已移除 */}
@@ -441,7 +441,7 @@ export default function GamePlayScreen() {
                                 style={styles.toolButtonGradient}
                             >
                                 <MaterialCommunityIcons name="rotate-3d-variant" size={22} color="#fff" />
-                                <Text style={styles.toolButtonText}>决策转盘</Text>
+                                <Text style={styles.toolButtonText}>{simpleT('decision_wheel')}</Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
@@ -513,13 +513,13 @@ export default function GamePlayScreen() {
                                                     color: color.title,
                                                     fontSize: FontSize.h3,
                                                     fontWeight: '700'
-                                                }]}>游戏分析</Text>
+                                                }]}>{simpleT('game_analysis')}</Text>
                                                 <Text style={{
                                                     fontSize: FontSize.small,
                                                     color: color.mutedText,
                                                     fontWeight: '500',
                                                     marginTop: 2,
-                                                }}>实时数据统计</Text>
+                                                }}>{simpleT('realtime_stats')}</Text>
                                             </View>
                                         </View>
                                     </LinearGradient>
@@ -550,25 +550,25 @@ export default function GamePlayScreen() {
                                                     color: color.mutedText,
                                                     textTransform: 'uppercase',
                                                     letterSpacing: 0.5,
-                                                }}>总体汇总</Text>
+                                                }}>{simpleT('overall_summary')}</Text>
                                             </View>
                                             <InfoRow
                                                 icon="alert-decagram"
                                                 text={`${display.totalDiffChips}`}
-                                                label="差额"
+                                                label={simpleT('diff_label')}
                                                 iconColor={color.highLighter}
                                                 textColor={display.totalDiffChips >= 0 ? color.success : color.error}
                                             />
                                             <InfoRow
                                                 icon="bank"
                                                 text={`${display.totalBuyInChips} `}
-                                                label="总买入"
+                                                label={simpleT('total_buyin_chips')}
                                                 iconColor={color.info}
                                             />
                                             <InfoRow
                                                 icon="calculator-variant"
                                                 text={`${display.totalEndingChips}`}
-                                                label="结算总筹码"
+                                                label={simpleT('total_settle_chips')}
                                                 iconColor={color.success}
                                             />
                                         </View>
@@ -598,7 +598,7 @@ export default function GamePlayScreen() {
                                                     color: color.mutedText,
                                                     textTransform: 'uppercase',
                                                     letterSpacing: 0.5,
-                                                }}>输赢排行</Text>
+                                                }}>{simpleT('win_rank')}</Text>
                                             </View>
                                             <InfoRow
                                                 icon="trophy-variant"
@@ -607,7 +607,7 @@ export default function GamePlayScreen() {
                                                         ? `${display.winner.nickname} (${display.winnerProfitChips})`
                                                         : '--'
                                                 }
-                                                label="赢家"
+                                                label={simpleT('winner_label')}
                                                 iconColor="#FFD700"
                                             />
                                             <InfoRow
@@ -617,7 +617,7 @@ export default function GamePlayScreen() {
                                                         ? `${display.loser.nickname} (${display.loserProfitChips})`
                                                         : '--'
                                                 }
-                                                label="输家"
+                                                label={simpleT('loser_label')}
                                                 iconColor="#FF6B6B"
                                             />
                                         </View>
@@ -646,7 +646,7 @@ export default function GamePlayScreen() {
                                                     color: color.mutedText,
                                                     textTransform: 'uppercase',
                                                     letterSpacing: 0.5,
-                                                }}>买入统计</Text>
+                                                }}>{simpleT('buyin_stats')}</Text>
                                             </View>
                                             <InfoRow
                                                 icon="arrow-up-bold-box"
@@ -655,7 +655,7 @@ export default function GamePlayScreen() {
                                                         ? `${display.mostBuyIn.nickname} (${display.mostBuyIn.totalBuyInChips})`
                                                         : '--'
                                                 }
-                                                label="最多买入"
+                                                label={simpleT('most_buyin_label')}
                                                 iconColor={color.primary}
                                             />
                                             <InfoRow
@@ -665,7 +665,7 @@ export default function GamePlayScreen() {
                                                         ? `${display.leastBuyIn.nickname} (${display.leastBuyIn.totalBuyInChips})`
                                                         : '--'
                                                 }
-                                                label="最少买入"
+                                                label={simpleT('least_buyin_label')}
                                                 iconColor={color.mutedText}
                                             />
                                             <InfoRow
@@ -675,7 +675,7 @@ export default function GamePlayScreen() {
                                                         ? `${display.mostBuyInTimes.nickname} (${display.mostBuyInTimes.buyInChipsList.length}次)`
                                                         : '--'
                                                 }
-                                                label="最多买入次数"
+                                                label={simpleT('most_buyin_times_label')}
                                                 iconColor={color.info}
                                             />
                                         </View>
@@ -687,10 +687,10 @@ export default function GamePlayScreen() {
                                 <PrimaryButton
                                     title={
                                         pendingFinalize
-                                            ? (isLoading ? '完成提交中…' : '重试完成提交')
+                                            ? (isLoading ? simpleT('finalizing_label') : simpleT('retry_finalize'))
                                             : (isLoading
-                                                ? (submitPhase === 'saving' ? '保存中…' : submitPhase === 'finalizing' ? '完成提交中…' : '提交中…')
-                                                : '结束游戏')
+                                                ? (submitPhase === 'saving' ? simpleT('saving_label') : submitPhase === 'finalizing' ? simpleT('finalizing_label') : simpleT('submitting_label'))
+                                                : simpleT('end_game'))
                                     }
                                     onPress={pendingFinalize ? handleRetryFinalizeOnly : handleGameFinishPrompt}
                                     style={[styles.endGameButton, {

@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiGet } from '@/services/httpService';
 import { getLocal, setLocal } from '@/services/storageService';
+import simpleT from '@/i18n/simpleT';
 import * as Clipboard from 'expo-clipboard';
 
 const LAST_FETCH_KEY = 'healthcheck:lastFetch';
@@ -29,7 +30,7 @@ export default function HealthCheckScreen() {
           if (elapsed < ONE_HOUR_SECONDS) {
             const remain = ONE_HOUR_SECONDS - elapsed;
             setCooldownRemaining(remain);
-            setError({ message: `每小时只能点击一次，请等待 ${Math.ceil(remain / 60)} 分钟` });
+            setError({ message: simpleT('health_cooldown', undefined, { minutes: Math.ceil(remain / 60) }) });
             return;
           }
           // record this click
@@ -89,10 +90,10 @@ export default function HealthCheckScreen() {
     try {
       const payload = result ? JSON.stringify(result, null, 2) : '';
       await Clipboard.setStringAsync(payload);
-      setCopyStatus('已复制');
+      setCopyStatus(simpleT('health_copy_success'));
       setTimeout(() => setCopyStatus(null), 2000);
     } catch (e) {
-      setCopyStatus('复制失败');
+      setCopyStatus(simpleT('health_copy_failed'));
       setTimeout(() => setCopyStatus(null), 2000);
     }
   };
@@ -102,11 +103,11 @@ export default function HealthCheckScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Health Check</Text>
+      <Text style={styles.title}>{simpleT('health_title')}</Text>
       <View style={styles.box}>
         <View style={styles.headerRow}>
-          <Text style={styles.subtitle}>检查时间</Text>
-          <Text style={styles.muted}>{lastFetchedAt ? new Date(lastFetchedAt).toLocaleString() : '尚未请求'}</Text>
+          <Text style={styles.subtitle}>{simpleT('health_check_time')}</Text>
+          <Text style={styles.muted}>{lastFetchedAt ? new Date(lastFetchedAt).toLocaleString() : simpleT('health_never_requested')}</Text>
         </View>
 
         <View style={styles.contentArea}>
@@ -114,32 +115,32 @@ export default function HealthCheckScreen() {
             <ActivityIndicator size="large" />
           ) : error ? (
             <View>
-              <Text style={styles.error}>请求失败</Text>
-              <Text style={styles.errorDetail}>{JSON.stringify(error, null, 2)}</Text>
+              <Text style={styles.error}>{simpleT('health_error_request_failed')}</Text>
+              <Text style={styles.errorDetail}>{simpleT('error_details')}: {JSON.stringify(error, null, 2)}</Text>
             </View>
           ) : (
             <>
               {/* Health card */}
               <View style={[styles.healthCard, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={styles.healthTitle}>服务状态</Text>
+                <Text style={styles.healthTitle}>{simpleT('health_service_status')}</Text>
                 {result && typeof result === 'object' && 'ok' in result ? (
                   result.ok ? (
                     <View style={styles.healthStatusRow}>
                       <View style={[styles.healthIcon, { backgroundColor: '#e6f4ea' }]}>
                         <MaterialCommunityIcons name="check" size={16} color="#1b8a2e" />
                       </View>
-                      <Text style={[styles.healthStatusText, { color: '#1b8a2e' }]}>正常</Text>
+                      <Text style={[styles.healthStatusText, { color: '#1b8a2e' }]}>{simpleT('health_status_ok')}</Text>
                     </View>
                   ) : (
                     <View style={styles.healthStatusRow}>
                       <View style={[styles.healthIcon, { backgroundColor: '#fdecea' }]}>
                         <MaterialCommunityIcons name="close" size={16} color="#c92a2a" />
                       </View>
-                      <Text style={[styles.healthStatusText, { color: '#c92a2a' }]}>异常</Text>
+                      <Text style={[styles.healthStatusText, { color: '#c92a2a' }]}>{simpleT('health_status_unhealthy')}</Text>
                     </View>
                   )
                 ) : (
-                  <Text style={styles.muted}>无可用状态</Text>
+                  <Text style={styles.muted}>{simpleT('health_no_status')}</Text>
                 )}
               </View>
             </>
@@ -152,11 +153,11 @@ export default function HealthCheckScreen() {
             onPress={() => fetchHealth(true)}
             disabled={cooldownRemaining > 0}
           >
-            <Text style={styles.btnText}>{cooldownRemaining > 0 ? `冷却 ${Math.ceil(cooldownRemaining/60)} 分钟` : '重新获取'}</Text>
+            <Text style={styles.btnText}>{cooldownRemaining > 0 ? simpleT('health_cooldown_button', undefined, { minutes: Math.ceil(cooldownRemaining/60) }) : simpleT('health_reload')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.btnSmall, styles.btnOutline]} onPress={onCopy}>
-            <Text style={[styles.btnOutlineText]}>{copyStatus ?? '复制结果'}</Text>
+            <Text style={[styles.btnOutlineText]}>{copyStatus ?? simpleT('health_copy')}</Text>
           </TouchableOpacity>
         </View>
         {/* Exchange UI moved to Settings screen */}

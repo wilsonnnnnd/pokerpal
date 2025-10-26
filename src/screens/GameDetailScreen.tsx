@@ -4,12 +4,13 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { usePopup } from '@/components/PopupProvider';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
+import { usePopup } from '@/providers/PopupProvider';
 import { useSettings } from '@/providers/SettingsProvider';
 import { Palette as color } from '@/constants';
 import { GameDetailstyles as styles } from '@/assets/styles';
 import { handleCopyToClipboard, handleSendEmail } from '@/utils/exportHandlers';
+import simpleT from '@/i18n/simpleT';
 
 import { doc, collection, onSnapshot, query, orderBy, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -199,17 +200,17 @@ export default function GameDetailScreen() {
         offGame = onSnapshot(
             gameRef,
             snap => {
-                if (!snap.exists()) {
-                    setError('游戏不存在或已被删除');
-                    setLoading(false);
-                    return;
-                }
+                        if (!snap.exists()) {
+                            setError(simpleT('game_not_found'));
+                            setLoading(false);
+                            return;
+                        }
                 latestGameDoc = { ...(snap.data() as GameDocFS) };
                 (latestGameDoc as any).gameId = latestGameDoc?.gameId ?? snap.id;
                 emit();
             },
             err => {
-                setError(err?.message || '读取游戏失败');
+                setError(err?.message || simpleT('err_read_game_failed'));
                 setLoading(false);
             }
         );
@@ -221,7 +222,7 @@ export default function GameDetailScreen() {
                 emit();
             },
             err => {
-                setError(err?.message || '读取玩家列表失败');
+                setError(err?.message || simpleT('err_read_players_failed'));
             }
         );
 
@@ -231,7 +232,7 @@ export default function GameDetailScreen() {
     if (loading) return (
         <View style={[styles.notFoundContainer, { justifyContent: 'center' }]}>
             <ActivityIndicator size="large" />
-            <Text style={{ marginTop: 12, color: color.loadingText }}>正在加载游戏数据…</Text>
+            <Text style={{ marginTop: 12, color: color.loadingText }}>{simpleT('loading_game_data')}</Text>
         </View>
     );
 
@@ -239,15 +240,15 @@ export default function GameDetailScreen() {
         <View style={styles.notFoundContainer}>
             <MaterialCommunityIcons name="alert-circle-outline" size={60} color={color.error} />
             <Text style={styles.notFound}>{error}</Text>
-            <PrimaryButton title="返回" icon="arrow-left" onPress={() => navigation.goBack()} style={styles.backButton} textStyle={styles.backButtonText} />
+            <PrimaryButton title={simpleT('back')} icon="arrow-left" onPress={() => navigation.goBack()} style={styles.backButton} textStyle={styles.backButtonText} />
         </View>
     );
 
     if (!game) return (
         <View style={styles.notFoundContainer}>
             <MaterialCommunityIcons name="alert-circle-outline" size={60} color={color.weakGray} />
-            <Text style={styles.notFound}>未找到该游戏记录</Text>
-            <PrimaryButton title="返回" icon="arrow-left" onPress={() => navigation.goBack()} style={styles.backButton} textStyle={styles.backButtonText} />
+            <Text style={styles.notFound}>{simpleT('game_not_found')}</Text>
+            <PrimaryButton title={simpleT('back')} icon="arrow-left" onPress={() => navigation.goBack()} style={styles.backButton} textStyle={styles.backButtonText} />
         </View>
     );
 
@@ -283,7 +284,7 @@ export default function GameDetailScreen() {
                             <Text style={styles.dateText}>{formatUtils.dateStr(game.created)}</Text>
                             <Text style={styles.timeText}>
                                 {formatUtils.timeStr(game.created)}
-                                {game.updated !== game.created ? `（更新：${formatUtils.timeStr(game.updated)}）` : ''}
+                                {game.updated !== game.created ? simpleT('updated_label', undefined, { time: formatUtils.timeStr(game.updated) }) : ''}
                             </Text>
                         </View>
                         <View style={styles.blindContainer}>
@@ -291,25 +292,25 @@ export default function GameDetailScreen() {
                             <Text style={styles.blindText}>{game.smallBlind ?? '-'} / {game.bigBlind ?? '-'}</Text>
                         </View>
                     </View>
-                    <Text style={styles.gameIdText}>ID: {game.id.slice(0, 12)}...</Text>
+                    <Text style={styles.gameIdText}>{simpleT('game_id_label')}: {game.id.slice(0, 12)}...</Text>
                 </View>
 
                 <View style={styles.summaryContainer}>
                     <View style={styles.summaryHeader}>
                         <MaterialCommunityIcons name="chart-box" size={20} color={color.highLighter} />
-                        <Text style={styles.summaryTitle}>游戏总览</Text>
+                        <Text style={styles.summaryTitle}>{simpleT('game_overview')}</Text>
                     </View>
 
                     <View style={styles.statsGrid}>
                         <View style={styles.statBox}>
                             <Text style={styles.statValue}>{game.players.length}</Text>
-                            <Text style={styles.statLabel}>玩家数</Text>
+                            <Text style={styles.statLabel}>{simpleT('players_count')}</Text>
                         </View>
                         <View style={styles.statBox}>
                             <Text style={[styles.statValue, { color: game.totalDiffCash >= 0 ? color.success : color.error }]}>
                                 {game.totalDiffCash >= 0 ? '+' : '-'}{formatUtils.money(Math.abs(game.totalDiffCash), formatCurrency)}
                             </Text>
-                            <Text style={styles.statLabel}>总差额</Text>
+                            <Text style={styles.statLabel}>{simpleT('total_difference')}</Text>
                         </View>
                     </View>
 
@@ -317,15 +318,15 @@ export default function GameDetailScreen() {
                     <View style={[styles.statsGrid, { marginTop: 12 }]}>
                         <View style={[styles.statBox, { backgroundColor: color.info + '10', borderColor: color.info + '20', borderWidth: 1 }]}>
                             <Text style={[styles.statValue, { color: color.info }]}>
-                                {Number(game.baseCashAmount) > 0 ? formatUtils.money(Number(game.baseCashAmount), formatCurrency) : '未设定'}
+                                {Number(game.baseCashAmount) > 0 ? formatUtils.money(Number(game.baseCashAmount), formatCurrency) : simpleT('not_set')}
                             </Text>
-                            <Text style={[styles.statLabel, { color: color.info }]}>初始买入金额</Text>
+                            <Text style={[styles.statLabel, { color: color.info }]}>{simpleT('base_buyin_cash')}</Text>
                         </View>
                         <View style={[styles.statBox, { backgroundColor: color.warning + '10', borderColor: color.warning + '20', borderWidth: 1 }]}>
                             <Text style={[styles.statValue, { color: color.warning }]}>
-                                {Number(game.baseChipAmount) > 0 ? formatUtils.money(Number(game.baseChipAmount)) : '未设定'}
+                                {Number(game.baseChipAmount) > 0 ? formatUtils.money(Number(game.baseChipAmount)) : simpleT('not_set')}
                             </Text>
-                            <Text style={[styles.statLabel, { color: color.warning }]}>初始买入筹码</Text>
+                            <Text style={[styles.statLabel, { color: color.warning }]}>{simpleT('base_buyin_chips')}</Text>
                         </View>
                     </View>
 
@@ -354,7 +355,7 @@ export default function GameDetailScreen() {
                                 fontWeight: '600',
                                 color: color.primary,
                             }}>
-                                兑换比率
+                                {simpleT('exchange_rate')}
                             </Text>
                         </View>
                         
@@ -376,7 +377,7 @@ export default function GameDetailScreen() {
                                     fontWeight: '600',
                                     color: color.warning
                                 }}>
-                                    1筹码
+                                    {simpleT('chip_unit')}
                                 </Text>
                             </View>
                             
@@ -419,7 +420,7 @@ export default function GameDetailScreen() {
                             textAlign: 'center',
                             fontWeight: '500'
                         }}>
-                            基于初始设定计算
+                            {simpleT('based_on_setup')}
                         </Text>
                     </View>
                 </View>
@@ -427,10 +428,10 @@ export default function GameDetailScreen() {
                 {topWinner && topLoser && (
                     <View style={styles.highlightsContainer}>
                         <View style={styles.highlightCard}>
-                            <View style={styles.highlightHeader}>
-                                <MaterialCommunityIcons name="trophy" size={18} color={color.card} />
-                                <Text style={styles.highlightTitle}>最大赢家</Text>
-                            </View>
+                                <View style={styles.highlightHeader}>
+                                    <MaterialCommunityIcons name="trophy" size={18} color={color.card} />
+                                    <Text style={styles.highlightTitle}>{simpleT('top_winner')}</Text>
+                                </View>
                             <View style={styles.highlightContent}>
                                 <Avatar photoURL={topWinner.photoURL} nickname={topWinner.nickname} />
                                 <View style={styles.highlightInfo}>
@@ -443,7 +444,7 @@ export default function GameDetailScreen() {
                         <View style={styles.highlightCard}>
                             <View style={styles.highlightHeader}>
                                 <MaterialCommunityIcons name="emoticon-sad" size={18} color={color.weakGray} />
-                                <Text style={styles.highlightTitle}>最大输家</Text>
+                                <Text style={styles.highlightTitle}>{simpleT('top_loser')}</Text>
                             </View>
                             <View style={styles.highlightContent}>
                                 <Avatar photoURL={topLoser.photoURL} nickname={topLoser.nickname} />
@@ -460,7 +461,7 @@ export default function GameDetailScreen() {
 
                 <View style={styles.sectionHeader}>
                     <MaterialCommunityIcons name="account-group" size={20} color={color.highLighter} />
-                    <Text style={styles.sectionTitle}>玩家列表</Text>
+                    <Text style={styles.sectionTitle}>{simpleT('players_list')}</Text>
                 </View>
 
                 <View style={styles.playerListContainer}>
@@ -488,7 +489,7 @@ export default function GameDetailScreen() {
                                         <MaterialCommunityIcons name="bank" size={16} color={color.highLighter} />
                                         <View style={styles.playerStatTexts}>
                                             <Text style={styles.playerStatValue}>{formatUtils.money(p.totalBuyInCash, formatCurrency)}</Text>
-                                            <Text style={styles.playerStatLabel}>总买入</Text>
+                                            <Text style={styles.playerStatLabel}>{simpleT('player_total_buyin')}</Text>
                                         </View>
                                     </View>
 
@@ -496,7 +497,7 @@ export default function GameDetailScreen() {
                                         <MaterialCommunityIcons name="cash" size={16} color={color.highLighter} />
                                         <View style={styles.playerStatTexts}>
                                             <Text style={styles.playerStatValue}>{formatUtils.money(p.settleCashAmount, formatCurrency)}</Text>
-                                            <Text style={styles.playerStatLabel}>结算金额</Text>
+                                            <Text style={styles.playerStatLabel}>{simpleT('player_settle_amount')}</Text>
                                         </View>
                                     </View>
 
@@ -504,7 +505,7 @@ export default function GameDetailScreen() {
                                         <MaterialCommunityIcons name="repeat" size={16} color={color.highLighter} />
                                         <View style={styles.playerStatTexts}>
                                             <Text style={styles.playerStatValue}>{p.buyInCount}次</Text>
-                                            <Text style={styles.playerStatLabel}>买入次数</Text>
+                                            <Text style={styles.playerStatLabel}>{simpleT('buyin_times_label')}</Text>
                                         </View>
                                     </View>
 
@@ -514,7 +515,7 @@ export default function GameDetailScreen() {
                                             <Text style={[styles.playerStatValue, { color: roi >= 0 ? color.success : color.error }]}>
                                                 {(roi * 100).toFixed(2)}%
                                             </Text>
-                                            <Text style={styles.playerStatLabel}>ROI</Text>
+                                            <Text style={styles.playerStatLabel}>{simpleT('stat_label_roi')}</Text>
                                         </View>
                                     </View>
                                 </View>

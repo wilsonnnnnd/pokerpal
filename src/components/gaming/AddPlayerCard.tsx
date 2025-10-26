@@ -11,8 +11,9 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { usePlayerStore } from '@/stores/usePlayerStore';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { Palette as color } from '@/constants';
+import simpleT from '@/i18n/simpleT';
 import { useGameStore } from '@/stores/useGameStore';
 import { logInfo } from '@/utils/useLogger';
 import QRCode from 'react-native-qrcode-svg';
@@ -115,7 +116,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
     const handleManualAdd = () => {
         if (!nickname.trim()) {
-            Alert.alert('提示', '请输入玩家昵称');
+            Alert.alert(simpleT('addplayer.alert_title'), simpleT('addplayer.enter_nickname_msg'));
             return;
         }
 
@@ -159,8 +160,8 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
             Clipboard.setStringAsync(link);
             Toast.show({
                 type: 'success',
-                text1: '已复制',
-                text2: '加入链接已复制到剪贴板',
+                text1: simpleT('addplayer.copy_success_title'),
+                text2: simpleT('addplayer.copy_success_msg'),
                 position: 'bottom',
             });
         }
@@ -168,7 +169,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
     const handleAddSelectedPlayers = () => {
         if (selectedEmails.length === 0) {
-            Alert.alert('提示', '请选择至少一名玩家');
+            Alert.alert(simpleT('addplayer.alert_title'), simpleT('addplayer.select_at_least_one_msg'));
             return;
         }
 
@@ -198,8 +199,8 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
 
         Toast.show({
             type: 'success',
-            text1: '已添加玩家',
-            text2: `${selectedEmails.length} 个用户已添加到游戏`,
+            text1: simpleT('addplayer.add_selected_success_title'),
+            text2: simpleT('addplayer.add_selected_success_msg', undefined, { count: selectedEmails.length }),
             position: 'bottom',
         });
 
@@ -213,7 +214,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                 return (
                     <View style={AddPlayerCardStyles.tabContent}>
                         <View style={AddPlayerCardStyles.qrContainer}>
-                            <Text style={AddPlayerCardStyles.qrTitle}>扫描二维码加入游戏</Text>
+                            <Text style={AddPlayerCardStyles.qrTitle}>{simpleT('addplayer.qr_title')}</Text>
                             <View style={AddPlayerCardStyles.qrWrapper}>
                                 <QRCode value={getQRCodeLink()} size={200} backgroundColor={color.lightBackground} />
                             </View>
@@ -222,11 +223,11 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                 style={AddPlayerCardStyles.copyLinkButton}
                             >
                                 <Ionicons name="copy-outline" size={20} color={color.lightText} />
-                                <Text style={AddPlayerCardStyles.copyLinkText}>复制邀请链接</Text>
+                                <Text style={AddPlayerCardStyles.copyLinkText}>{simpleT('addplayer.copy_link')}</Text>
                             </TouchableOpacity>
 
                             <Text style={AddPlayerCardStyles.qrHelper}>
-                                玩家扫描二维码后可直接加入游戏
+                                {simpleT('addplayer.qr_helper')}
                             </Text>
                         </View>
                     </View>
@@ -239,7 +240,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             <Ionicons name="search" size={20} color={color.text} style={AddPlayerCardStyles.searchIcon} />
                             <TextInput
                                 style={AddPlayerCardStyles.searchInput}
-                                placeholder="搜索玩家（昵称或邮箱）"
+                                placeholder={simpleT('addplayer.search_placeholder')}
                                 value={searchTerm}
                                 onChangeText={setSearchTerm}
                             />
@@ -253,17 +254,17 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         {isLoadingUsers ? (
                             <View style={AddPlayerCardStyles.loadingContainer}>
                                 <ActivityIndicator size="large" color={color.info} />
-                                <Text style={AddPlayerCardStyles.loadingText}>正在加载玩家列表...</Text>
+                                <Text style={AddPlayerCardStyles.loadingText}>{simpleT('addplayer.loading_players')}</Text>
                             </View>
                         ) : filteredUsers.length === 0 ? (
                             <View style={AddPlayerCardStyles.emptyContainer}>
                                 <Ionicons name="people" size={50} color={color.weakGray} />
                                 <Text style={AddPlayerCardStyles.emptyText}>
-                                    {searchTerm ? '没有找到匹配的玩家' : existingPlayerEmails.length > 0 ? '没有更多可添加的玩家' : '暂无已注册玩家'}
+                                    {searchTerm ? simpleT('addplayer.no_match') : existingPlayerEmails.length > 0 ? simpleT('addplayer.no_more') : simpleT('addplayer.no_registered')}
                                 </Text>
                                 {existingPlayerEmails.length > 0 && !searchTerm && (
                                     <Text style={AddPlayerCardStyles.emptySubText}>
-                                        所有已注册的玩家都已添加到游戏中
+                                        {simpleT('addplayer.all_added_subtext')}
                                     </Text>
                                 )}
                             </View>
@@ -307,7 +308,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         )}
 
                         <PrimaryButton
-                            title={`添加选中的玩家 (${selectedEmails.length})`}
+                            title={simpleT('addplayer.add_selected_title', undefined, { count: selectedEmails.length })}
                             onPress={handleAddSelectedPlayers}
                             style={[
                                 AddPlayerCardStyles.addSelectedButton,
@@ -324,10 +325,10 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                     <View style={AddPlayerCardStyles.tabContent}>
                         <View style={AddPlayerCardStyles.manualAddContainer}>
                             <View style={AddPlayerCardStyles.inputContainer}>
-                                <Text style={AddPlayerCardStyles.label}>玩家昵称</Text>
+                                    <Text style={AddPlayerCardStyles.label}>{simpleT('addplayer.manual_label_nickname')}</Text>
                                 <TextInput
                                     style={[AddPlayerCardStyles.input, isFocused.nickname && AddPlayerCardStyles.inputFocused]}
-                                    placeholder="输入玩家昵称"
+                                    placeholder={simpleT('addplayer.manual_placeholder_nickname')}
                                     placeholderTextColor={color.mutedText}
                                     value={nickname}
                                     onChangeText={setNickname}
@@ -337,10 +338,10 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             </View>
 
                             <View style={AddPlayerCardStyles.inputContainer}>
-                                <Text style={AddPlayerCardStyles.label}>邮箱 <Text style={AddPlayerCardStyles.optional}>(选填)</Text></Text>
+                                <Text style={AddPlayerCardStyles.label}>{simpleT('addplayer.manual_label_email')} <Text style={AddPlayerCardStyles.optional}>{simpleT('addplayer.optional')}</Text></Text>
                                 <TextInput
                                     style={[AddPlayerCardStyles.input, isFocused.email && AddPlayerCardStyles.inputFocused]}
-                                    placeholder="输入玩家邮箱"
+                                    placeholder={simpleT('addplayer.manual_placeholder_email')}
                                     placeholderTextColor={color.mutedText}
                                     value={email}
                                     keyboardType="email-address"
@@ -352,7 +353,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                             </View>
 
                             <PrimaryButton
-                                title="添加玩家"
+                                title={simpleT('addplayer.add_button')}
                                 onPress={handleManualAdd}
                                 style={AddPlayerCardStyles.addButton}
                                 textStyle={AddPlayerCardStyles.addButtonText}
@@ -373,7 +374,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                     <Ionicons name="close" size={24} color={color.text} />
                 </TouchableOpacity>
 
-                <Text style={AddPlayerCardStyles.title}>添加玩家</Text>
+                <Text style={AddPlayerCardStyles.title}>{simpleT('addplayer.title')}</Text>
 
                 {/* 选项卡导航：非房主只显示手动添加 */}
 
@@ -383,7 +384,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                         onPress={() => setActiveTab(AddPlayerTab.MANUAL)}
                     >
                         <Ionicons name="create-outline" size={22} color={activeTab === AddPlayerTab.MANUAL ? color.info : color.text} />
-                        <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.MANUAL && AddPlayerCardStyles.activeTabText]}>手动添加</Text>
+                        <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.MANUAL && AddPlayerCardStyles.activeTabText]}>{simpleT('addplayer.tab_manual')}</Text>
                     </TouchableOpacity>
                     {isHost ? (
                         <>
@@ -392,7 +393,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                 onPress={() => setActiveTab(AddPlayerTab.SELECT)}
                             >
                                 <Ionicons name="people" size={22} color={activeTab === AddPlayerTab.SELECT ? color.info : color.text} />
-                                <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.SELECT && AddPlayerCardStyles.activeTabText]}>选择玩家</Text>
+                                <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.SELECT && AddPlayerCardStyles.activeTabText]}>{simpleT('addplayer.tab_select')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -400,7 +401,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
                                 onPress={() => setActiveTab(AddPlayerTab.SCAN)}
                             >
                                 <Ionicons name="qr-code" size={22} color={activeTab === AddPlayerTab.SCAN ? color.info : color.text} />
-                                <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.SCAN && AddPlayerCardStyles.activeTabText]}>扫码加入</Text>
+                                <Text style={[AddPlayerCardStyles.tabText, activeTab === AddPlayerTab.SCAN && AddPlayerCardStyles.activeTabText]}>{simpleT('addplayer.tab_scan')}</Text>
                             </TouchableOpacity>
                         </>
                     ) : null}

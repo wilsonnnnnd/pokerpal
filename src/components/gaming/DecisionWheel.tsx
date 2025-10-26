@@ -8,6 +8,7 @@ import { Gradients } from '@/constants/gradients';
 import * as Haptics from 'expo-haptics';
 import { DecisionWheelStyles } from '@/assets/styles';
 import { DecisionWheelProps, OPTIONS } from '@/types';
+import simpleT from '@/i18n/simpleT';
 
 
 export default function DecisionWheel({ onClose }: DecisionWheelProps) {
@@ -111,7 +112,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
             </TouchableOpacity>
             
             <View style={DecisionWheelStyles.content}>
-                <Text style={DecisionWheelStyles.title}>德州扑克决策转盘</Text>
+                <Text style={DecisionWheelStyles.title}>{simpleT('decision_wheel')}</Text>
 
                 <View style={DecisionWheelStyles.wheelContainer}>
                     <Animated.View 
@@ -167,7 +168,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                                 color={color.lightText} 
                             />
                             <Text style={DecisionWheelStyles.buttonText}>
-                                {spinning ? '转动中...' : '开始旋转'}
+                                {spinning ? simpleT('spin_spinning') : simpleT('spin_start')}
                             </Text>
                         </LinearGradient>
                     </TouchableOpacity>
@@ -193,7 +194,7 @@ export default function DecisionWheel({ onClose }: DecisionWheelProps) {
                                 color={decision === 'CALL' ? color.success : color.error}
                                 style={{ marginBottom: Spacing.sm }}
                             />
-                            <Text style={DecisionWheelStyles.decisionResult}>决策结果</Text>
+                            <Text style={DecisionWheelStyles.decisionResult}>{simpleT('decision_result_label')}</Text>
                             <Text style={[
                                 DecisionWheelStyles.decisionText,
                                 { color: decision === 'CALL' ? color.success : color.error }

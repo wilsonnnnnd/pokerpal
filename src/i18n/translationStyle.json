@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "version": "1.0",
+    "created": "2025-10-25",
+    "author": "pokerpal-i18n-guidelines"
+  },
+  "general": {
+    "tone": "friendly",
+    "verbosity": "concise",
+    "addressing": "你",                 
+    "use_formal_you": false,
+    "preferred_language_order": ["zh", "en"],
+    "primary_goal": "界面文案应直接、友好并具有可操作性；确认类文案须包含后果与可撤销窗口（如适用）"
+  },
+  "english_rules": {
+    "contractions_allowed": true,
+    "sentence_case_for_messages": true,
+    "title_case_for_headers": true,
+    "friendly_examples": {
+      "info_note": "No password needed — we'll save your nickname and avatar for stats and invites.",
+      "save_success": "Saved",
+      "guest_login": "You're signed in as a guest"
+    }
+  },
+  "chinese_rules": {
+    "use_pronoun": "你",
+    "avoid_polite_forms": true,
+    "sentence_end_punctuation": "。 / ?（保留中文标点）",
+    "friendly_examples": {
+      "info_note": "无需输入密码 — 我们会保存你的昵称与头像，用于统计和邀请。",
+      "save_success": "已保存",
+      "guest_login": "你已以访客身份登录"
+    }
+  },
+  "terminology": {
+    "account_action": { "en": "Delete Account", "zh": "注销账号" },
+    "local_clear": { "en": "Clear local data", "zh": "清除本地数据" },
+    "save": { "en": "Save", "zh": "保存" },
+    "saved": { "en": "Saved", "zh": "已保存" },
+    "cancel": { "en": "Cancel", "zh": "取消" },
+    "confirm_prompt_suffix": { "en": "Continue?", "zh": "是否继续？" }
+  },
+  "placeholders": {
+    "format": "{name}",
+    "notes": "占位符使用花括号，不要在花括号内加空格；示例：{days}, {name}",
+    "pluralization": "不要在占位符内处理复数，若需要复数或语言特定处理请在模板中处理"
+  },
+  "confirm_messages": {
+    "rules": [
+      "确认类对话框必须说明：行为会产生的后果（比如清除何种数据）",
+      "如果有可撤销窗口（如账号注销的 7 天回滚），请明确给出天数占位符 {days} 并说明如何撤销（如重新登录）",
+      "以问题形式结束（英文使用 '?'，中文使用 '是否继续？'）"
+    ],
+    "examples": {
+      "anon_delete": {
+        "en": "Deleting an anonymous account will permanently remove all local history and cannot be undone. Continue?",
+        "zh": "注销匿名账号将永久清除所有本地历史数据，且无法恢复。是否继续？"
+      },
+      "non_anon_delete": {
+        "en": "We will schedule deletion of your account and associated data in {days} days. If you sign back in within {days} days the deletion can be canceled. Continue?",
+        "zh": "我们会在 {days} 天后安排删除你的账号和关联数据。若你在 {days} 天内重新登录，注销可以取消。是否继续？"
+      }
+    }
+  },
+  "ui_text_length": {
+    "button_labels": { "max_chars": 12 },
+    "titles": { "max_chars": 30 },
+    "messages": { "max_chars": 140 }
+  },
+  
+  "i18n_runtime": {
+    "simpleT_signature": "simpleT(key: string, locale?: string | null, vars?: Record<string, any>) -> string",
+    "default_locale_behavior": "simpleT 现在支持模块级默认 locale（由 SettingsProvider 在初始化以及 setLanguage 时调用 setSimpleTLocale 来设置）。调用方可以省略 locale 参数，simpleT 将使用当前 app 语言作为默认。",
+    "vars_position_note": "如果需要传入占位符（vars）但不想显式传 locale，请传入 undefined 作为第二个参数： simpleT('key', undefined, { days: 7 })",
+    "compatibility": "向后兼容：传入 locale 仍然有效；但建议大多数组件省略 locale 并依赖 SettingsProvider 管理全局语言。",
+    "cold_start_bootstrap": "App 启动时会从本地存储 (SETTINGS_KEY) 读取已保存设置并在渲染 providers 之前设置 simpleT 的默认语言，以确保组件首次渲染使用正确语言（实现位于 App.tsx 的启动引导逻辑）。"
+  },
+  "migration_rules": {
+    "goal": "把大多数 simpleT('key', language) 调用替换为 simpleT('key')，并确保占位符调用正确保留 vars 参数。",
+      "safe_steps": [
+      "在代码库运行静态搜索：查找包含第二个参数为变量名 language 的 simpleT 调用（例如 simpleT('key', language) 或 simpleT('key', language, {...})）",
+      "针对简单替换（没有 vars）的调用，将 simpleT('key', language) -> simpleT('key')",
+      "针对带 vars 的调用（例如 simpleT('x', language, {days:7}）），改为 simpleT('x', undefined, {days:7}) 或直接 simpleT('x', {days:7}) 取决于 simpleT 的签名——本项目使用 third-arg vars，因此使用 undefined 占位更安全：simpleT('x', undefined, {days:7})",
+      "对少数需要临时用不同语言渲染的场景，保留显式 locale 传参（例如 simpleT('key', 'en')）。"
+    ],
+    "codemod_examples": {
+      "note": "示例（手动/脚本操作）：将 simpleT('key', language) 替换为 simpleT('key')；将 simpleT('key', language, {vars}) 替换为 simpleT('key', undefined, {vars})。可使用代码搜索工具（ripgrep/grep）匹配包含 , language 的调用作为候选。"
+    }
+  },
+  "qa_checks": [
+    "保留原意：不要在翻译时改变逻辑/条件（比如是否会影响云端数据）",
+    "一致性：术语表中的词必须统一替换（例如：所有本地清理使用“清除本地数据”）",
+    "占位符完整性：翻译字符串必须保留并正确放置所有占位符，例如 {days}",
+    "api_usage：对于 simpleT 调用，优先使用省略 locale 的形式 simpleT('key')；对于带 vars 的调用，确保使用第三个参数或传入 undefined 作为第二参数以避免参数错位。"
+  ],
+  "usage_notes": "此文件旨在作为翻译/审校与自动化替换规则的单一来源。可以被脚本读取以校验占位符与术语一致性。若需改变整体语气（如改为正式），请修改 top-level 的 tone 并更新示例。添加或修改 simpleT 的运行时行为时，请同时更新 SettingsProvider 与 App.tsx 中的初始化引导以保证一致性。"
+}

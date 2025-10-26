@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { GameHistorystyles as styles } from '@/assets/styles';
 import { GameHistoryItem } from '@/types';
+import simpleT from '@/i18n/simpleT';
 
 interface GameCardProps {
     item: GameHistoryItem;
@@ -137,7 +138,7 @@ export const GameCard: React.FC<GameCardProps> = ({ item, index, onPress }) => {
                                 <MaterialCommunityIcons name="bank" size={16} color={color.info} />
                                 <View style={styles.statTexts}>
                                     <Text style={styles.statValue}>${Number(item.totalBuyInCash).toFixed(0)}</Text>
-                                    <Text style={styles.statLabel}>买入</Text>
+                                    <Text style={styles.statLabel}>{simpleT('buyin_label')}</Text>
                                 </View>
                             </View>
 
@@ -147,7 +148,7 @@ export const GameCard: React.FC<GameCardProps> = ({ item, index, onPress }) => {
                                 <MaterialCommunityIcons name="calculator-variant" size={16} color={color.warning} />
                                 <View style={styles.statTexts}>
                                     <Text style={styles.statValue}>${Number(item.totalEndingCash).toFixed(0)}</Text>
-                                    <Text style={styles.statLabel}>结算</Text>
+                                    <Text style={styles.statLabel}>{simpleT('settle_label')}</Text>
                                 </View>
                             </View>
 
@@ -168,7 +169,7 @@ export const GameCard: React.FC<GameCardProps> = ({ item, index, onPress }) => {
                                     >
                                         {item.totalDiffCash >= 0 ? '+' : ''}${Math.abs(Number(item.totalDiffCash)).toFixed(0)}
                                     </Text>
-                                    <Text style={styles.statLabel}>差额</Text>
+                                    <Text style={styles.statLabel}>{simpleT('diff_label')}</Text>
                                 </View>
                             </View>
                         </View>
@@ -206,7 +207,7 @@ export const GameCard: React.FC<GameCardProps> = ({ item, index, onPress }) => {
                         <View style={styles.cardFooter}>
                             <View style={styles.localBadge}>
                                 <MaterialCommunityIcons name="cloud" size={14} color={color.info} />
-                                <Text style={styles.localBadgeText}>云端</Text>
+                                <Text style={styles.localBadgeText}>{simpleT('cloud_label')}</Text>
                             </View>
                             <MaterialCommunityIcons name="chevron-right" size={20} color={color.mutedText} />
                         </View>

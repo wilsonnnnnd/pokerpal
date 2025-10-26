@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import simpleT from '@/i18n/simpleT';
 
 // 导出可重用的头部按钮组件
 export const HeaderButton = ({ 
@@ -40,17 +41,19 @@ export const HeaderButton = ({
     </TouchableOpacity>
 );
 
-const titles: Record<string, { title: string; icon?: string }> = {
-    Home: { title: '主页', icon: 'home' },
-    GameSetup: { title: '游戏设置', icon: 'cog' },
-    AddPlayer: { title: '添加玩家', icon: 'account-plus' },
-    GamePlay: { title: '游戏进行中', icon: 'cards-playing-outline' },
-    GameHistory: { title: '游戏记录', icon: 'history' },
-    GameDetail: { title: '游戏详情', icon: 'information' },
-    GamePlayerRank: { title: '玩家排名', icon: 'trophy' },
-    LocalHistory: { title: '本地记录', icon: 'database' },
-    Profile: { title: '个人资料', icon: 'account-circle' },
-    Settings: { title: '设置', icon: 'cog' }
+// Store translation keys here and resolve with simpleT at render time to avoid
+// evaluating translations during module import (ensures SettingsProvider can
+// set locale before first render).
+const titles: Record<string, { titleKey: string; icon?: string }> = {
+    Home: { titleKey: 'menu_home', icon: 'home' },
+    GameSetup: { titleKey: 'game_setup_title', icon: 'cog' },
+    AddPlayer: { titleKey: 'add_player', icon: 'account-plus' },
+    GamePlay: { titleKey: 'game_playing', icon: 'cards-playing-outline' },
+    GameHistory: { titleKey: 'menu_history', icon: 'history' },
+    GameDetail: { titleKey: 'game_detail', icon: 'information' },
+    GamePlayerRank: { titleKey: 'menu_ranking', icon: 'trophy' },
+    Profile: { titleKey: 'menu_profile', icon: 'account-circle' },
+    Settings: { titleKey: 'menu_settings', icon: 'cog' }
 };
 
 export const Header = () => {
@@ -61,7 +64,9 @@ export const Header = () => {
 
     const shouldShowBack = route.name !== 'Home' && !left;
     const routeInfo = (titles as any)[(route as any).name];
-    const fallbackTitle = title || routeInfo?.title || (route as any).name || '页面';
+    // Resolve title at render time so translation locale is respected.
+    const resolvedRouteTitle = routeInfo?.titleKey ? simpleT(routeInfo.titleKey) : undefined;
+    const fallbackTitle = title || resolvedRouteTitle || (route as any).name || simpleT('unknown_page');
     const titleIcon = routeInfo?.icon;
 
     return (

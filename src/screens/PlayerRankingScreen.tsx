@@ -21,6 +21,7 @@ import { getHosterId } from '@/utils/hostInfo';
 import { GamePlayerRankstyles as styles } from '@/assets/styles';
 import { usePaginatedPageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
+import simpleT from '@/i18n/simpleT';
 
 // ===== 常量：服务端可排序字段（必须与 Firestore 索引一致）=====
 const SORT_TYPES = {
@@ -45,7 +46,7 @@ export type AggregatedPlayer = {
 
 // ===== 头像子项（保持你原样）=====
 const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index: number }) => {
-    const safeName = item.nickname || '未知玩家';
+    const safeName = item.nickname || simpleT('player_unknown');
     const avatarColor = useMemo(() => {
         const ch = safeName.charCodeAt(0) || 0;
         return AVATAR_COLORS[ch % AVATAR_COLORS.length];
@@ -88,7 +89,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                     <Text style={styles.playerName}>{safeName}</Text>
                     <View style={styles.gamesContainer}>
                         <MaterialCommunityIcons name="cards-playing-outline" size={14} color={color.valueLabel} />
-                        <Text style={styles.gamesText}>{Number(item.gamesPlayed) || 0} 场游戏</Text>
+                        <Text style={styles.gamesText}>{simpleT('games_count', undefined, { count: Number(item.gamesPlayed) || 0 })}</Text>
                     </View>
                 </View>
 
@@ -104,7 +105,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                     <MaterialCommunityIcons name="calendar-check" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
                         <Text style={styles.statValue}>{Number(item.gamesPlayed) || 0}</Text>
-                        <Text style={styles.statLabel}>场次</Text>
+                        <Text style={styles.statLabel}>{simpleT('stat_label_games')}</Text>
                     </View>
                 </View>
 
@@ -114,7 +115,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                         <Text style={[styles.statValue, { color: isCashPositive ? color.success : color.error }]}> 
                             ${Math.abs(Number(item.totalProfit) || 0).toFixed(2)}
                         </Text>
-                        <Text style={styles.statLabel}>{isCashPositive ? '盈利' : '亏损'}</Text>
+                        <Text style={styles.statLabel}>{isCashPositive ? simpleT('profit_label_positive') : simpleT('profit_label_negative')}</Text>
                     </View>
                 </View>
 
@@ -122,7 +123,7 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
                     <MaterialCommunityIcons name="chart-line" size={16} color={color.highLighter} />
                     <View style={styles.statTexts}>
                         <Text style={[styles.statValue, { color: isRoiPositive ? color.success : color.error }]}>{roiText}%</Text>
-                        <Text style={styles.statLabel}>ROI</Text>
+                        <Text style={styles.statLabel}>{simpleT('stat_label_roi')}</Text>
                     </View>
                 </View>
             </View>
@@ -134,8 +135,8 @@ const PlayerItem = React.memo(({ item, index }: { item: AggregatedPlayer; index:
 const EmptyListComponent = React.memo(({ keyword }: { keyword: string }) => (
     <View style={styles.emptyContainer}>
         <MaterialCommunityIcons name={keyword ? 'account-search' : 'account-group'} size={60} color={color.weakGray} />
-        <Text style={styles.emptyTitle}>{keyword ? '未找到匹配玩家' : '暂无玩家数据'}</Text>
-        <Text style={styles.emptyText}>{keyword ? '尝试使用其他关键词搜索' : '完成游戏后玩家数据将在此显示'}</Text>
+        <Text style={styles.emptyTitle}>{keyword ? simpleT('empty_no_match') : simpleT('player_ranking_empty_title')}</Text>
+        <Text style={styles.emptyText}>{keyword ? simpleT('empty_try_other') : simpleT('player_ranking_empty_subtitle')}</Text>
     </View>
 ));
 
@@ -190,7 +191,7 @@ export default function PlayerRankingScreen() {
                     // 读取所有 index 文档（注意：如果很多，可能需要后端分页或云函数支持）
                     const email = await getHosterId();
                     if (!email) {
-                        pageState.setError('无法获取当前用户邮箱');
+                        pageState.setError(simpleT('err_no_user_email'));
                         return;
                     }
                     const idxRef = collection(db, userByEmailDoc, email, playerDoc);
@@ -205,7 +206,7 @@ export default function PlayerRankingScreen() {
                     indexList = uids;
                 } catch (e) {
                     console.error('[PlayerRanking] load index ids error', e);
-                    pageState.setError('读取玩家索引失败');
+                    pageState.setError(simpleT('err_load_index'));
                     return;
                 }
             }
@@ -246,7 +247,7 @@ export default function PlayerRankingScreen() {
 
                 acc.push({
                     id,
-                    nickname: data.nickname ?? '未知玩家',
+                    nickname: data.nickname ?? simpleT('player_unknown'),
                     totalProfit: Number(data.totalProfit) || 0,
                     averageROI: Number(data.averageROI) || 0,
                     gamesPlayed: Number(data.gamesPlayed) || 0,
@@ -275,11 +276,11 @@ export default function PlayerRankingScreen() {
             pageState.setError(null);
         } catch (err) {
             console.error('[PlayerRanking] Fetch error:', err);
-            pageState.setError('加载失败，请检查网络连接或稍后重试');
+            pageState.setError(simpleT('err_loading_failed'));
             Toast.show({
                 type: 'error',
-                text1: '加载失败',
-                text2: '请检查网络连接或稍后重试。',
+                text1: simpleT('err_loading_title'),
+                text2: simpleT('err_loading_msg'),
             });
         } finally {
             pageState.setLoading(false);
@@ -417,14 +418,14 @@ export default function PlayerRankingScreen() {
             return (
                 <View style={{ paddingVertical: 16, alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={color.primary} />
-                    <Text style={{ marginTop: 8, color: color.valueLabel }}>加载更多...</Text>
+                    <Text style={{ marginTop: 8, color: color.valueLabel }}>{simpleT('loading_more')}</Text>
                 </View>
             );
         }
             if (!pageState.hasNextPage && players.length > 0) {
             return (
                 <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-                    <Text style={{ color: color.weakGray }}>没有更多了</Text>
+                    <Text style={{ color: color.weakGray }}>{simpleT('no_more_results')}</Text>
                 </View>
             );
         }
@@ -449,8 +450,8 @@ export default function PlayerRankingScreen() {
             loading={pageState.loading && !pageState.refreshing}
             error={pageState.error}
             isEmpty={!pageState.loading && !pageState.error && players.length === 0}
-            emptyTitle="暂无玩家数据"
-            emptySubtitle="完成游戏后玩家数据将在此显示"
+            emptyTitle={simpleT('player_ranking_empty_title')}
+            emptySubtitle={simpleT('player_ranking_empty_subtitle')}
             onRetry={handleRetry}
         >
             <View style={styles.container}>
@@ -459,7 +460,7 @@ export default function PlayerRankingScreen() {
                     <View style={styles.searchContainer}>
                         <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
                         <TextInput
-                            placeholder="搜索玩家昵称..."
+                            placeholder={simpleT('search_player_placeholder')}
                             value={keyword}
                             onChangeText={setKeyword}
                             style={styles.searchInput}
@@ -482,7 +483,7 @@ export default function PlayerRankingScreen() {
                         >
                             <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
                             <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
-                                累计收益
+                                {simpleT('total_profit')}
                             </Text>
                         </TouchableOpacity>
 
@@ -492,7 +493,7 @@ export default function PlayerRankingScreen() {
                         >
                             <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
                             <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
-                                平均 ROI
+                                {simpleT('average_roi')}
                             </Text>
                         </TouchableOpacity>
 
@@ -502,7 +503,7 @@ export default function PlayerRankingScreen() {
                         >
                             <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
                             <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
-                                参与场次
+                                {simpleT('appearances')}
                             </Text>
                         </TouchableOpacity>
                     </View>

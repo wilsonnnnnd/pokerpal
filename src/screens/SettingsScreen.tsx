@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getLocal, removeLocal, setLocal } from '@/services/storageService';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
 import { onAuthStateChanged } from '@/services/authService';
@@ -10,7 +10,8 @@ import { fetchUserProfile } from '@/firebase/getUserProfile';
 import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { useSettings } from '@/providers/SettingsProvider';
-import { simpleT } from '@/i18n/simpleT';
+import simpleT from '@/i18n/simpleT';
+import { DEFAULT_CURRENCY, DEFAULT_UI_LANGUAGE } from '@/constants/appConfig';
 import { execSql } from '@/services/localDb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SoftwareSettings from '@/components/settings/SoftwareSettings';
@@ -22,7 +23,7 @@ import { useCallback } from 'react';
 import { getAuth } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/firebase/config';
 import { signOut } from '@/services/authService';
-import { usePopup } from '@/components/PopupProvider';
+import { usePopup } from '@/providers/PopupProvider';
 
 // (use SelectField component for dropdowns)
 
@@ -69,16 +70,17 @@ export default function SettingsScreen() {
     // load persisted settings
     useEffect(() => {
         (async () => {
-                try {
-                    // language/timezone/currency are loaded by SettingsProvider; just load persisted user for debug
-                    const pu = await getLocal(CURRENT_USER_KEY);
-                    setPersistedUser(pu);
-                } catch (e) {
-                    console.warn('load settings', e);
-                } finally {
-                    setLoading(false);
-                }
-            })();
+            try {
+                console.debug('Loading persisted settings in SettingsScreen', language, currency);
+                // language/timezone/currency are loaded by SettingsProvider; just load persisted user for debug
+                const pu = await getLocal(CURRENT_USER_KEY);
+                setPersistedUser(pu);
+            } catch (e) {
+                console.warn('load settings', e);
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, [isHost]);
 
     // SettingsExchangeCard is imported from components and reused here
@@ -113,28 +115,28 @@ export default function SettingsScreen() {
 
     const save = async () => {
         try {
-            if (!language) throw new Error(simpleT('choose_language', language));
+            if (!language) throw new Error(simpleT('choose_language'));
             // ensure provider persists
             await setLanguage(language);
             // currency is read-only here; persist existing currency value into SETTINGS_KEY
             try {
                 const existing = await getLocal<any>(SETTINGS_KEY);
-                const merged = { ...(existing || {}), language, currency: existing?.currency ?? (global as any).__pokerpal_settings?.currency ?? 'AUD' };
+                const merged = { ...(existing || {}), language, currency: existing?.currency ?? (global as any).__pokerpal_settings?.currency ?? DEFAULT_CURRENCY };
                 await setLocal(SETTINGS_KEY, merged).catch(() => { });
                 try { (global as any).__pokerpal_settings = merged; } catch (e) { /* ignore */ }
             } catch (e) { /* ignore */ }
             setInitialLanguage(language);
             setPopup({
                 visible: true,
-                title: simpleT('save_success_title', language),
-                message: simpleT('save_success_msg', language),
+                title: simpleT('save_success_title'),
+                message: simpleT('save_success_msg'),
                 onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
                 onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
             });
         } catch (e: any) {
             setPopup({
                 visible: true,
-                title: simpleT('save_fail_title', language),
+                title: simpleT('save_fail_title'),
                 message: e?.message || String(e),
                 isWarning: true,
                 onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -146,12 +148,12 @@ export default function SettingsScreen() {
     const reset = async () => {
         setPopup({
             visible: true,
-            title: simpleT('reset_title', language),
-            message: simpleT('reset_confirm_msg', language),
+            title: simpleT('reset_title'),
+            message: simpleT('reset_confirm_msg'),
             isWarning: true,
             onConfirm: async () => {
                 // 使用默认设置（时区已移除）
-                const defaults = { language: 'zh', currency: 'AUD' };
+                const defaults = { language: DEFAULT_UI_LANGUAGE, currency: DEFAULT_CURRENCY };
                 try { await setLanguage(defaults.language); } catch (e) { /* ignore */ }
                 try { await setLocal(SETTINGS_KEY, defaults); } catch (e) { /* ignore */ }
                 setInitialLanguage(defaults.language);
@@ -164,8 +166,8 @@ export default function SettingsScreen() {
     const clearDatabase = async () => {
         setPopup({
             visible: true,
-            title: simpleT('clear_database_title', language),
-            message: simpleT('clear_database_confirm', language),
+            title: simpleT('clear_database_title'),
+            message: simpleT('clear_database_confirm'),
             isWarning: true,
             onConfirm: async () => {
                 setPopup(prev => ({ ...prev, visible: false }));
@@ -210,16 +212,16 @@ export default function SettingsScreen() {
 
                     setPopup({
                         visible: true,
-                        title: simpleT('clear_success_title', language),
-                        message: simpleT('clear_success_msg', language),
+                        title: simpleT('clear_success_title'),
+                        message: simpleT('clear_success_msg'),
                         onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
                         onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
                     });
                 } catch (e: any) {
                     setPopup({
                         visible: true,
-                        title: simpleT('clear_fail_title', language),
-                        message: e?.message || simpleT('clear_fail_msg', language),
+                        title: simpleT('clear_fail_title'),
+                        message: e?.message || simpleT('clear_fail_msg'),
                         isWarning: true,
                         onConfirm: () => setPopup(prev => ({ ...prev, visible: false })),
                         onCancel: () => setPopup(prev => ({ ...prev, visible: false })),
@@ -235,9 +237,9 @@ export default function SettingsScreen() {
     const handleDeleteAccount = async () => {
         // Decide message and behavior based on whether the user is anonymous
         const isAnon = !!user?.isAnonymous;
-        const title = simpleT('delete_account', language) || '删除账户';
-        const anonMsg = '删除匿名账户将清除所有本地历史数据，操作不可恢复。是否继续？';
-        const nonAnonMsg = '删除账户将移除您的远端账户；删除后需要重新授权登录以恢复访问。数据库内的用户数据以及游戏历史将在 7 天内被删除。如果您在 7 天内重新授权登录，删除将被取消；否则数据将被永久清除。是否继续？';
+    const title = simpleT('delete_account') || '删除账户';
+    const anonMsg = simpleT('delete_anon_confirm');
+    const nonAnonMsg = simpleT('delete_non_anon_confirm', undefined, { days: 7 });
 
         // Use centralized confirm popup
         const confirmed = await confirmPopup({
@@ -286,7 +288,7 @@ export default function SettingsScreen() {
             const current = auth.currentUser as any | null;
 
             if (!current) {
-                await confirmPopup({ title, message: '未检测到登录用户', isWarning: true });
+                await confirmPopup({ title, message: simpleT('no_user_detected'), isWarning: true });
                 return;
             }
 
@@ -301,7 +303,7 @@ export default function SettingsScreen() {
                     await current.delete();
                 } catch (err: any) {
                     // deletion might still fail; report
-                    await confirmPopup({ title, message: err?.message || String(err) || '删除失败', isWarning: true });
+                    await confirmPopup({ title, message: err?.message || String(err) || simpleT('delete_failed'), isWarning: true });
                     return;
                 }
 
@@ -311,7 +313,7 @@ export default function SettingsScreen() {
                 try { await removeLocal(SETTINGS_KEY); } catch (e) { /* ignore */ }
                 await signOut();
 
-                await confirmPopup({ title, message: '匿名账户已删除，本地历史已清除。' });
+                await confirmPopup({ title, message: simpleT('anon_deleted_msg') });
                 return;
             }
 
@@ -334,14 +336,14 @@ export default function SettingsScreen() {
                 try { await removeLocal(SETTINGS_KEY); } catch (e) { /* ignore */ }
                 await signOut();
 
-                await confirmPopup({ title, message: '已创建删除请求：您的账户将在 7 天后由服务器删除。若您在 7 天内重新授权登录，服务器可取消该删除。' });
+                await confirmPopup({ title, message: simpleT('deletion_request_created', undefined, { days: 7 }) });
                 return;
             } catch (err: any) {
-                await confirmPopup({ title, message: err?.message || String(err) || '删除请求失败', isWarning: true });
+                await confirmPopup({ title, message: err?.message || String(err) || simpleT('delete_failed'), isWarning: true });
                 return;
             }
         } catch (e: any) {
-            await confirmPopup({ title, message: e?.message || String(e) || '删除失败', isWarning: true });
+            await confirmPopup({ title, message: e?.message || String(e) || simpleT('delete_failed'), isWarning: true });
         } finally {
             setLoading(false);
         }
@@ -350,15 +352,8 @@ export default function SettingsScreen() {
     // Helper to get idToken similar to attachAuthHeader implementation
     const getIdTokenForRequest = async (forceRefresh = false): Promise<string | null> => {
         try {
-            const auth = (firebaseAuth as any) ?? null;
-            const user = auth?.currentUser ?? null;
-            if (!user) return null;
-            try {
-                const token = await user.getIdToken(!!forceRefresh);
-                return token || null;
-            } catch (e) {
-                return null;
-            }
+            const { getFreshIdToken } = await import('@/services/authToken');
+            return await getFreshIdToken({ force: !!forceRefresh });
         } catch (e) {
             return null;
         }
@@ -368,7 +363,7 @@ export default function SettingsScreen() {
     if (loading) return (
         <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={color.confirm} />
-            <Text style={styles.loadingText}>{simpleT('loading_settings', language)}</Text>
+            <Text style={styles.loadingText}>{simpleT('loading_settings')}</Text>
         </View>
     );
 
@@ -382,16 +377,11 @@ export default function SettingsScreen() {
 
                 {/* 数据管理部分 */}
                 <DataManagement language={language} onClear={clearDatabase} />
-                {(initialLanguage !== null && language !== initialLanguage) && (
-                    <View style={styles.actionRow}>
-                        <PrimaryButton title={simpleT('save', language)} icon="content-save" onPress={save} />
-                        <PrimaryButton title={simpleT('reset', language)} icon="restore" variant="outlined" onPress={reset} style={styles.actionResetButton} iconColor={color.valueText} />
-                    </View>
-                )}
+                {/* Language and currency now persist immediately when changed in the UI; no explicit save required */}
                 {/* Delete account button - only show if a user is signed in */}
                 {user && (
                     <View style={{ marginTop: 12 }}>
-                        <PrimaryButton title={simpleT('delete_account', language)} icon="delete" variant="outlined" onPress={handleDeleteAccount} style={{ borderColor: color.error }} iconColor={color.error} />
+                        <PrimaryButton title={simpleT('delete_account')} icon="delete" variant="outlined" onPress={handleDeleteAccount} style={{ borderColor: color.error }} iconColor={color.error} />
                     </View>
                 )}
                 <View style={styles.actionSpacer} />

@@ -16,11 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../App';
 import { useGameStore } from '@/stores/useGameStore';
+import simpleT from '@/i18n/simpleT';
 import { useStoreReady } from '@/hooks/useStoreReady';
 
 import { Palette as color } from '@/constants';
-import { GameSetupCard } from '@/components/GameSetupCard';
-import { usePopup } from '@/components/PopupProvider';
+import { GameSetupCard } from '@/components/gaming/GameSetupCard';
+import { usePopup } from '@/providers/PopupProvider';
 import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
@@ -53,8 +54,8 @@ const HomeScreen = () => {
             const confirmation = async () => {
                 try {
                     const result = await confirmPopup({
-                        title: '继续上次游戏？',
-                        message: '检测到您有未完成的游戏，是否继续？',
+                        title: simpleT('continue_last_game_title'),
+                        message: simpleT('continue_last_game_message'),
                     });
 
                     if (result) {
@@ -68,8 +69,8 @@ const HomeScreen = () => {
 
                         Toast.show({
                             type: 'info',
-                            text1: '游戏已重置',
-                            text2: '您可以开始新的游戏。',
+                            text1: simpleT('game_reset_title'),
+                            text2: simpleT('game_reset_msg'),
                             position: 'bottom',
                             visibilityTime: 2000,
                         });
@@ -166,8 +167,8 @@ const HomeScreen = () => {
     if (!isReady) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={color.confirm} />
-                <Text style={styles.loadingText}>正在加载存储...</Text>
+                    <ActivityIndicator size="large" color={color.confirm} />
+                <Text style={styles.loadingText}>{simpleT('loading_settings')}</Text>
             </View>
         );
     }
@@ -189,52 +190,25 @@ const HomeScreen = () => {
                             color={color.lightText}
                         />
                     </View>
-                    <Text style={styles.title}>德州扑克筹码记录器</Text>
-                    <Text style={styles.subtitle}>轻松管理，精确记录</Text>
+                    <Text style={styles.title}>{simpleT('welcome_title')}</Text>
+                    <Text style={styles.subtitle}>{simpleT('welcome_subtitle')}</Text>
                 </LinearGradient>
 
                 <View style={styles.mainContent}>
                     {/* User Profile Card */}
                     {user && (
-                        <View style={[styles.userCard, {
-                            marginBottom: Spacing.lg,
-                            backgroundColor: color.lightBackground, // 使用纯白背景
-                            borderWidth: 1,
-                            borderColor: color.lightGray + '60',
-                            shadowColor: color.shadowLight,
-                            shadowOffset: { width: 0, height: 3 },
-                            shadowOpacity: 0.12,
-                            shadowRadius: 8,
-                            elevation: 3,
-                        }]}>
+                        <View style={[styles.userCard, styles.userCardExtra]}>
                             <View style={styles.userInfoContainer}>
                                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
                                     {user.photoURL ? (
-                                        <View style={{
-                                            borderRadius: Radius.round,
-                                            padding: 3,
-                                            shadowColor: color.shadowLight,
-                                            shadowOffset: { width: 0, height: 2 },
-                                            shadowOpacity: 0.1,
-                                            shadowRadius: 4,
-                                            elevation: 2,
-                                        }}>
+                                        <View style={styles.avatarWrapper}>
                                             <Image
                                                 source={{ uri: user.photoURL }}
-                                                style={[styles.userAvatar, { borderRadius: Radius.round }]}
+                                                style={[styles.userAvatar, styles.userAvatarRound]}
                                             />
                                         </View>
                                     ) : (
-                                        <View style={[styles.userAvatar, {
-                                            backgroundColor: color.primary,
-                                            borderWidth: 3,
-                                            borderColor: color.background,
-                                            shadowColor: color.shadowLight,
-                                            shadowOffset: { width: 0, height: 2 },
-                                            shadowOpacity: 0.1,
-                                            shadowRadius: 4,
-                                            elevation: 2,
-                                        }]}>
+                                        <View style={[styles.userAvatar, styles.userAvatarPrimary]}>
                                             <Text style={{
                                                 color: color.lightText,
                                                 fontWeight: '800',
@@ -247,26 +221,17 @@ const HomeScreen = () => {
                                 </TouchableOpacity>
 
                                 <View style={styles.userInfo}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs }}>
+                                    <View style={styles.nameRow}>
                                         <Text style={[styles.userName, { flex: 1 }]}>
                                             {user.displayName ??
                                                 (user.isAnonymous ? '访客' : '未命名')}
                                         </Text>
                                         {isHost && (
-                                            <LinearGradient
+                                                <LinearGradient
                                                 colors={[color.primary, color.highLighter]}
                                                 start={{ x: 0, y: 0 }}
                                                 end={{ x: 1, y: 0 }}
-                                                style={[styles.vipBadge, {
-                                                    borderRadius: Radius.sm,
-                                                    paddingHorizontal: Spacing.sm,
-                                                    paddingVertical: 2,
-                                                    shadowColor: color.shadowLight,
-                                                    shadowOffset: { width: 0, height: 1 },
-                                                    shadowOpacity: 0.2,
-                                                    shadowRadius: 2,
-                                                    elevation: 1,
-                                                }]}
+                                                style={[styles.vipBadge, styles.vipBadgeSmall]}
                                             >
                                                 <MaterialCommunityIcons name="crown" size={12} color={color.lightText} />
                                                 <Text style={[styles.vipText, { marginLeft: 2, fontWeight: '700' }]}>HOST</Text>
@@ -274,69 +239,35 @@ const HomeScreen = () => {
                                         )}
                                     </View>
 
-                                    <Text style={[styles.userEmail, { marginBottom: Spacing.sm }]}>
+                                    <Text style={[styles.userEmail, styles.userEmailMargin]}> 
                                         {user.email ?? (user.isAnonymous ? '访客账户' : '')}
                                     </Text>
 
-                                    <View style={{
-                                        backgroundColor: color.primary + '10',
-                                        borderRadius: Radius.md,
-                                        padding: Spacing.sm,
-                                        marginBottom: Spacing.sm,
-                                        borderWidth: 1,
-                                        borderColor: color.primary + '20',
-                                    }}>
-                                        <Text style={[styles.roleText, { fontWeight: '600', color: color.primary }]}>
-                                            身份: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
+                                    <View style={styles.roleBadge}>
+                                        <Text style={[styles.roleText, styles.roleTextBold, { color: color.primary }]}> 
+                                            {simpleT('role_label')}: {user.profile?.role ?? (user.isAnonymous ? 'guest' : 'player')}
                                         </Text>
                                     </View>
 
                                     {/* 显示游戏统计信息（如果可用） */}
                                     {user.profile && !user.isAnonymous && (user.profile as any).gamesPlayed !== undefined && (
                                         <>
-                                            <View style={{
-                                                backgroundColor: color.info + '10',
-                                                borderRadius: Radius.md,
-                                                padding: Spacing.sm,
-                                                marginBottom: Spacing.xs,
-                                                borderWidth: 1,
-                                                borderColor: color.info + '20',
-                                            }}>
-                                                <Text style={[styles.roleText, { color: color.info, fontWeight: '600' }]}>
-                                                    🎮 游戏 {(user.profile as any).gamesPlayed || 0} 局 ·
-                                                    胜 {(user.profile as any).wins || 0} 负 {(user.profile as any).losses || 0}
+                                            <View style={styles.gamesStatCard}>
+                                                <Text style={[styles.roleText, styles.roleTextBold, { color: color.info }]}> 
+                                                    {simpleT('games_stat', undefined, { games: (user.profile as any).gamesPlayed || 0, wins: (user.profile as any).wins || 0, losses: (user.profile as any).losses || 0 })}
                                                 </Text>
                                             </View>
 
                                             {/* 显示总收益统计 */}
-                                            <View style={{
-                                                backgroundColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '10' : color.error + '10',
-                                                borderRadius: Radius.md,
-                                                padding: Spacing.sm,
-                                                marginBottom: Spacing.xs,
-                                                borderWidth: 1,
-                                                borderColor: (user.profile as any).totalProfit >= 0 ? color.confirm + '20' : color.error + '20',
-                                            }}>
-                                                <Text style={[styles.roleText, {
-                                                    color: (user.profile as any).totalProfit >= 0 ? color.confirm : color.error,
-                                                    fontWeight: '600'
-                                                }]}>
-                                                    💰 总收益: ${(user.profile as any).totalProfit || 0}
+                                            <View style={[styles.profitCard, (user.profile as any).totalProfit >= 0 ? styles.profitCardPositive : styles.profitCardNegative]}>
+                                                <Text style={[styles.roleText, styles.roleTextBold, { color: (user.profile as any).totalProfit >= 0 ? color.confirm : color.error }]}> 
+                                                    💰 {simpleT('total_profit')}: ${(user.profile as any).totalProfit || 0}
                                                 </Text>
                                             </View>
 
                                             {/* 显示ROI统计 */}
-                                            <View style={{
-                                                backgroundColor: (user.profile as any).averageROI >= 0 ? color.confirm + '10' : color.error + '10',
-                                                borderRadius: Radius.md,
-                                                padding: Spacing.sm,
-                                                borderWidth: 1,
-                                                borderColor: (user.profile as any).averageROI >= 0 ? color.confirm + '20' : color.error + '20',
-                                            }}>
-                                                <Text style={[styles.roleText, {
-                                                    color: (user.profile as any).averageROI >= 0 ? color.confirm : color.error,
-                                                    fontWeight: '600'
-                                                }]}>
+                                            <View style={(user.profile as any).averageROI >= 0 ? styles.roiCardPositive : styles.roiCardNegative}>
+                                                <Text style={[styles.roleText, styles.roleTextBold, { color: (user.profile as any).averageROI >= 0 ? color.confirm : color.error }]}> 
                                                     📈 ROI: {(((user.profile as any).averageROI || 0) * 100).toFixed(1)}%
                                                 </Text>
                                             </View>
@@ -347,93 +278,49 @@ const HomeScreen = () => {
                         </View>
                     )}
 
-                    {/* Action Buttons with Enhanced Design */}
+                        {/* Action Buttons with Enhanced Design */}
                     <View style={styles.buttonsSection}>
                         {/* Primary Action - Start Game */}
-                        <View style={{
-                            backgroundColor: color.lightBackground,
-                            borderRadius: Radius.lg,
-                            padding: Spacing.lg,
-                            marginBottom: Spacing.md,
-                            shadowColor: color.shadowLight,
-                            shadowOffset: { width: 0, height: 3 },
-                            shadowOpacity: 0.12,
-                            shadowRadius: 8,
-                            elevation: 3,
-                            borderWidth: 1,
-                            borderColor: color.lightGray + '50',
-                        }}>
+                        <View style={styles.actionsCard}>
                             <LinearGradient
                                 colors={[color.primary, color.highLighter]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
-                                style={{
-                                    borderRadius: Radius.lg,
-                                    overflow: 'hidden',
-                                }}
+                                style={styles.cardGradientWrapper}
                             >
                                 <TouchableOpacity
                                     onPress={() => setModalVisible(true)}
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        paddingVertical: Spacing.lg,
-                                        paddingHorizontal: Spacing.xl,
-                                    }}
+                                    style={styles.startButtonTouchable}
                                     activeOpacity={0.8}
                                 >
                                     <MaterialCommunityIcons
                                         name="play-circle"
                                         size={24}
                                         color={color.lightText}
-                                        style={{ marginRight: Spacing.sm }}
+                                        style={styles.logoutIcon}
                                     />
                                     <Text style={{
                                         color: color.lightText,
                                         fontSize: FontSize.h3,
                                         fontWeight: '700',
                                     }}>
-                                        开始新游戏
+                                        {simpleT('start_new_game')}
                                     </Text>
                                 </TouchableOpacity>
                             </LinearGradient>
                         </View>
 
                         {/* Secondary Actions Grid */}
-                        <View style={{
-                            backgroundColor: color.lightBackground,
-                            borderRadius: Radius.lg,
-                            padding: Spacing.lg,
-                            marginBottom: Spacing.md,
-                            shadowColor: color.shadowLight,
-                            shadowOffset: { width: 0, height: 3 },
-                            shadowOpacity: 0.12,
-                            shadowRadius: 8,
-                            elevation: 3,
-                            borderWidth: 1,
-                            borderColor: color.lightGray + '50',
-                        }}>
-                            <Text style={{
-                                fontSize: FontSize.body,
-                                fontWeight: '700',
-                                color: color.title,
-                                marginBottom: Spacing.md,
-                                textAlign: 'center',
-                            }}>
-                                功能菜单
+                        <View style={styles.actionsCard}>
+                            <Text style={styles.actionsTitle}>
+                                {simpleT('feature_menu')}
                             </Text>
 
-                            <View style={{
-                                flexDirection: 'row',
-                                flexWrap: 'wrap',
-                                justifyContent: 'space-between',
-                                gap: Spacing.md, // 统一间隔
-                            }}>
+                            <View style={styles.buttonGrid}>
                                 {[
                                     {
                                         key: 'profile',
-                                        title: '个人资料',
+                                        title: simpleT('menu_profile'),
                                         icon: 'account-circle',
                                         color: color.primary,
                                         onPress: () => navigation.navigate('Profile'),
@@ -441,7 +328,7 @@ const HomeScreen = () => {
                                     },
                                     {
                                         key: 'ranking',
-                                        title: '玩家排行',
+                                        title: simpleT('menu_ranking'),
                                         icon: 'trophy',
                                         color: color.warning,
                                         onPress: () => navigation.navigate('GamePlayerRank'),
@@ -449,23 +336,16 @@ const HomeScreen = () => {
                                     },
                                     {
                                         key: 'history',
-                                        title: '游戏历史',
+                                        title: simpleT('menu_history'),
                                         icon: 'history',
                                         color: color.info,
                                         onPress: () => navigation.navigate('GameHistory'),
                                         visible: isHost,
                                     },
-                                    {
-                                        key: 'localHistory',
-                                        title: '本地历史',
-                                        icon: 'database',
-                                        color: color.confirm,
-                                        onPress: () => navigation.navigate('LocalHistory'),
-                                        visible: true,
-                                    },
+                                    // localHistory removed - local records accessible from Game History tab
                                     {
                                         key: 'settings',
-                                        title: '全局设置',
+                                        title: simpleT('menu_settings'),
                                         icon: 'cog-outline',
                                         color: color.mutedText,
                                         onPress: () => navigation.navigate('Settings'),
@@ -473,7 +353,7 @@ const HomeScreen = () => {
                                     },
                                     {
                                         key: 'health',
-                                        title: 'API Health',
+                                        title: simpleT('menu_health'),
                                         icon: 'cloud-check',
                                         color: color.primary,
                                         onPress: () => navigation.navigate('HealthCheck'),
@@ -485,46 +365,23 @@ const HomeScreen = () => {
                                     const itemsPerRow = filteredArray.length >= 4 ? 2 : filteredArray.length <= 2 ? filteredArray.length : 3;
                                     const isLastRow = index >= filteredArray.length - (filteredArray.length % itemsPerRow || itemsPerRow);
                                     const itemWidth = itemsPerRow === 1 ? '100%' :
-                                        itemsPerRow === 2 ? '47%' :
+                                        itemsPerRow === 2 ? '48%' :
                                             '30%';
 
                                     return (
                                         <TouchableOpacity
                                             key={btn.key}
                                             onPress={btn.onPress}
-                                            style={{
-                                                width: itemWidth,
-                                                backgroundColor: color.lightBackground,
-                                                borderRadius: Radius.md,
-                                                padding: Spacing.md,
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderWidth: 1,
-                                                borderColor: btn.color + '35',
-                                                shadowColor: color.shadowLight,
-                                                shadowOffset: { width: 0, height: 2 },
-                                                shadowOpacity: 0.1,
-                                                shadowRadius: 4,
-                                                elevation: 2,
-                                                marginBottom: isLastRow ? 0 : Spacing.sm, // 最后一行不加底部间距
-                                                minHeight: 65, // 减小按钮高度
-                                            }}
+                                            style={[styles.gridButtonBase, { width: itemWidth, marginBottom: isLastRow ? 0 : Spacing.sm, borderColor: btn.color + '35' }]}
                                             activeOpacity={0.7}
                                         >
                                             <MaterialCommunityIcons
                                                 name={btn.icon as any}
-                                                size={20} // 减小图标尺寸
+                                                size={20}
                                                 color={btn.color}
-                                                style={{ marginBottom: Spacing.xs }}
+                                                style={styles.gridButtonIcon}
                                             />
-                                            <Text style={{
-                                                color: btn.color,
-                                                fontSize: FontSize.small - 1, // 减小字体
-                                                fontWeight: '600',
-                                                textAlign: 'center',
-                                            }}>
-                                                {btn.title}
-                                            </Text>
+                                            <Text style={[styles.gridButtonText, { color: btn.color }]}> {btn.title} </Text>
                                         </TouchableOpacity>
                                     );
                                 })}
@@ -532,18 +389,7 @@ const HomeScreen = () => {
                         </View>
 
                         {/* Logout Button */}
-                        <View style={{
-                            backgroundColor: color.lightBackground,
-                            borderRadius: Radius.lg,
-                            padding: Spacing.lg,
-                            shadowColor: color.shadowLight,
-                            shadowOffset: { width: 0, height: 3 },
-                            shadowOpacity: 0.12,
-                            shadowRadius: 8,
-                            elevation: 3,
-                            borderWidth: 1,
-                            borderColor: color.lightGray + '50',
-                        }}>
+                        <View style={styles.logoutCard}>
                             <TouchableOpacity
                                 onPress={async () => {
                                     try {
@@ -551,36 +397,22 @@ const HomeScreen = () => {
                                         useGameStore.getState().resetGame();
                                         usePlayerStore.getState().resetPlayers();
                                         clearLogs(); // 清除日志缓存
-                                        Toast.show({ type: 'success', text1: '已退出登录' });
+                                        Toast.show({ type: 'success', text1: simpleT('signout_success') });
                                     } catch (e) {
-                                        Toast.show({ type: 'error', text1: '退出登录失败' });
+                                        Toast.show({ type: 'error', text1: simpleT('signout_failed') });
                                     }
                                 }}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    paddingVertical: Spacing.md,
-                                    paddingHorizontal: Spacing.lg,
-                                    borderRadius: Radius.md,
-                                    backgroundColor: 'transparent',
-                                    borderWidth: 1.5,
-                                    borderColor: color.error + '60',
-                                }}
+                                style={[styles.logoutTouchable, { borderColor: color.error + '60' }]}
                                 activeOpacity={0.7}
                             >
                                 <MaterialCommunityIcons
                                     name="logout"
                                     size={20}
                                     color={color.error}
-                                    style={{ marginRight: Spacing.sm }}
+                                    style={styles.logoutIcon}
                                 />
-                                <Text style={{
-                                    color: color.error,
-                                    fontSize: FontSize.body,
-                                    fontWeight: '600',
-                                }}>
-                                    退出登录
+                                <Text style={[styles.logoutText, { color: color.error }]}>
+                                    {simpleT('signout_label')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -605,7 +437,7 @@ const HomeScreen = () => {
             {/* Footer */}
             <View style={styles.footerSection}>
                 <Text style={styles.footerText}>
-                    版本 {appConfig.expo.version} · 轻松记录每局游戏 ✨
+                    {simpleT('footer_version', undefined, { version: appConfig.expo.version })}
                 </Text>
             </View>
         </>

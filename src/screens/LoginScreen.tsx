@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Toast from 'react-native-toast-message';
+import simpleT from '@/i18n/simpleT';
+import { useSettings } from '@/providers/SettingsProvider';
 import { useNavigation } from '@react-navigation/native';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
@@ -15,6 +17,7 @@ import { EmailConflictError } from '@/types';
 export default function LoginScreen() {
     const navigation = useNavigation();
     const pageState = usePageState();
+    const { language } = useSettings();
     const [isAppleSupported, setIsAppleSupported] = useState(false);
 
     useEffect(() => {
@@ -34,10 +37,10 @@ export default function LoginScreen() {
     }, []);
 
     const handleAuthSuccess = (userProfile: any) => {
-        Toast.show({ 
+            Toast.show({ 
             type: 'success', 
-            text1: '登录成功', 
-            text2: `欢迎 ${userProfile.displayName ?? '玩家'}` 
+            text1: simpleT('login_success'),
+            text2: `${simpleT('welcome_user_prefix')} ${userProfile.displayName ?? simpleT('guest_continue')}`
         });
         
         // 不需要手动导航，App.tsx 会监听认证状态变化并自动切换到 MainNavigator
@@ -60,15 +63,15 @@ export default function LoginScreen() {
         const currentProviderName = getProviderName(currentProvider);
 
         Alert.alert(
-            '账号冲突',
-            `该邮箱 ${email} 已使用 ${existingProviderName} 登录注册。\n\n请使用 ${existingProviderName} 登录继续。`,
+            simpleT('account_conflict_title'),
+            `${email} ${simpleT('account_conflict_prompt')}`,
             [
                 {
-                    text: '取消',
+                    text: simpleT('cancel'),
                     style: 'cancel'
                 },
                 {
-                    text: `使用 ${existingProviderName} 登录`,
+                    text: `${simpleT('sign_in_with')} ${existingProviderName}`,
                     onPress: () => {
                             console.info(`User chose to sign in with existing provider: ${existingProvider}`);
                             if (existingProvider === 'google.com') {
@@ -106,7 +109,7 @@ export default function LoginScreen() {
 
         // If user explicitly cancelled the auth flow, show an info toast instead of an error
         if (isUserCancelled(message)) {
-            Toast.show({ type: 'info', text1: `${method} 登录已取消` });
+            Toast.show({ type: 'info', text1: `${method} ${simpleT('login_cancelled')}` });
             return;
         }
 
@@ -128,7 +131,7 @@ export default function LoginScreen() {
 
         Toast.show({ 
             type: 'error', 
-            text1: `${method}登录失败`, 
+            text1: `${method} ${simpleT('login_success') ? '失败' : '失败'}`, 
             text2: message + hint 
         });
     };
@@ -176,7 +179,7 @@ export default function LoginScreen() {
         try {
             const result = await AuthService.signInAnonymously();
             if (result.success && result.user) {
-                Toast.show({ type: 'success', text1: '已以访客身份登录' });
+                Toast.show({ type: 'success', text1: simpleT('guest_login_success') });
                 // 不需要手动导航，认证状态变化会自动切换导航器
             } else {
                 handleAuthError(new Error(result.error || '访客登录失败'), '访客');
@@ -208,8 +211,8 @@ export default function LoginScreen() {
                             <Image source={require('../../src/assets/PokerPal.png')} style={styles.logo} />
                         </View>
                     </View>
-                    <Text style={styles.title}>欢迎使用 PokerPal</Text>
-                    <Text style={styles.subtitle}>德州扑克筹码管理专家</Text>
+                    <Text style={styles.title}>{simpleT('welcome_title')}</Text>
+                    <Text style={styles.subtitle}>{simpleT('welcome_subtitle')}</Text>
                 </View>
 
                 {/* Login Actions */}
@@ -239,7 +242,7 @@ export default function LoginScreen() {
                                                 color={color.lightText}
                                                 style={styles.buttonIcon}
                                             />
-                                            <Text style={styles.primaryButtonText}>使用 Apple 登录</Text>
+                                            <Text style={styles.primaryButtonText}>{simpleT('apple_sign_in')}</Text>
                                         </>
                                     )}
                                 </LinearGradient>
@@ -269,7 +272,7 @@ export default function LoginScreen() {
                                             color={color.lightText}
                                             style={styles.buttonIcon}
                                         />
-                                        <Text style={styles.primaryButtonText}>使用 Google 登录</Text>
+                                        <Text style={styles.primaryButtonText}>{simpleT('google_sign_in')}</Text>
                                     </>
                                 )}
                             </LinearGradient>
@@ -288,7 +291,7 @@ export default function LoginScreen() {
                                 color={color.primary}
                                 style={styles.buttonIcon}
                             />
-                            <Text style={styles.secondaryButtonText}>以访客身份继续</Text>
+                            <Text style={styles.secondaryButtonText}>{simpleT('guest_continue')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -301,7 +304,7 @@ export default function LoginScreen() {
                             style={styles.infoIcon}
                         />
                         <Text style={styles.note}>
-                            无需输入密码，授权后将保存昵称与头像以便统计与邀请。
+                            {simpleT('info_note')}
                         </Text>
                     </View>
                 </View>
