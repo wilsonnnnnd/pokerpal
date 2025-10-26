@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "pokerpal",
-    "slug": "pokerpal",
-    "version": "1.0.3",
+    "name": "iPokerpal",
+    "slug": "pokerpal", 
+    "version": "1.1.3",
     "scheme": "pokerpal",
     "orientation": "portrait",
     "icon": "./src/assets/PokerPal.png",

@@ -10,7 +10,8 @@ export const LANGUAGES: LanguageEntry[] = [
 ];
 
 // Default UI language for the app
-export const DEFAULT_UI_LANGUAGE = 'zh';
+// Changed default to English per request
+export const DEFAULT_UI_LANGUAGE = 'en';
 
 // Currency / exchange defaults
 export const DEFAULT_FROM_CURRENCY = 'AUD';
