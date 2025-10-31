@@ -31,7 +31,7 @@ export type RootStackParamList = {
   GameSetup: undefined;
   AddPlayer: undefined;
   GamePlay: { gameId: string };
-  GameHistory: undefined;
+  GameHistory: { initialTab?: 'local' | 'cloud' } | undefined;
   GameDetail: { game: any };
   GamePlayerRank: undefined;
 

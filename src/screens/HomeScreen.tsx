@@ -204,12 +204,12 @@ const HomeScreen = () => {
                                     <View style={styles.avatarWrapper}>
                                         <Avatar
                                             uri={user.photoURL ?? undefined}
-                                            name={user.displayName ?? (user.isAnonymous ? '访客' : '未命名')}
+                                            name={user.displayName ?? (user.isAnonymous ? 'guest' : 'player')}
                                             size={64}
                                             style={styles.userAvatar}
                                             imageStyle={styles.userAvatarRound}
                                             textStyle={{ color: color.lightText, fontWeight: '800', fontSize: FontSize.h2 }}
-                                            accessibilityLabel={user.photoURL ? `${user.displayName}的头像照片` : `${(user.displayName || '访客').slice(0,1)} 的头像`}
+                                            accessibilityLabel={user.photoURL ? `${user.displayName}的头像照片` : `${(user.displayName || 'guest').slice(0,1)} 的头像`}
                                         />
                                     </View>
                                 </TouchableOpacity>
@@ -234,7 +234,7 @@ const HomeScreen = () => {
                                     </View>
 
                                     <Text style={[styles.userEmail, styles.userEmailMargin]}> 
-                                        {user.email ?? (user.isAnonymous ? '访客账户' : '')}
+                                        {user.email ?? (user.isAnonymous ? 'guest' : 'player')}
                                     </Text>
 
                                     <View style={styles.roleBadge}>
@@ -333,10 +333,10 @@ const HomeScreen = () => {
                                         title: simpleT('menu_history'),
                                         icon: 'history',
                                         color: color.info,
-                                        onPress: () => navigation.navigate('GameHistory'),
-                                        visible: isHost,
+                                        onPress: () => navigation.navigate('GameHistory', { initialTab: 'local' }),
+                                        // 对所有用户可见（包括访客/匿名用户）
+                                        visible: true,
                                     },
-                                    // localHistory removed - local records accessible from Game History tab
                                     {
                                         key: 'settings',
                                         title: simpleT('menu_settings'),

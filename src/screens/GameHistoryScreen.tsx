@@ -1,5 +1,15 @@
 // src/screens/GameHistoryScreen.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * Route params:
+ * - initialTab?: 'local' | 'cloud'
+ *
+ * If `initialTab` is provided (e.g. { initialTab: 'local' }), the screen will
+ * open with the specified tab selected. This is useful when other screens
+ * (like Home) want to deep-link into the local-history view regardless of
+ * the current permission/host state.
+ */
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { FlatList, Text, View, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -56,7 +66,9 @@ export default function GameHistoryScreen() {
     const pageState = usePaginatedPageState();
     const [items, setItems] = useState<GameHistoryItem[]>([]);
     // Local tab state & pageState
-    const [tab, setTab] = useState<'cloud' | 'local'>('cloud');
+    const route = useRoute<RouteProp<RootStackParamList, 'GameHistory'>>();
+    const initialTabParam = (route && route.params && (route.params as any).initialTab) || undefined;
+    const [tab, setTab] = useState<'cloud' | 'local'>(initialTabParam === 'local' ? 'local' : 'cloud');
     const localPageState = usePageState();
     const [localItems, setLocalItems] = useState<any[]>([]);
     // segmented control styles with improved design consistency
@@ -149,6 +161,31 @@ export default function GameHistoryScreen() {
             localPageState.setLoading(false);
         }
     };
+
+    // 如果路由传入 initialTab 为 'local'，或用户切换到 local tab 且尚未加载本地条目，自动触发本地历史加载
+    useEffect(() => {
+        let mounted = true;
+
+        (async () => {
+            try {
+                if (!mounted) return;
+
+                // 优先使用路由参数驱动初始加载
+                if (initialTabParam === 'local' && localItems.length === 0 && !localPageState.loading) {
+                    await loadLocalHistory();
+                }
+
+                // 当用户切换到 local tab 时，如果列表为空也触发加载
+                if (tab === 'local' && localItems.length === 0 && !localPageState.loading) {
+                    await loadLocalHistory();
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, [initialTabParam, tab]);
 
     // ...existing code...
 
@@ -502,12 +539,16 @@ export default function GameHistoryScreen() {
         ? (!pageState.loading && !pageState.error && !permLoading && isHost !== null && items.length === 0 && initializedRef.current)
         : (!localPageState.loading && !localPageState.error && localItems.length === 0);
 
+    // 当处于 local tab 时，不应被远端权限检查阻止（访客应可查看本地历史）
+    const pagePermLoading = tab === 'cloud' ? permLoading : false;
+    const pageIsHost = tab === 'cloud' ? isHost : true;
+
     return (
         <PageStateView
             loading={currentLoading}
             error={currentError}
-            permLoading={permLoading}
-            isHost={isHost}
+            permLoading={pagePermLoading}
+            isHost={pageIsHost}
             isEmpty={currentIsEmpty}
             emptyTitle={tab === 'cloud' ? simpleT('game_history_empty_title') : simpleT('local_history_empty_title')}
             emptySubtitle={tab === 'cloud' ? simpleT('game_history_empty_subtitle') : simpleT('local_history_empty_subtitle')}
