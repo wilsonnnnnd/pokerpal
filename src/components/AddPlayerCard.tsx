@@ -27,7 +27,6 @@ import usePermission from '@/hooks/usePermission';
 import { AddPlayerCardProps, AddPlayerTab } from '@/types';
 import { AddPlayerCardStyles } from '@/assets/styles';
 import { fetchUsersByHostname } from '@/firebase/fetchUser';
-import { onAuthStateChanged } from '@/services/authService';
 
 
 export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps) => {
@@ -36,7 +35,7 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [email, setEmail] = useState('');
     const [isFocused, setIsFocused] = useState({ nickname: false, email: false });
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-    const { isHost } = usePermission();
+    const { isHost, authUser } = usePermission();
     const addPlayer = usePlayerStore((state) => state.addPlayer);
     const players = usePlayerStore((state) => state.players); // Get current players from store
     const getGame = useGameStore((state) => state.getGame);
@@ -48,13 +47,10 @@ export const AddPlayerCard = ({ onConfirm: onAdd, onCancel }: AddPlayerCardProps
     const [searchTerm, setSearchTerm] = useState('');
     const [currentUser, setCurrentUser] = useState<{ email?: string; isAnonymous?: boolean } | null>(null);
 
-    // 监听当前用户状态
+    // Derive currentUser from centralized authUser
     useEffect(() => {
-        const unsub = onAuthStateChanged((user: any) => {
-            setCurrentUser(user);
-        });
-        return () => unsub && unsub();
-    }, []);
+        setCurrentUser(authUser ? { email: authUser.email ?? undefined, isAnonymous: authUser.isAnonymous } : null);
+    }, [authUser]);
     
     useEffect(() => {
         if (isHost && activeTab === AddPlayerTab.SCAN && gameId) {

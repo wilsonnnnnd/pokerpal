@@ -368,12 +368,9 @@ export default function GameHistoryScreen() {
     );
 
     // —— 首屏加载 ——
-    useEffect(() => {
-        console.log('[useEffect] permLoading:', permLoading, 'isHost:', isHost, 'initializedRef.current:', initializedRef.current); // 添加日志
-        
+    useEffect(() => {       
         // 权限检查：如果不是 host，则不自动跳转 —— 切换到本地历史 tab
         if (!permLoading && isHost === false) {
-            console.log('[useEffect] Not a host, switching to local tab');
             setTab('local');
         }
 
@@ -383,11 +380,9 @@ export default function GameHistoryScreen() {
         }
 
         if (permLoading || isHost === false || initializedRef.current) {
-            console.log('[useEffect] Skipping cloud initialization - permLoading:', permLoading, 'isHost:', isHost, 'initialized:', initializedRef.current);
             return;
         }
 
-        console.log('[useEffect] Starting initialization'); // 添加日志
         // 立即设置加载状态，避免先显示空状态
         pageState.setLoading(true);
         initializedRef.current = true;

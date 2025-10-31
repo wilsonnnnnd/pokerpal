@@ -13,20 +13,17 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
 import { RootStackParamList } from '../../App';
 import { useGameStore } from '@/stores/useGameStore';
 import { Palette as color } from '@/constants';
 import { GameSetupCard } from '@/components/gaming/GameSetupCard';
 import simpleT from '@/i18n/simpleT';
-import GuestPlaceholder from '@/components/common/GuestPlaceholder';
 import { useStoreReady } from '@/hooks/useStoreReady';
 import { usePopup } from '@/providers/PopupProvider';
-import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { Spacing, Radius, FontSize } from '@/constants/designTokens';
+import { Spacing, FontSize } from '@/constants/designTokens';
 import Avatar from '@/components/common/Avatar';
 import { onAuthStateChanged, signOut } from '@/services/authService';
 import storage from '@/services/storageService';
@@ -47,81 +44,37 @@ const HomeScreen = () => {
     const { finalized, gameId } = useGameStore((state) => state);
     const isReady = useStoreReady();
     const { confirmPopup } = usePopup();
-    const { isHost } = usePermission();
+    const { isHost, loading: permLoading, authUser, profile: permProfile } = usePermission();
     const { clearLogs } = useLogger();
 
-    // Subscribe to auth state and fetch profile
+    // Derive local `user` state from centralized authUser + Firestore profile provided by usePermission
     useEffect(() => {
-        const unsub = onAuthStateChanged(async (u: any) => {
-            if (!u) {
-                setUser(null);
-                return;
-            }
+        if (!authUser) {
+            setUser(null);
+            return;
+        }
 
-            // 如果已知用户没有 host 权限，则不去 fetchUserProfile，直接使用基础信息
-            // 这样可以避免对 Firestore 的不必要请求
-            if (isHost === false) {
-                setUser({
-                    uid: u.uid,
-                    email: u.email,
-                    displayName: u.displayName,
-                    photoURL: u.photoURL,
-                    isAnonymous: u.isAnonymous,
-                    profile: undefined
-                });
+        const merged = {
+            uid: authUser.uid,
+            email: permProfile?.email || authUser.email || null,
+            displayName: permProfile?.displayName || authUser.displayName || null,
+            photoURL: permProfile?.photoURL || authUser.photoURL || null,
+            isAnonymous: authUser.isAnonymous,
+            profile: permProfile ? { ...permProfile, uid: authUser.uid, displayName: permProfile.displayName } : undefined,
+        };
 
-                // load persisted user for avatar/name preference
-                try {
-                    const pu = await storage.getLocal(CURRENT_USER_KEY);
-                    setPersistedUser(pu);
-                } catch (e) {
-                    // ignore
-                }
+        setUser(merged);
 
-                return;
-            }
-
+        // load persisted user for avatar/name preference
+        (async () => {
             try {
-                const firestoreProfile = await fetchUserProfile(u.uid);
-                // 构建用户对象，优先使用 Firestore 数据
-                const userWithProfile = {
-                    uid: u.uid,
-                    email: firestoreProfile?.email || u.email,
-                    displayName: firestoreProfile?.nickname || u.displayName,
-                    photoURL: firestoreProfile?.photoURL || u.photoURL,
-                    isAnonymous: u.isAnonymous,
-                    profile: firestoreProfile ? {
-                        ...firestoreProfile,
-                        uid: u.uid,
-                        displayName: firestoreProfile.nickname,
-                    } : undefined
-                };
-
-                setUser(userWithProfile);
-
-                // load persisted user for avatar/name preference
-                try {
-                    const pu = await storage.getLocal(CURRENT_USER_KEY);
-                    setPersistedUser(pu);
-                } catch (e) {
-                    // ignore
-                }
-            } catch (error) {
-                console.warn('获取用户档案失败:', error);
-                // 即使获取 Firestore 档案失败，也设置基础用户信息
-                setUser({
-                    uid: u.uid,
-                    email: u.email,
-                    displayName: u.displayName,
-                    photoURL: u.photoURL,
-                    isAnonymous: u.isAnonymous,
-                    profile: undefined
-                });
+                const pu = await storage.getLocal(CURRENT_USER_KEY);
+                setPersistedUser(pu);
+            } catch (e) {
+                // ignore
             }
-        });
-
-        return () => unsub && unsub();
-    }, [isHost]);
+        })();
+    }, [authUser?.uid, permProfile]);
 
     // 禁用返回和侧滑（当页面处于焦点时）
     useFocusEffect(

@@ -28,6 +28,8 @@ import { UserProfile } from '@/types';
 export function usePermission() {
     // 当前登录的 uid（可能为 null）
     const [uid, setUid] = useState<string | null>(null);
+    // 基础的 auth user 信息（来自 onAuthStateChanged 的 firebase user / 本地 currentUser）
+    const [authUser, setAuthUser] = useState<{ uid: string; email?: string | null; displayName?: string | null; photoURL?: string | null; isAnonymous?: boolean } | null>(null);
     // 本地缓存的用户资料（从 Firestore 拉取），用于快速判断 role 等字段
     const [profile, setProfile] = useState<UserProfile | null>(null);
     // 是否为 host（通过 userHasRole 做远端检查）
@@ -41,19 +43,30 @@ export function usePermission() {
             if (!u) {
                 // 未登录：清空状态
                 setUid(null);
+                setAuthUser(null);
                 setProfile(null);
                 setIsHost(false);
                 setLoading(false);
                 return;
             }
 
+            // 更新基础 auth 用户信息
+            setAuthUser({ uid: u.uid, email: u.email ?? null, displayName: u.displayName ?? null, photoURL: u.photoURL ?? null, isAnonymous: u.isAnonymous ?? false });
             // 登录：更新 uid 并开始加载资料
             setUid(u.uid);
             setLoading(true);
             try {
                 // 先拉取 profile（用于本地判断）
                 const p = await fetchUserProfile(u.uid);
-                setProfile(p ? { ...p, uid: u.uid } : null);
+                // Map FirestoreUserProfile fields to local UserProfile shape (ensure displayName exists)
+                if (p) {
+                    const mapped: any = { ...p, uid: u.uid };
+                    // some Firestore profiles use `nickname`; prefer that for displayName
+                    if ((p as any).nickname && !mapped.displayName) mapped.displayName = (p as any).nickname;
+                    setProfile(mapped as UserProfile);
+                } else {
+                    setProfile(null);
+                }
 
                 // 再做一次远端角色检查（userHasRole），将结果作为 isHost
                 try {
@@ -76,7 +89,7 @@ export function usePermission() {
     }, []);
 
 
-    return { uid, profile, loading, isHost };
+    return { uid, authUser, profile, loading, isHost };
 }
 
 export default usePermission;

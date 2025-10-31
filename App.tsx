@@ -23,6 +23,7 @@ import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { userHasRole } from '@/firebase/getUserProfile';
+import usePermission from '@/hooks/usePermission';
 
 
 export type RootStackParamList = {
@@ -87,8 +88,9 @@ function AuthNavigator() {
 
 export default function App() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
-  const [initializing, setInitializing] = useState(true);
-  const [authUser, setAuthUser] = useState<any | null>(null);
+  // initializing is driven by permission loading state from usePermission
+  const { authUser, loading: permLoading, isHost } = usePermission();
+  const [initializing] = useState(true); // kept for render gating until bootstrapped + permLoading handled below
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
@@ -136,41 +138,9 @@ export default function App() {
       }
     })();
 
-    // guard: auth may be undefined in some non-firebase-enabled environments
-    let unsub: (() => void) | undefined;
-
-    if (typeof onAuthStateChanged === 'function') {
-      unsub = onAuthStateChanged(async (user: any) => {
-        // update local auth state
-        setAuthUser(user ?? null);
-
-        // 检查并更新汇率数据（仅当用户已登录且为host时）
-        if (user && user.uid) {
-          try {
-            // 检查用户是否为host
-            const isHost = await userHasRole(user.uid, 'host');
-
-          } catch (e) {
-            console.warn('Failed to check user role or update exchange rates:', e);
-          }
-        }
-
-        // Simply update auth state and mark initialization done.
-        // The navigator rendered in JSX will switch based on `authUser`.
-        setInitializing(false);
-      });
-    } else {
-      // No auth available: NavigationContainer onReady() will handle navigating to Login
-      // We intentionally do not poll navigationRef here so the effect only runs on mount.
-    }
-
-    return () => {
-      try {
-        if (typeof unsub === 'function') unsub();
-      } catch (e) {
-        // ignore
-      }
-    };
+    // No explicit subscription here: `usePermission` handles auth subscription and remote role check.
+    // We only need to return a noop cleanup since no subscription was created in this effect.
+    return () => {};
   }, []);
 
   if (!bootstrapped) {
@@ -202,7 +172,7 @@ export default function App() {
                 }
               }}
             >
-              {initializing && (
+              {(bootstrapped && permLoading) && (
                 <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator size="large" />
                 </View>

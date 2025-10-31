@@ -15,8 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { onAuthStateChanged } from '@/services/authService';
-import { fetchUserProfile } from '@/firebase/getUserProfile';
+import usePermission from '@/hooks/usePermission';
 import { fetchUserGameHistory, UserGameHistoryItem } from '@/firebase/fetchUserGameHistory';
 import storage from '@/services/storageService';
 import { CURRENT_USER_KEY, playerDoc, userByEmailDoc, userDoc } from '@/constants/namingVar';
@@ -55,27 +54,31 @@ const ProfileScreen = () => {
     const [historyLoading, setHistoryLoading] = useState(false);
     const [showInspector, setShowInspector] = useState(false);
 
+    const { authUser, profile: permProfile } = usePermission();
+
     useEffect(() => {
-        const unsub = onAuthStateChanged(async (u: any) => {
-            if (!u) {
+        (async () => {
+            setLoading(true);
+            if (!authUser) {
                 setUser(null);
                 setLoading(false);
                 return;
             }
 
             try {
-                const firestoreProfile = await fetchUserProfile(u.uid);
+                const u = authUser;
+                const firestoreProfile = permProfile;
 
                 const userWithProfile = {
                     uid: u.uid,
                     email: firestoreProfile?.email || u.email,
-                    displayName: firestoreProfile?.nickname || u.displayName,
+                    displayName: firestoreProfile?.displayName || u.displayName,
                     photoURL: firestoreProfile?.photoURL || u.photoURL,
                     isAnonymous: u.isAnonymous,
                     profile: firestoreProfile ? {
                         ...firestoreProfile,
                         uid: u.uid,
-                        displayName: firestoreProfile.nickname,
+                        displayName: firestoreProfile.displayName,
                     } : undefined
                 };
 
@@ -83,7 +86,7 @@ const ProfileScreen = () => {
 
                 // 初始化编辑数据
                 setEditData({
-                    nickname: firestoreProfile?.nickname || u.displayName || '',
+                    nickname: firestoreProfile?.displayName || u.displayName || '',
                     email: firestoreProfile?.email || u.email || '',
                 });
 
@@ -99,29 +102,26 @@ const ProfileScreen = () => {
                         setHistoryLoading(false);
                     }
                 }
-
             } catch (error) {
                 console.warn('获取用户档案失败:', error);
                 setUser({
-                    uid: u.uid,
-                    email: u.email,
-                    displayName: u.displayName,
-                    photoURL: u.photoURL,
-                    isAnonymous: u.isAnonymous,
+                    uid: authUser.uid,
+                    email: authUser.email,
+                    displayName: authUser.displayName,
+                    photoURL: authUser.photoURL,
+                    isAnonymous: authUser.isAnonymous,
                     profile: undefined
                 });
 
                 setEditData({
-                    nickname: u.displayName || '',
-                    email: u.email || '',
+                    nickname: authUser.displayName || '',
+                    email: authUser.email || '',
                 });
             } finally {
                 setLoading(false);
             }
-        });
-
-        return () => unsub && unsub();
-    }, []);
+        })();
+    }, [authUser?.uid, permProfile]);
 
     const handleSave = async () => {
         if (!user?.uid) {

@@ -5,19 +5,17 @@ import { getLocal, removeLocal, setLocal } from '@/services/storageService';
 import { PrimaryButton } from '@/components/common/PrimaryButton';
 import { Palette as color } from '@/constants';
 import { HomePagestyles as styles } from '@/assets/styles';
-import { onAuthStateChanged } from '@/services/authService';
-import { fetchUserProfile } from '@/firebase/getUserProfile';
+import usePermission from '@/hooks/usePermission';
 import MessagePopUp from '@/components/MessagePopUp';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { useSettings } from '@/providers/SettingsProvider';
 import simpleT from '@/i18n/simpleT';
 import { DEFAULT_CURRENCY, DEFAULT_UI_LANGUAGE } from '@/constants/appConfig';
-import { execSql } from '@/services/localDb';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { execSql, clearDatabase as clearLocalDb } from '@/services/localDb';
 import SoftwareSettings from '@/components/settings/SoftwareSettings';
 import ExchangeManagement from '@/components/settings/ExchangeManagement';
 import DataManagement from '@/components/settings/DataManagement';
-import { usePermission } from '@/hooks/usePermission';
+// usePermission imported below as default
 import { UserProfile } from '@/types';
 import { useCallback } from 'react';
 import { getAuth } from 'firebase/auth';
@@ -94,24 +92,19 @@ export default function SettingsScreen() {
     }, [language, currency]);
 
 
-    // subscribe user
+    const { isHost: hostFlag, loading: permissionLoading2, authUser, profile: permProfile } = usePermission();
+
+    // derive local user/profile from centralized permission hook
     useEffect(() => {
-        const unsub = onAuthStateChanged(async (u: any) => {
-            if (!u) {
-                setUser(null);
-                setProfile(null);
-                return;
-            }
-            setUser(u);
-            try {
-                const p = await fetchUserProfile(u.uid);
-                setProfile(p ? { ...p, uid: u.uid } : null);
-            } catch (e) {
-                setProfile(null);
-            }
-        });
-        return () => unsub && unsub();
-    }, []);
+        if (!authUser) {
+            setUser(null);
+            setProfile(null);
+            return;
+        }
+
+        setUser(authUser);
+        setProfile(permProfile ? { ...permProfile, uid: authUser.uid, displayName: permProfile.displayName } : null);
+    }, [authUser, permProfile]);
 
     const save = async () => {
         try {
@@ -174,41 +167,11 @@ export default function SettingsScreen() {
                 setLoading(true);
 
                 try {
-                    // 清除 SQLite 数据库表
-                    const tables = ['players', 'games', 'game_players', 'actions'];
-                    for (const table of tables) {
-                        try {
-                            await execSql(`DELETE FROM ${table}`);
-                        } catch (e) {
-                            console.warn(`Failed to clear table ${table}:`, e);
-                        }
-                    }
+                    // Use centralized localDb.clearDatabase which handles native transaction or fallback and persists cleared in-memory store
+                    await clearLocalDb();
 
-                    // 清除内存中的数据存储
-                    if ((global as any).__pokerpal_store) {
-                        (global as any).__pokerpal_store = {
-                            players: [],
-                            games: [],
-                            game_players: [],
-                            actions: [],
-                            _id: 1
-                        };
-                    }
-
-                    // 清除 AsyncStorage 中的游戏相关数据（保留用户设置）
-                    const keys = await AsyncStorage.getAllKeys();
-                    const gameRelatedKeys = keys.filter(key =>
-                        key.includes('game') ||
-                        key.includes('player') ||
-                        key.includes('history') ||
-                        key.includes('__pokerpal_store') ||
-                        key.includes('GAME_') ||
-                        key.includes('PLAYER_')
-                    );
-
-                    if (gameRelatedKeys.length > 0) {
-                        await AsyncStorage.multiRemove(gameRelatedKeys);
-                    }
+                    // 不再批量扫描并删除 AsyncStorage keys（避免误删）。
+                    // 仅依赖 localDb.clearDatabase() 清理本地 SQLite / 内存回退数据。
 
                     setPopup({
                         visible: true,
@@ -255,29 +218,7 @@ export default function SettingsScreen() {
         // helper: clear local DB and game-related AsyncStorage keys
         const clearLocalHistory = async () => {
             try {
-                const tables = ['players', 'games', 'game_players', 'actions'];
-                for (const table of tables) {
-                    try { await execSql(`DELETE FROM ${table}`); } catch (e) { /* ignore */ }
-                }
-
-                if ((global as any).__pokerpal_store) {
-                    (global as any).__pokerpal_store = {
-                        players: [],
-                        games: [],
-                        game_players: [],
-                        actions: [],
-                        _id: 1
-                    };
-                }
-
-                const keys = await AsyncStorage.getAllKeys();
-                const gameRelatedKeys = keys.filter(key =>
-                    key.includes('game') || key.includes('player') || key.includes('history') || key.includes('__pokerpal_store') || key.includes('GAME_') || key.includes('PLAYER_')
-                );
-
-                if (gameRelatedKeys.length > 0) {
-                    await AsyncStorage.multiRemove(gameRelatedKeys);
-                }
+                await clearLocalDb();
             } catch (err) {
                 // ignore
             }

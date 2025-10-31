@@ -17,6 +17,7 @@ import { AppleAuthService } from '@/services/appleAuthService';
 import { GoogleAuthService } from '@/services/googleAuthService';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthProvider, EmailConflictError, User, AuthResult, UserProfile } from '@/types';
+import { clearDatabase } from './localDb';
 
 
 // 全局状态管理
@@ -100,6 +101,7 @@ class AuthService {
         notify();
         try {
             await storage.removeLocal(CURRENT_USER_KEY);
+            await clearDatabase();
         } catch (e) {
             // non-fatal
         }
@@ -309,20 +311,6 @@ class AuthService {
             // 使用凭据登录并获取用户信息
             const userCred = await GoogleAuthService.signInWithCredentialToFirebase(googleCredential);
             const user = userCred.user;
-            console.log('Auth', user)
-            // 记录 Google 登录返回的非敏感用户信息，便于调试（不记录 tokens）
-            try {
-                console.log('Auth', {
-                    event: 'GoogleSignInResult',
-                    uid: user?.uid ?? null,
-                    email: user?.email ?? null,
-                    displayName: user?.displayName ?? null,
-                    photoURL: user?.photoURL ?? null,
-                });
-            } catch (e) {
-                // 不影响主流程
-                console.warn('logInfo failed for GoogleSignInResult', e);
-            }
 
             // 创建用户配置文件，优先使用Firebase返回的用户信息
             const userProfile: UserProfile = {

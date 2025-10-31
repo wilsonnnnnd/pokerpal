@@ -7,6 +7,9 @@ import { FirestoreUserProfile } from '@/types';
 const profileCache = new Map<string, { ts: number; data: FirestoreUserProfile | null }>();
 const PROFILE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// In-flight requests dedupe: uid -> Promise
+const inFlight = new Map<string, Promise<FirestoreUserProfile | null>>();
+
 export async function fetchUserProfile(uid: string): Promise<FirestoreUserProfile | null> {
     if (!uid) return null;
 
@@ -16,11 +19,25 @@ export async function fetchUserProfile(uid: string): Promise<FirestoreUserProfil
         return cached.data;
     }
 
-    const ref = doc(db, userDoc, uid);
-    const snap = await getDoc(ref);
-    const data = snap.exists() ? (snap.data() as FirestoreUserProfile) : null;
-    profileCache.set(uid, { ts: now, data });
-    return data;
+    // If there's already an ongoing request for this uid, return the same promise
+    const ongoing = inFlight.get(uid);
+    if (ongoing) return ongoing;
+
+    const promise = (async () => {
+        try {
+            const ref = doc(db, userDoc, uid);
+            const snap = await getDoc(ref);
+            const data = snap.exists() ? (snap.data() as FirestoreUserProfile) : null;
+            profileCache.set(uid, { ts: Date.now(), data });
+            return data;
+        } finally {
+            // ensure we clean up inFlight regardless of success/failure
+            inFlight.delete(uid);
+        }
+    })();
+
+    inFlight.set(uid, promise);
+    return promise;
 }
 
 export async function userHasRole(uid: string, role: string): Promise<boolean> {

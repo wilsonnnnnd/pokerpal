@@ -292,6 +292,49 @@ export async function deleteGameLocal(gameId: string | number): Promise<void> {
     }
 }
 
+/**
+ * Clear the entire local database (games, players, game_players, actions).
+ * This attempts to run a fast transactional DELETE on native DB when available,
+ * and falls back to sequential execSql calls and an in-memory store reset.
+ */
+export async function clearDatabase(): Promise<void> {
+    try {
+        // If native transaction available, run deletes in a single transaction
+        if (db && typeof db.transaction === 'function') {
+            await new Promise<void>((resolve, reject) => {
+                try {
+                    db.transaction((tx: any) => {
+                        tx.executeSql('DELETE FROM game_players;');
+                        tx.executeSql('DELETE FROM actions;');
+                        tx.executeSql('DELETE FROM games;');
+                        tx.executeSql('DELETE FROM players;');
+                    }, (txErr: any) => reject(txErr), () => resolve());
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        } else {
+            // fallback: sequential deletes via execSql (works with in-memory fallback)
+            await execSql('DELETE FROM game_players;');
+            await execSql('DELETE FROM actions;');
+            await execSql('DELETE FROM games;');
+            await execSql('DELETE FROM players;');
+        }
+
+        // Reset in-memory fallback store and persist it so reload sees cleared state
+        (global as any).__pokerpal_store = { players: [], games: [], game_players: [], actions: [], _id: 1 };
+        try {
+            await setLocal('__pokerpal_store', (global as any).__pokerpal_store);
+        } catch (e) {
+            // non-fatal
+            console.warn('[localDb] failed to persist cleared in-memory store', e);
+        }
+    } catch (err) {
+        console.error('clearDatabase error', err);
+        throw err;
+    }
+}
+
 export async function getGameLocal(gameId: string | number): Promise<any | null> {
     try {
         const res = await execSql('SELECT * FROM games WHERE id = ?;', [gameId]);
@@ -393,4 +436,4 @@ export async function getActionsForGame(gameId: number): Promise<any[]> {
     }
 }
 
-export default { execSql, initSchema, deleteGameLocal, getGameLocal } as const;
+export default { execSql, initSchema, deleteGameLocal, getGameLocal, clearDatabase } as const;
