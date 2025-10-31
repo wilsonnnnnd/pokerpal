@@ -30,6 +30,7 @@ import { db } from '@/firebase/config';
 import { updateProfile } from 'firebase/auth';
 import { getAuth } from 'firebase/auth';
 import { usePopup } from '@/providers/PopupProvider';
+import GuestPlaceholder from '@/components/common/GuestPlaceholder';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
@@ -260,38 +261,7 @@ const ProfileScreen = () => {
     }
 
     if (!user || user.isAnonymous) {
-        return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }]}>
-                <MaterialCommunityIcons
-                    name="account-off"
-                    size={80}
-                    color={color.mutedText}
-                    style={{ marginBottom: Spacing.lg }}
-                />
-                <Text style={{
-                    fontSize: FontSize.h2,
-                    fontWeight: '700',
-                    color: color.title,
-                    textAlign: 'center',
-                    marginBottom: Spacing.md,
-                }}>
-                    访客模式
-                </Text>
-                <Text style={{
-                    fontSize: FontSize.body,
-                    color: color.mutedText,
-                    textAlign: 'center',
-                    marginBottom: Spacing.xl,
-                    lineHeight: 24,
-                }}>
-                    访客用户无法查看个人档案{'\n'}请登录以访问完整功能
-                </Text>
-                <PrimaryButton
-                    title="返回首页"
-                    onPress={() => navigation.goBack()}
-                />
-            </View>
-        );
+        return <GuestPlaceholder onPress={() => navigation.goBack()} />;
     }
 
     return (

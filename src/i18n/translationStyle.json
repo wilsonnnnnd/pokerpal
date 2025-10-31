@@ -95,5 +95,13 @@
     "占位符完整性：翻译字符串必须保留并正确放置所有占位符，例如 {days}",
     "api_usage：对于 simpleT 调用，优先使用省略 locale 的形式 simpleT('key')；对于带 vars 的调用，确保使用第三个参数或传入 undefined 作为第二参数以避免参数错位。"
   ],
+  "new_keys_examples": {
+    "no_cloud_permission": {
+      "context": "Shown in Game History screen when the current user lacks host permissions; informs user that only local history is available.",
+      "note": "Keep concise, friendly and action-oriented. Prefer phrasing that explains limitation and next step (e.g., sign in as host if applicable).",
+      "en": "You don't have permission to view online history; only local history is shown.",
+      "zh": "您当前无权限查看在线历史，仅显示本地历史"
+    }
+  },
   "usage_notes": "此文件旨在作为翻译/审校与自动化替换规则的单一来源。可以被脚本读取以校验占位符与术语一致性。若需改变整体语气（如改为正式），请修改 top-level 的 tone 并更新示例。添加或修改 simpleT 的运行时行为时，请同时更新 SettingsProvider 与 App.tsx 中的初始化引导以保证一致性。"
 }

@@ -23,6 +23,9 @@ import Avatar from '@/components/common/Avatar';
 import { usePaginatedPageState } from '@/hooks/usePageState';
 import { PageStateView } from '@/components/PageState';
 import simpleT from '@/i18n/simpleT';
+import RequireHost from '@/hooks/RequireHost';
+import GuestPlaceholder from '@/components/common/GuestPlaceholder';
+import { useNavigation } from '@react-navigation/native';
 
 // ===== 常量：服务端可排序字段（必须与 Firestore 索引一致）=====
 const SORT_TYPES = {
@@ -142,6 +145,7 @@ const EmptyListComponent = React.memo(({ keyword }: { keyword: string }) => (
 ));
 
 export default function PlayerRankingScreen() {
+    const navigation = useNavigation<any>();
     const pageState = usePaginatedPageState();
     const [players, setPlayers] = useState<AggregatedPlayer[]>([]);
     const [keyword, setKeyword] = useState('');
@@ -447,83 +451,95 @@ export default function PlayerRankingScreen() {
     }, []); // 移除 fetchPage 依赖
 
     return (
-        <PageStateView
-            loading={pageState.loading && !pageState.refreshing}
-            error={pageState.error}
-            isEmpty={!pageState.loading && !pageState.error && players.length === 0}
-            emptyTitle={simpleT('player_ranking_empty_title')}
-            emptySubtitle={simpleT('player_ranking_empty_subtitle')}
-            onRetry={handleRetry}
-        >
-            <View style={styles.container}>
-                {/* 搜索栏 */}
-                    <View style={styles.header}>
-                    <View style={styles.searchContainer}>
-                        <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
-                        <TextInput
-                            placeholder={simpleT('search_player_placeholder')}
-                            value={keyword}
-                            onChangeText={setKeyword}
-                            style={styles.searchInput}
-                            placeholderTextColor={color.weakGray}
-                        />
-                        {keyword.length > 0 && (
-                            <TouchableOpacity onPress={clearKeyword}>
-                                <MaterialCommunityIcons name="close-circle" size={16} color={color.weakGray} />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
-                {/* 排序按钮 */}
-                <View style={styles.sortContainer}>
-                    <View style={styles.sortButtonsContainer}>
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
-                            onPress={handleSortByTotalProfit}
-                        >
-                            <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
-                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
-                                {simpleT('total_profit')}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === SORT_TYPES.ROI && styles.sortButtonActive]}
-                            onPress={handleSortByRoi}
-                        >
-                            <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
-                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
-                                {simpleT('average_roi')}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonActive]}
-                            onPress={handleSortByAppearances}
-                        >
-                            <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
-                            <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
-                                {simpleT('appearances')}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* 列表 */}
-                    <FlatList data={filteredPlayers}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.list}
-                    refreshControl={
-                        <RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} />
-                    }
-                    ListEmptyComponent={renderEmptyComponent}
-                    onEndReachedThreshold={0.1}
-                    onEndReached={onEndReached}
-                    ListFooterComponent={ListFooter}
+        <RequireHost
+            loadingFallback={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={color.primary} /></View>}
+            denyFallback={
+                <GuestPlaceholder
+                    title={simpleT('player_ranking_guest_title')}
+                    message={simpleT('player_ranking_guest_msg')}
+                    buttonTitle={simpleT('player_ranking_guest_cta')}
+                    onPress={() => navigation.navigate('Home')}
                 />
-            </View>
-        </PageStateView>
+            }
+        >
+            <PageStateView
+                loading={pageState.loading && !pageState.refreshing}
+                error={pageState.error}
+                isEmpty={!pageState.loading && !pageState.error && players.length === 0}
+                emptyTitle={simpleT('player_ranking_empty_title')}
+                emptySubtitle={simpleT('player_ranking_empty_subtitle')}
+                onRetry={handleRetry}
+            >
+                <View style={styles.container}>
+                    {/* 搜索栏 */}
+                        <View style={styles.header}>
+                        <View style={styles.searchContainer}>
+                            <MaterialCommunityIcons name="magnify" size={20} color={color.valueLabel} />
+                            <TextInput
+                                placeholder={simpleT('search_player_placeholder')}
+                                value={keyword}
+                                onChangeText={setKeyword}
+                                style={styles.searchInput}
+                                placeholderTextColor={color.weakGray}
+                            />
+                            {keyword.length > 0 && (
+                                <TouchableOpacity onPress={clearKeyword}>
+                                    <MaterialCommunityIcons name="close-circle" size={16} color={color.weakGray} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* 排序按钮 */}
+                    <View style={styles.sortContainer}>
+                        <View style={styles.sortButtonsContainer}>
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonActive]}
+                                onPress={handleSortByTotalProfit}
+                            >
+                                <MaterialCommunityIcons name="cash" size={16} color={sortBy === SORT_TYPES.TOTAL_PROFIT ? color.lightText : color.text} />
+                                <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.TOTAL_PROFIT && styles.sortButtonTextActive]}>
+                                    {simpleT('total_profit')}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortBy === SORT_TYPES.ROI && styles.sortButtonActive]}
+                                onPress={handleSortByRoi}
+                            >
+                                <MaterialCommunityIcons name="percent" size={16} color={sortBy === SORT_TYPES.ROI ? color.lightText : color.text} />
+                                <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.ROI && styles.sortButtonTextActive]}>
+                                    {simpleT('average_roi')}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonActive]}
+                                onPress={handleSortByAppearances}
+                            >
+                                <MaterialCommunityIcons name="calendar-multiple" size={16} color={sortBy === SORT_TYPES.APPEARANCES ? color.lightText : color.text} />
+                                <Text style={[styles.sortButtonText, sortBy === SORT_TYPES.APPEARANCES && styles.sortButtonTextActive]}>
+                                    {simpleT('appearances')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    {/* 列表 */}
+                        <FlatList data={filteredPlayers}
+                        keyExtractor={keyExtractor}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.list}
+                        refreshControl={
+                            <RefreshControl refreshing={pageState.refreshing || false} onRefresh={onRefresh} colors={[color.primary]} />
+                        }
+                        ListEmptyComponent={renderEmptyComponent}
+                        onEndReachedThreshold={0.1}
+                        onEndReached={onEndReached}
+                        ListFooterComponent={ListFooter}
+                    />
+                </View>
+            </PageStateView>
+        </RequireHost>
     );
 }

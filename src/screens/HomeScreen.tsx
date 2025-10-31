@@ -16,11 +16,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../App';
 import { useGameStore } from '@/stores/useGameStore';
-import simpleT from '@/i18n/simpleT';
-import { useStoreReady } from '@/hooks/useStoreReady';
-
 import { Palette as color } from '@/constants';
 import { GameSetupCard } from '@/components/gaming/GameSetupCard';
+import simpleT from '@/i18n/simpleT';
+import GuestPlaceholder from '@/components/common/GuestPlaceholder';
+import { useStoreReady } from '@/hooks/useStoreReady';
 import { usePopup } from '@/providers/PopupProvider';
 import { deleteGame } from '@/services/gameStoreDb';
 import Toast from 'react-native-toast-message';
@@ -50,55 +50,34 @@ const HomeScreen = () => {
     const { isHost } = usePermission();
     const { clearLogs } = useLogger();
 
-    useEffect(() => {
-        if (!finalized && gameId) {
-            const confirmation = async () => {
-                try {
-                    const result = await confirmPopup({
-                        title: simpleT('continue_last_game_title'),
-                        message: simpleT('continue_last_game_message'),
-                    });
-
-                    if (result) {
-                        navigation.navigate('GamePlay', { gameId });
-
-                    } else {
-                        await deleteGame(gameId);
-                        useGameStore.getState().resetGame();
-                        usePlayerStore.getState().resetPlayers();
-                        clearLogs(); // 清除之前游戏的日志缓存
-
-                        Toast.show({
-                            type: 'info',
-                            text1: simpleT('game_reset_title'),
-                            text2: simpleT('game_reset_msg'),
-                            position: 'bottom',
-                            visibilityTime: 2000,
-                        });
-
-                        navigation.reset({
-                            index: 0,
-                            routes: [{ name: 'Home' }],
-                        });
-                    }
-                } catch (e) {
-                    Toast.show({
-                        type: 'error',
-                        text1: '错误',
-                        text2: '无法加载游戏数据，请稍后再试。',
-                    });
-                }
-            };
-
-            confirmation();
-        }
-    }, []);
-
     // Subscribe to auth state and fetch profile
     useEffect(() => {
         const unsub = onAuthStateChanged(async (u: any) => {
             if (!u) {
                 setUser(null);
+                return;
+            }
+
+            // 如果已知用户没有 host 权限，则不去 fetchUserProfile，直接使用基础信息
+            // 这样可以避免对 Firestore 的不必要请求
+            if (isHost === false) {
+                setUser({
+                    uid: u.uid,
+                    email: u.email,
+                    displayName: u.displayName,
+                    photoURL: u.photoURL,
+                    isAnonymous: u.isAnonymous,
+                    profile: undefined
+                });
+
+                // load persisted user for avatar/name preference
+                try {
+                    const pu = await storage.getLocal(CURRENT_USER_KEY);
+                    setPersistedUser(pu);
+                } catch (e) {
+                    // ignore
+                }
+
                 return;
             }
 
@@ -142,7 +121,7 @@ const HomeScreen = () => {
         });
 
         return () => unsub && unsub();
-    }, []);
+    }, [isHost]);
 
     // 禁用返回和侧滑（当页面处于焦点时）
     useFocusEffect(
@@ -209,7 +188,6 @@ const HomeScreen = () => {
                                             style={styles.userAvatar}
                                             imageStyle={styles.userAvatarRound}
                                             textStyle={{ color: color.lightText, fontWeight: '800', fontSize: FontSize.h2 }}
-                                            accessibilityLabel={user.photoURL ? `${user.displayName}的头像照片` : `${(user.displayName || 'guest').slice(0,1)} 的头像`}
                                         />
                                     </View>
                                 </TouchableOpacity>
@@ -218,7 +196,7 @@ const HomeScreen = () => {
                                     <View style={styles.nameRow}>
                                         <Text style={[styles.userName, { flex: 1 }]}>
                                             {user.displayName ??
-                                                (user.isAnonymous ? '访客' : '未命名')}
+                                                (user.isAnonymous ? 'Guest' : 'Player')}
                                         </Text>
                                         {isHost && (
                                                 <LinearGradient
@@ -351,7 +329,7 @@ const HomeScreen = () => {
                                         icon: 'cloud-check',
                                         color: color.primary,
                                         onPress: () => navigation.navigate('HealthCheck'),
-                                        visible: !user?.isAnonymous,
+                                        visible: isHost,
                                     },
 
                                 ].filter(btn => btn.visible).map((btn, index, filteredArray) => {

@@ -123,6 +123,16 @@ export default function GameHistoryScreen() {
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null); // 防抖计时器
     const endReachedDebounceRef = useRef<NodeJS.Timeout | null>(null); // 触底加载防抖
 
+    // 可关闭的信息行（用于在权限确定且非 host 时提示用户）
+    const [showNoCloudInfo, setShowNoCloudInfo] = useState(false);
+
+    // 当权限从加载完成并且确定为非 host 时，展示一次可关闭信息行
+    useEffect(() => {
+        if (!permLoading && isHost === false) {
+            setShowNoCloudInfo(true);
+        }
+    }, [permLoading, isHost]);
+
 
     // 批量读取主集合 /games/{gameId}（只针对 top-level gameDoc 路径），
     // 使用 documentId() in 查询，Firestore 对 in 的限制是最多 10 个 id，所以需要分片。
@@ -543,6 +553,9 @@ export default function GameHistoryScreen() {
     const pagePermLoading = tab === 'cloud' ? permLoading : false;
     const pageIsHost = tab === 'cloud' ? isHost : true;
 
+    // 是否展示 cloud tab：在权限检查加载中或确认是 host 的情况下展示；若已确认不是 host，则隐藏 cloud 入口
+    const showCloudTab = permLoading || isHost === true;
+
     return (
         <PageStateView
             loading={currentLoading}
@@ -571,33 +584,35 @@ export default function GameHistoryScreen() {
                     <View style={styles.headerContent}>
                         {/* Tab control - segmented */}
                         <View style={segStyles.container}>
-                            <TouchableOpacity
-                                onPress={async () => {
-                                    if (tab === 'cloud') return;
-                                    setTab('cloud');
-                                    // force refresh cloud data when switching to cloud
-                                    if (isHost === false) {
-                                        // not a host: nothing to load
-                                        return;
-                                    }
-                                    pageState.setLoading(true);
-                                    try {
-                                        // reset pagination to force a fresh load
-                                        initializedRef.current = false;
-                                        reachedEndRef.current = false;
-                                        nextCursorRef.current = null;
-                                        fetchedSetRef.current.clear();
-                                        await fetchPage('refresh');
-                                    } catch (e) {
-                                        pageState.setError(simpleT('err_loading_game_history'));
-                                    } finally {
-                                        pageState.setLoading(false);
-                                    }
-                                }}
-                                style={[segStyles.button, tab === 'cloud' ? segStyles.activeButton : undefined]}
-                            >
-                                <Text style={tab === 'cloud' ? segStyles.activeText : segStyles.inactiveText}>{simpleT('menu_history')}</Text>
-                            </TouchableOpacity>
+                            {showCloudTab && (
+                                <TouchableOpacity
+                                    onPress={async () => {
+                                        if (tab === 'cloud') return;
+                                        setTab('cloud');
+                                        // force refresh cloud data when switching to cloud
+                                        if (isHost === false) {
+                                            // not a host: nothing to load
+                                            return;
+                                        }
+                                        pageState.setLoading(true);
+                                        try {
+                                            // reset pagination to force a fresh load
+                                            initializedRef.current = false;
+                                            reachedEndRef.current = false;
+                                            nextCursorRef.current = null;
+                                            fetchedSetRef.current.clear();
+                                            await fetchPage('refresh');
+                                        } catch (e) {
+                                            pageState.setError(simpleT('err_loading_game_history'));
+                                        } finally {
+                                            pageState.setLoading(false);
+                                        }
+                                    }}
+                                    style={[segStyles.button, tab === 'cloud' ? segStyles.activeButton : undefined]}
+                                >
+                                    <Text style={tab === 'cloud' ? segStyles.activeText : segStyles.inactiveText}>{simpleT('menu_history')}</Text>
+                                </TouchableOpacity>
+                            )}
 
                             <TouchableOpacity
                                 onPress={async () => {
@@ -635,6 +650,27 @@ export default function GameHistoryScreen() {
                         </View>
                     </View>
                     {/* 统计信息 - 针对不同 tab 显示 */}
+                    {/* 可关闭的信息行：当权限已确定且不是 host 时显示一次，用户可关闭以折叠该提示 */}
+                    {(!permLoading && isHost === false && showNoCloudInfo) && (
+                        <View style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                            marginHorizontal: Spacing.lg,
+                            marginTop: Spacing.sm,
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                        }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '600', flex: 1 }}>
+                                {simpleT('no_cloud_permission') || '您当前无权限查看在线历史，仅显示本地历史'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowNoCloudInfo(false)} style={{ marginLeft: 8, padding: 6 }}>
+                                <MaterialCommunityIcons name="close" size={16} color={'rgba(255,255,255,0.7)'} />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     <View style={[
                         styles.statsRow,
                         {
@@ -764,3 +800,6 @@ export default function GameHistoryScreen() {
         </PageStateView>
     );
 }
+
+// 当权限状态从加载变为已知且为非 host 时，展示一次可关闭信息行
+// 放在文件末尾是为了保持 effect 顺序清晰（组件内的 useEffect 已负责 setShowNoCloudInfo）

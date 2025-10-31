@@ -424,7 +424,7 @@ class AuthService {
             const userProfile: UserProfile = {
                 uid,
                 email: null,
-                displayName: '访客',
+                displayName: 'Guest',
                 photoURL: null,
                 isAnonymous: true,
                 provider: AuthProvider.ANONYMOUS,

@@ -4,12 +4,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { apiGet } from '@/services/httpService';
 import { getLocal, setLocal } from '@/services/storageService';
 import simpleT from '@/i18n/simpleT';
+import { Palette as color } from '@/constants';
+import RequireHost from '@/hooks/RequireHost';
+import GuestPlaceholder from '@/components/common/GuestPlaceholder';
+import { useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 
 const LAST_FETCH_KEY = 'healthcheck:lastFetch';
 const ONE_HOUR_SECONDS = 60 * 60;
 
 export default function HealthCheckScreen() {
+  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<any | null>(null);
   const [error, setError] = useState<any | null>(null);
@@ -102,8 +107,12 @@ export default function HealthCheckScreen() {
   // exchange functionality removed from this screen
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>{simpleT('health_title')}</Text>
+    <RequireHost
+      loadingFallback={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={color.primary} /></View>}
+      denyFallback={<GuestPlaceholder title={simpleT('permission_denied_title')} message={simpleT('permission_denied_subtitle')} buttonTitle={simpleT('return_home')} onPress={() => navigation.navigate('Home')} />}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>{simpleT('health_title')}</Text>
       <View style={styles.box}>
         <View style={styles.headerRow}>
           <Text style={styles.subtitle}>{simpleT('health_check_time')}</Text>
@@ -163,6 +172,7 @@ export default function HealthCheckScreen() {
         {/* Exchange UI moved to Settings screen */}
       </View>
     </ScrollView>
+    </RequireHost>
   );
 }
 
