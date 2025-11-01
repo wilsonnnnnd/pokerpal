@@ -6,10 +6,10 @@
 
 目标（更新）：仅记录当前已登录的玩家（当前用户）的结算/游戏信息。
 
-说明：本功能范围为单用户快速记录 —— 不包含其他玩家条目或多人结算输入。设计目标是让单个玩家（无论是 host 或普通 player）能以最少的交互步骤记录自己的本局结算并保存到本地；当用户具有云端写权限（如 host）时，可选择同步到 Firestore。
+说明：本功能范围为登录用户快速记录 —— 不包含其他玩家条目或多人结算输入。设计目标是让单个玩家能以最少的交互步骤记录自己的本局结算并保存到本地。仅当用户为 host 和普通已登录玩家时，客户端才直接同步到 Firestore 的选项，访客不可同步到云端。
 
-适用场景（精简）：
-- 登录玩家（包括 host）：记录自己的 buy-in、settleCashDiff、盲注和备注，并可选择同步云端（仅当有写权限）。
+适用场景（精简）：当
+- 登录玩家（包括 host 和普通已登录玩家）：记录自己的 buy-in、settleCashDiff、盲注和备注。
 - 访客/匿名：可保存到本地，但云端同步选项不可用，界面会提示登录以启用同步功能。
 
 ---
@@ -21,13 +21,12 @@
 - 可选：notes, location/id
 
 输出：
-- 成功：返回本地保存的 gameLocalId；若同步成功，返回 remoteId 与时间戳。
+- 成功：返回本地保存的 gameLocalId；。
 - 失败：返回 error code 与友好提示（网络/permission/db）。
 
 权限：
-- 本地保存：任何用户（含访客）。
-- 写入云端：仅当 usePermission().isHost === true 或用户有相应写权限时。
-- finalize：仅 host 可执行。
+ - 本地保存：任何用户（含访客）。
+ - 写入云端：仅当已登录玩家由客户端发起，访客不可直接在客户端同步云端；
 
 权限（更新说明）：
 - 本地保存：任何用户（含访客）。
@@ -77,7 +76,7 @@ UX 要点：
 - 可复用 `useGameStore` 或新增 `useQuickRecordStore` 保存临时交互数据（rows、meta），保存时调用 localDb API。
 
 云端模型：
-- 复用 `saveGame.ts` / `gameWriters.ts`（若存在）写入 Firestore。若没有适配接口，新增 `saveQuickGameToFirebase(game)` 放在 `src/firebase/`。
+ - 复用 `saveGame.ts` / `gameWriters.ts`（仅由 host 或受控后端调用）写入 Firestore。客户端仅在 host 情况下发起同步；普通玩家的任何云端上报应通过后端路径完成（例如 `saveQuickGameToServer` 的 Cloud Function）。
 
 ---
 
