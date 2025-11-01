@@ -53,7 +53,8 @@ const titles: Record<string, { titleKey: string; icon?: string }> = {
     GameDetail: { titleKey: 'game_detail', icon: 'information' },
     GamePlayerRank: { titleKey: 'menu_ranking', icon: 'trophy' },
     Profile: { titleKey: 'menu_profile', icon: 'account-circle' },
-    Settings: { titleKey: 'menu_settings', icon: 'cog' }
+    Settings: { titleKey: 'menu_settings', icon: 'cog' },
+    QuickRecord: { titleKey: 'quick_record', icon: 'flash' }
 };
 
 export const Header = () => {

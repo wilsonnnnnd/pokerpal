@@ -21,6 +21,7 @@ import LoginScreen from '@/screens/LoginScreen';
 import PlayerRankingScreen from '@/screens/PlayerRankingScreen';
 import ProfileScreen from '@/screens/ProfileScreen';
 import SettingsScreen from '@/screens/SettingsScreen';
+import QuickRecordScreen from '@/screens/QuickRecordScreen';
 import { CURRENT_USER_KEY, SETTINGS_KEY } from '@/constants/namingVar';
 import { userHasRole } from '@/firebase/getUserProfile';
 import usePermission from '@/hooks/usePermission';
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   Settings: undefined;
   AuthInspector: undefined;
   HealthCheck: undefined;
+  QuickRecord: undefined;
 };
 
 // Opt-in to native screens for improved memory and performance
@@ -49,7 +51,6 @@ enableScreens();
 try {
   const seedLang = (global as any).__pokerpal_settings?.language;
   if (seedLang) {
-    try { setSimpleTLocale(seedLang); } catch (e) { /* ignore */ }
   }
 } catch (e) {
   // ignore
@@ -66,6 +67,7 @@ function MainNavigator() {
       }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="HealthCheck" component={require('@/screens/HealthCheckScreen').default} />
+  <Stack.Screen name="QuickRecord" component={QuickRecordScreen} options={{ title: 'Quick Record' }} />
       <Stack.Screen name="GamePlay" component={GamePlayScreen} />
       <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
       <Stack.Screen name="GameDetail" component={GameDetailScreen} />

@@ -251,6 +251,14 @@ const HomeScreen = () => {
                                         onPress: () => navigation.navigate('Profile'),
                                         visible: !user?.isAnonymous,
                                     },
+                                                                        {
+                                        key: 'quickrecord',
+                                        title: simpleT('menu_quick_record') || 'Quick Record',
+                                        icon: 'flash',
+                                        color: color.confirm,
+                                        onPress: () => navigation.navigate('QuickRecord'),
+                                        visible: true,
+                                    },
                                     {
                                         key: 'ranking',
                                         title: simpleT('menu_ranking'),

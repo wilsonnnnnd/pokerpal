@@ -36,7 +36,6 @@ export function useLogger() {
     const clearLogs = useLogStore((state) => state.clearLogs);
 
     const log = (tag: string, message: string | object) => writeLog(tag, message);
-
     return {
         logs,
         log,

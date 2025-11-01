@@ -16,6 +16,7 @@ import simpleT from '@/i18n/simpleT';
 import { doc, collection, onSnapshot, query, orderBy, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { GameDocFS, GameSnapshotUI, PlayerSnapshotCash } from '@/types';
+import computePlayerCashProfit from '@/utils/profit';
 import { gameDoc, playerDoc } from '@/constants/namingVar';
 
 // 辅助函数
@@ -244,13 +245,12 @@ export default function GameDetailScreen() {
 
     const { topWinner, topLoser, exchangeRate } = useMemo(() => {
         const players = game.players || [];
-        if (!players.length) return { 
-            topWinner: null as PlayerSnapshotCash | null, 
-            topLoser: null as PlayerSnapshotCash | null, 
-            exchangeRate: 1 
+        if (!players.length) return {
+            topWinner: null as PlayerSnapshotCash | null,
+            topLoser: null as PlayerSnapshotCash | null,
+            exchangeRate: 1
         };
-        
-        const sortedByProfit = [...players].sort((a, b) => Number(b.settleCashDiff) - Number(a.settleCashDiff));
+
         const rate = (() => {
             const baseCash = Number(game.baseCashAmount ?? 0);
             const baseChip = Number(game.baseChipAmount ?? 0);
@@ -258,6 +258,9 @@ export default function GameDetailScreen() {
             const r = baseCash / baseChip;
             return Number.isFinite(r) && r > 0 ? r : 1;
         })();
+
+        const sortedByProfit = [...players].sort((a, b) => computePlayerCashProfit(b, rate) - computePlayerCashProfit(a, rate));
+
         return {
             topWinner: sortedByProfit[0],
             topLoser: sortedByProfit[sortedByProfit.length - 1],
@@ -422,13 +425,13 @@ export default function GameDetailScreen() {
                                     <MaterialCommunityIcons name="trophy" size={18} color={color.card} />
                                     <Text style={styles.highlightTitle}>{simpleT('top_winner')}</Text>
                                 </View>
-                            <View style={styles.highlightContent}>
-                                <Avatar uri={topWinner.photoURL} name={topWinner.nickname} size={48} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={topWinner.photoURL ? `${topWinner.nickname}的头像照片` : `${topWinner.nickname}的头像`} />
-                                <View style={styles.highlightInfo}>
-                                    <Text style={styles.highlightName}>{topWinner.nickname}</Text>
-                                    <Text style={styles.highlightProfit}>(+{formatUtils.money(topWinner.settleCashDiff * (game.rate || 1), formatCurrency)})</Text>
-                                </View>
-                            </View>
+                                        <View style={styles.highlightContent}>
+                                            <Avatar uri={topWinner.photoURL} name={topWinner.nickname} size={48} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={topWinner.photoURL ? `${topWinner.nickname}的头像照片` : `${topWinner.nickname}的头像`} />
+                                            <View style={styles.highlightInfo}>
+                                                <Text style={styles.highlightName}>{topWinner.nickname}</Text>
+                                                <Text style={styles.highlightProfit}>(+{formatUtils.money(Number(topWinner.settleCashAmount ?? topWinner.settleCashDiff ?? 0), formatCurrency)})</Text>
+                                            </View>
+                                        </View>
                         </View>
 
                         <View style={styles.highlightCard}>
@@ -440,8 +443,8 @@ export default function GameDetailScreen() {
                                 <Avatar uri={topLoser.photoURL} name={topLoser.nickname} size={48} style={styles.avatar} imageStyle={styles.avatarImage} textStyle={styles.avatarText} accessibilityLabel={topLoser.photoURL ? `${topLoser.nickname}的头像照片` : `${topLoser.nickname}的头像`} />
                                 <View style={styles.highlightInfo}>
                                     <Text style={styles.highlightName}>{topLoser.nickname}</Text>
-                                    <Text style={[styles.highlightProfit, { color: color.error }]}>
-                                        (-{formatUtils.money(Math.abs(topLoser.settleCashDiff * (game.rate || 1)), formatCurrency)})
+                                    <Text style={[styles.highlightProfit, { color: color.error }]}> 
+                                        (-{formatUtils.money(Math.abs(Number(topLoser.settleCashAmount ?? topLoser.settleCashDiff ?? 0)), formatCurrency)})
                                     </Text>
                                 </View>
                             </View>
@@ -456,7 +459,7 @@ export default function GameDetailScreen() {
 
                 <View style={styles.playerListContainer}>
                     {game.players.map((p, idx) => {
-                        const diff = Number(p.settleCashDiff) || 0;
+                        const diff = Number(p.settleCashAmount ?? p.settleCashDiff ?? 0) || 0;
                         const roi = Number(p.settleROI) || 0;
                         return (
                             <View style={styles.playerCard} key={`${p.id || 'row'}-${idx}`}>
@@ -468,7 +471,7 @@ export default function GameDetailScreen() {
 
                                     <View style={[styles.playerCashResult, { backgroundColor: diff >= 0 ? color.success + '22' : color.error + '22' }]}> 
                                         <MaterialCommunityIcons name={diff >= 0 ? 'cash-plus' : 'cash-minus'} size={18} color={diff >= 0 ? color.success : color.error} />
-                                        <Text style={[styles.playerCashText, { color: diff >= 0 ? color.success : color.error }]}>
+                                        <Text style={[styles.playerCashText, { color: diff >= 0 ? color.success : color.error }]}> 
                                             {diff >= 0 ? '+' : '-'}{formatUtils.money(Math.abs(diff), formatCurrency)}
                                         </Text>
                                     </View>

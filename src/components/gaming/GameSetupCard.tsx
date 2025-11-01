@@ -16,6 +16,7 @@ import { PrimaryButton } from '../common/PrimaryButton';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Palette as color } from '@/constants';
 import * as yup from 'yup';
+import normalizeNumberInput from '@/utils/number';
 import 'react-native-get-random-values';
 import { generateSecureId } from '@/utils/getSecureNumber';
 import { InputField } from '../common/InputField';
@@ -123,13 +124,19 @@ export const GameSetupCard = ({ onConfirm, onCancel }: GameSetupCardProps) => {
 
     // 处理表单输入变化
     const handleInputChange = (field: string, value: string) => {
-        // 仅允许数字输入
-        const numericValue = value.replace(/[^0-9]/g, '');
+        // normalize input according to field requirements
+        let normalized = '';
+        if (field === 'baseCashAmount') {
+            normalized = normalizeNumberInput(value || '', { allowDecimal: true });
+        } else {
+            // smallBlind, bigBlind, baseChipAmount are integers
+            normalized = normalizeNumberInput(value || '', { integers: true });
+        }
 
         // 更新表单值
         setFormValues(prev => ({
             ...prev,
-            [field]: numericValue
+            [field]: normalized
         }));
 
         // 清除对应字段的错误
