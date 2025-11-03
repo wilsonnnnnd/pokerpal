@@ -28,6 +28,7 @@ import { useLogger } from '@/utils/useLogger';
 import normalizeNumberInput from '@/utils/number';
 import { Palette as color } from '@/constants';
 import { Spacing, Radius, FontSize } from '@/constants/designTokens';
+import { generateSecureId } from '@/utils/getSecureNumber';
 
 const QuickRecordScreen: React.FC = () => {
     const { authUser, isHost, loading } = usePermission();
@@ -91,7 +92,7 @@ const QuickRecordScreen: React.FC = () => {
 
         setSaving(true);
         try {
-            const playerId = authUser?.uid ?? `guest-${uuidv4()}`; // 若无 authUser，则生成本地 guest id
+            const playerId = authUser?.uid ?? generateSecureId('player'); // 若无 authUser，则生成本地 guest id
 
             // 1) 保持原有 AsyncStorage 列表的本地游戏记录（用于 UI 列表）
             const storagePlayers = [
@@ -107,7 +108,7 @@ const QuickRecordScreen: React.FC = () => {
             log('QuickRecord', 'local createGame 完成');
 
             // 2) 使用与 GamePlay 相同的本地快照格式写入 sqlite actions（便于后续上传/分析）
-            const gameId = uuidv4();
+            const gameId = generateSecureId('game');
             const now = new Date().toISOString();
 
             const buyInCash = Number(buyIn) || 0;

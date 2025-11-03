@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import storage from './storageService';
 import { PlayerLocal, GameLocal, GamePlayerEntry } from '@/types/localModels';
+import { generateSecureId } from '@/utils/getSecureNumber';
 
 /**
  * 本模块负责本地（AsyncStorage）层面的玩家与游戏数据管理。
@@ -119,7 +120,7 @@ export async function createGame(payload: {
 }): Promise<GameLocal> {
     const list = await getGames();
     const now = new Date().toISOString();
-    const id = uuidv4();
+    const id = generateSecureId('game');
     const game: GameLocal = {
         id,
         createdAt: now,
