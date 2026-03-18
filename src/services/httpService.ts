@@ -11,13 +11,13 @@ function nowMs() {
   return Date.now();
 }
 
-function pruneOldTimestamps(windowMs = RATE_LIMIT_WINDOW_MS) {
+function removeOldTimestamps(windowMs = RATE_LIMIT_WINDOW_MS) {
   const cutoff = nowMs() - windowMs;
   rateLimitTimestamps = rateLimitTimestamps.filter((t) => t >= cutoff);
 }
 
 function allowRequest(windowMs = RATE_LIMIT_WINDOW_MS, maxRequests = RATE_LIMIT_MAX_REQUESTS) {
-  pruneOldTimestamps(windowMs);
+  removeOldTimestamps(windowMs);
   if (rateLimitTimestamps.length >= maxRequests) return false;
   rateLimitTimestamps.push(nowMs());
   return true;
@@ -65,43 +65,65 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeout =
   }
 }
 
+async function fetchWithAuthRetry(input: string, init: RequestInit = {}, timeout = DEFAULT_TIMEOUT, opts?: { autoRetryOn401?: boolean }) {
+  let res = await fetchWithTimeout(input, init, timeout);
+  if (res.status === 401) {
+    if (opts?.autoRetryOn401 !== false) {
+      try {
+        await getFreshIdToken({ force: true });
+        const headers = await attachAuthHeader((init.headers as Record<string, string>) ?? {});
+        init = { ...init, headers };
+        res = await fetchWithTimeout(input, init, timeout);
+      } catch (e) {
+        // ignore and fallthrough to error handling
+      }
+    }
+    if (res.status === 401) {
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text || '{}');
+        throw { status: 401, data };
+      } catch {
+        throw { status: 401, data: text };
+      }
+    }
+  }
+  return res;
+}
+
 export async function apiGet<T = any>(
   url: string,
   options?: { params?: Record<string, any>; headers?: Record<string, string>; timeout?: number; disableRateLimit?: boolean; autoRetryOn401?: boolean }
 ) {
   try {
-    // Rate limiting: allow callers to opt-out via options.disableRateLimit
+    // Rate limit: enabled by default. Caller can set options.disableRateLimit to skip it.
+    // If there are too many requests in the window, allowRequest() returns false and we throw 429.
     if (!options?.disableRateLimit) {
       const ok = allowRequest();
       if (!ok) {
         throw { status: 429, data: { message: 'Rate limit exceeded' } };
       }
     }
-    const finalUrl = options?.params ? buildUrlWithParams(url, options.params) : (url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`);
-    let headers = await attachAuthHeader(options?.headers ?? {});
-    let res = await fetchWithTimeout(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT);
-    // If 401, optionally force-refresh token and retry once
-    if (res.status === 401) {
-      if (options?.autoRetryOn401 !== false) {
-        try {
-          await getFreshIdToken({ force: true });
-          headers = await attachAuthHeader(options?.headers ?? {});
-          res = await fetchWithTimeout(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT);
-        } catch (e) {
-          // ignore and fallthrough to error handling
-        }
-      }
-      if (res.status === 401) {
-        return Promise.reject({ status: 401, data: await (async () => {
-          const text = await res.text();
-          try { return JSON.parse(text || '{}'); } catch { return text; }
-        })() });
-      }
-    }
 
+    // Build final URL
+    const finalUrl = options?.params
+      ? buildUrlWithParams(url, options.params)
+      : (url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`);
+
+    // Attach auth header: attachAuthHeader may refresh the token if it is near expiry.
+    // It returns headers that include Authorization when a token is present.
+    let headers = await attachAuthHeader(options?.headers ?? {});
+
+    // Send request: fetchWithAuthRetry wraps timeout and 401 auto-retry logic.
+    // On 401 it tries to refresh the token and retry once (this can be controlled by options).
+    let res = await fetchWithAuthRetry(finalUrl, { method: 'GET', headers }, options?.timeout ?? DEFAULT_TIMEOUT, { autoRetryOn401: options?.autoRetryOn401 });
+
+    // Read response and parse JSON when content-type contains application/json.
     const text = await res.text();
     const contentType = res.headers.get('content-type') || '';
     const data = contentType.includes('application/json') ? JSON.parse(text || '{}') : text;
+
+    // If response status is not OK, throw { status, data } so caller can handle it.
     if (!res.ok) {
       throw { status: res.status, data };
     }
@@ -124,25 +146,7 @@ export async function apiPost<T = any>(url: string, body?: any, options?: { head
 
     let headers = await attachAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) });
     const finalUrl = url.includes('://') ? url : `${API_BASE.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
-    let res = await fetchWithTimeout(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT);
-    // If 401, optionally force-refresh token and retry once
-    if (res.status === 401) {
-      if ((options as any)?.autoRetryOn401 !== false) {
-        try {
-          await getFreshIdToken({ force: true });
-          headers = await attachAuthHeader({ 'Content-Type': 'application/json', ...(options?.headers ?? {}) });
-          res = await fetchWithTimeout(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT);
-        } catch (e) {
-          // ignore and fallthrough
-        }
-      }
-      if (res.status === 401) {
-        return Promise.reject({ status: 401, data: await (async () => {
-          const text = await res.text();
-          try { return JSON.parse(text || '{}'); } catch { return text; }
-        })() });
-      }
-    }
+    let res = await fetchWithAuthRetry(finalUrl, { method: 'POST', headers, body: body ? JSON.stringify(body) : undefined }, options?.timeout ?? DEFAULT_TIMEOUT, { autoRetryOn401: (options as any)?.autoRetryOn401 });
 
     const text = await res.text();
     const contentType = res.headers.get('content-type') || '';
