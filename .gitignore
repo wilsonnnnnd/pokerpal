@@ -41,3 +41,19 @@ yarn-error.*
 .env
 
 package-lock.json
+
+# Firebase config files (may contain project keys)
+GoogleService-Info.plist
+google-services.json
+
+# Local DB files
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor folders
+.vscode/
+.idea/
+
+# Logs
+*.log

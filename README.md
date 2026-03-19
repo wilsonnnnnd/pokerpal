@@ -51,16 +51,8 @@ cd pokerpal
 npm install
 ```
 
-3. Set env
-Create a `.env` file and add Firebase keys:
-```env
-EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
-```
+3. Configure environment
+Copy `.env.example` to `.env` and fill in the real values for your Firebase and app settings. Do not commit `.env` to the repository. The `.env.example` file shows the required keys and example placeholders.
 
 4. Start dev server
 ```bash
