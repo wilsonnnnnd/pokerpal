@@ -40,8 +40,6 @@ yarn-error.*
 /ios
 .env
 
-package-lock.json
-
 # Firebase config files (may contain project keys)
 GoogleService-Info.plist
 google-services.json

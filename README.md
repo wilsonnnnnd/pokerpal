@@ -1,188 +1,133 @@
-# PokerPal 🃏
+# PokerPal
 
-PokerPal is a modern app to manage poker chips and game records. It is built with React Native and Expo. The app tracks games, shows player stats, and saves history.
+PokerPal is a poker session tracker for live/online games, built with Expo + React Native (TypeScript). It helps manage blinds, buy-ins, chip counts, and settlement results, and provides basic player stats.
 
-## Short Project Summary
+中文说明见：[README.zh-CN.md](./README.zh-CN.md)
 
-PokerPal helps record chip counts and settlements for live or online poker games. The app uses Expo and React Native. Data is stored locally with SQLite and AsyncStorage. You can also sync data to Firebase (Firestore and Auth). The project uses TypeScript and Zustand for state. The app is made to work well offline and to sync later.
+## Highlights
 
-Main goals:
-- Local first: work and save games even when offline.
-- Multiple storage layers: memory (Zustand), AsyncStorage cache, local SQLite backup, and optional Firebase sync.
-- Easy UI for players and settlement. Show player stats like profit and ROI.
-## Features
+- Session tracking: blinds, chip base values, buy-ins, leave/return, settlement
+- Stats: profit / ROI / appearances ranking and summaries
+- Quick Record: faster flow to record a session
+- Invite via link/QR (e.g. `https://hdpoker.xyz/join/<gameId>?token=...`)
+- Local-first: works offline (AsyncStorage + SQLite) and can sync later
+- Optional cloud: Firebase Auth + Firestore (some write flows require host permission)
 
-Basic features: track game progress, save history, and show player stats.
+## Tech Stack
 
-## Architecture
+- Expo SDK 54, React Native 0.81, React 19
+- TypeScript (`strict: true`)
+- Navigation: React Navigation (native-stack)
+- State: zustand (persisted to AsyncStorage)
+- Local storage: expo-sqlite (with an in-memory fallback) + AsyncStorage
+- Cloud: Firebase (Auth / Firestore)
 
-Main stack:
-- Frontend: React Native + Expo
-- State: Zustand with AsyncStorage
-- Local DB: SQLite (expo-sqlite)
-- Cloud: Firebase (Firestore + Auth)
-- Language: TypeScript
-- Tooling: Expo CLI
-
-Data flow:
-```
-User actions → Zustand store → local SQLite → optional Firebase sync
-                 ↓
-             AsyncStorage cache
-```
-
-## Quick Start
+## Getting Started
 
 ### Requirements
-- Node.js 16+
-- Expo CLI
-- Android Studio (for Android) or Xcode (for iOS)
+
+- Node.js 18+
+- npm
+- Android Studio (Android) / Xcode (iOS, macOS required)
 
 ### Install
 
-1. Clone the repo
-```bash
-git clone https://github.com/wilsonnnnnd/pokerpal.git
-cd pokerpal
-```
-
-2. Install deps
 ```bash
 npm install
 ```
 
-3. Configure environment
-Copy `.env.example` to `.env` and fill in the real values for your Firebase and app settings. Do not commit `.env` to the repository. The `.env.example` file shows the required keys and example placeholders.
+### Environment Variables (Firebase optional)
 
-4. Start dev server
+1) Copy `.env.example` to `.env`
+2) Fill in Firebase config (Expo exposes `EXPO_PUBLIC_*` variables to the client):
+
+- `EXPO_PUBLIC_FIREBASE_API_KEY`
+- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
+- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `EXPO_PUBLIC_FIREBASE_APP_ID`
+- `EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID` (optional; supported in code)
+
+If you enable Firebase/Google capabilities on iOS:
+
+- Put `GoogleService-Info.plist` at the repository root (path is referenced by [app.json](./app.json))
+
+### Start Dev Server
+
 ```bash
 npm start
 ```
 
-5. Run app
-```bash
-# Android
-npm run android
+### Run on Device/Simulator
 
-# iOS
+```bash
+npm run android
 npm run ios
+npm run web
+```
+
+## Build & Release (EAS)
+
+Build profiles are defined in [eas.json](./eas.json): `development` / `preview` / `production`.
+
+```bash
+# Android internal build (apk)
+eas build --profile development --platform android
+
+# Android preview build (apk)
+eas build --profile preview --platform android
+
+# Android store build (aab)
+eas build --profile production --platform android
+
+# iOS (example)
+eas build --profile production --platform ios
+```
+
+Submit (example):
+
+```bash
+eas submit --profile production --platform android
 ```
 
 ## Project Structure
 
 ```
 src/
-├── assets/      # images and sounds
-├── components/  # reusable UI
-├── constants/   # colors and settings
-├── firebase/    # firebase helpers
-├── hooks/       # custom hooks
-├── screens/     # app screens
-├── services/    # services and APIs
-├── stores/      # Zustand stores
-├── types/       # TypeScript types
-└── utils/       # helper functions
+├── assets/      static assets (images / sounds / styles)
+├── components/  UI components (common / gaming / settings)
+├── constants/   constants and config
+├── firebase/    Firebase init and data access
+├── hooks/       custom hooks (permission / stats / etc.)
+├── i18n/        localization
+├── providers/   global providers (Auth / Settings / Popup)
+├── screens/     screens
+├── services/    service layer (localDb / auth / storage / etc.)
+├── stores/      zustand stores
+├── types/       type definitions
+└── utils/       utilities
 ```
 
-Key files:
-- `App.tsx` — app entry and setup
-- `src/screens/GamePlayScreen.tsx` — main game flow
-- `src/stores/useGameStore.ts` — game state and persistence
-- `src/firebase/config.ts` — firebase setup
- - `src/services/localGameService.ts` — local game read/write and SQLite interaction
+## Key Entry Points
 
-## How to Use
+- [App.tsx](./App.tsx): app bootstrap, providers, navigation
+- [localDb.ts](./src/services/localDb.ts): SQLite schema + SQL wrapper (with fallback)
+- [firebase/config.ts](./src/firebase/config.ts): Firebase init (reads `EXPO_PUBLIC_*`)
+- [useGameStore.ts](./src/stores/useGameStore.ts): core game store (persisted to AsyncStorage)
 
-### Start a game
-1. Tap "New Game" on the home screen.
-2. Set blinds and chip values.
-3. Add players and their buy-ins.
-4. Start tracking the game.
+## Numeric Conventions
 
-### Game actions
-- Add buy-in: record when a player adds chips.
-- Player status: mark a player leave or return.
-- Auto calc: profit and ROI update in real time.
-- Finish game: set final chips and save the game.
-
-### View data
-- Game history: view past games.
-- Player ranking: sort by profit and ROI.
-- Stats: view detailed stats per player or game.
-
-## Development Notes
-
-### Formatting rules
 - Money: keep 2 decimals `Number(amount.toFixed(2))`
-- ROI: 6 decimals `Number(roi.toFixed(6))`
+- ROI: keep 6 decimals `Number(roi.toFixed(6))`
 - Chips: integer `Math.round(chips)`
 
-### State usage
-```typescript
-// read state
-const game = useGameStore(state => state.gameId);
-
-// update state
-const setGame = useGameStore(state => state.setGame);
-setGame({ gameId: 'new-game-id', ... });
-```
-
-### Persistence layers
-1. Memory (Zustand) — live state
-2. AsyncStorage — quick restore
-3. SQLite — offline backup
-4. Firebase — cross-device sync
-
-### Errors and retry
-- Network calls use retry strategies.
-- Local DB has fallback logic.
-- If Firebase write fails, it is saved locally to retry.
-
-## Testing
+## Type Check
 
 ```bash
-# TypeScript check
 npx tsc --noEmit
-
-# Run tests (if any)
-npm test
 ```
 
-## Build & Release
+## Security
 
-### Android
-```bash
-# dev build
-expo build:android
-
-# production
-eas build --platform android
-```
-
-### iOS
-```bash
-# dev build
-expo build:ios
-
-# production
-eas build --platform ios
-```
-
-### Code style
-- Use TypeScript strict mode.
-- Follow ESLint rules.
-- Use function components and hooks.
-- Use Zustand for state.
-
-## License
-
-This project uses the MIT license. See [LICENSE](LICENSE).
-
-## Thanks
-
-- React Native — cross-platform
-- Expo — development platform
-- Firebase — backend services
-- Zustand — state management
-
-PokerPal — make poker game tracking simple 🎯
+Please report security issues privately following [SECURITY.md](./SECURITY.md).
