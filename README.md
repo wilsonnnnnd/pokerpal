@@ -4,6 +4,10 @@ PokerPal is a poker session tracker for live/online games, built with Expo + Rea
 
 中文说明见：[README.zh-CN.md](./README.zh-CN.md)
 
+[![GitHub stars](https://img.shields.io/github/stars/wilsonnnnnd/pokerpal?style=social)](https://github.com/wilsonnnnnd/pokerpal.git)
+
+If you find this project useful, please give it a star on GitHub — it helps others discover the project and supports continued development. Thank you!
+
 ## Highlights
 
 - Session tracking: blinds, chip base values, buy-ins, leave/return, settlement
